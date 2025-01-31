@@ -1,0 +1,111 @@
+.targetGroupsComponent {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2778vw;
+
+    > div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 0 1.11vw;
+        border-bottom: 1px solid rgba(237, 237, 237, 1);
+        position: relative;
+
+        .images {
+            width: auto;
+            height: auto;
+            position: absolute;
+            right: 1.25vw;
+            top: 1.25vw;
+            display: flex;
+            flex-direction: row;
+            gap: 1.111vw;
+            align-items: center;
+
+            img {
+                width: 1.6667vw;
+                height: 1.6667vw;
+            }
+        }
+
+        &:hover:not(.title) {
+            background: rgba(244, 244, 244, 1);
+            cursor: pointer;
+        }
+
+        > div {
+            width: 30%;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            font-size: 1.11vw;
+            font-weight: 600;
+            line-height: 1.6667vw;
+            height: 4.166vw;
+            color: rgba(58, 62, 61, 1);
+        }
+
+        &.title {
+            border-bottom: none;
+
+            > div {
+                height: 4.44vw;
+                color: rgba(135, 135, 135, 1);
+            }
+        }
+    }
+
+    /* User List Section */
+    .user-list {
+        width: 100%;
+        background-color: rgba(250, 250, 250, 1);
+        padding: 1vw;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5vw;
+
+        .user-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5vw 1vw;
+            background-color: rgba(244, 244, 244, 1);
+            font-size: 1.1vw;
+            font-weight: 600;
+            color: rgba(135, 135, 135, 1);
+            border-bottom: 1px solid rgba(237, 237, 237, 1);
+
+            div {
+                flex: 1;
+                text-align: center;
+            }
+        }
+
+        .user-item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5vw 1vw;
+            font-size: 1vw;
+            font-weight: 400;
+            color: rgba(58, 62, 61, 1);
+            border-bottom: 1px solid rgba(237, 237, 237, 1);
+
+            &:last-child {
+                border-bottom: none;
+            }
+
+            div {
+                flex: 1;
+                text-align: center;
+
+                &.user-name {
+                    font-weight: 600;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,10 @@
+.dashboard {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+    .pages {
+        width: 81vw;
+        padding: 0 4.1667vw 0 1.6667vw;
+    }
+}

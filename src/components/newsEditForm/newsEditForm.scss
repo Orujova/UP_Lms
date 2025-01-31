@@ -1,0 +1,58 @@
+.newsEditForm {
+    padding-bottom: 8.4722vw;
+
+    .inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 2.222vw;
+        margin-bottom: 5.5555vw;
+    }
+
+    .formButtons {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 0.83333vw;
+
+        button {
+            width: 7.5vw;
+            height: 2.5vw;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 141, 102, 1);
+            border-radius: 0.2778vw;
+            font-size: 0.9722vw;
+            font-weight: 400;
+            line-height: 1.1667vw;
+            color: rgba(255, 255, 255, 1);
+        }
+
+        .backButton {
+            width: 7.5vw;
+            height: 2.5vw;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(189, 189, 189, 1);
+            font-size: 0.9722vw;
+            font-weight: 400;
+            line-height: 1.1667vw;
+            text-align: center;
+            color: rgba(0, 0, 0, 1);
+            border-radius: 0.2778vw;
+        }
+    }
+
+    .descriptionEditor {
+        label {
+            font-size: 0.97222vw;
+            font-weight: 600;
+            line-height: 1.38889vw;
+            letter-spacing: 0.10000000149011612px;
+            color: rgba(32, 41, 57, 1);
+        }
+    }
+}

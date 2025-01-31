@@ -1,0 +1,63 @@
+.userComponent {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.389vw 0;
+    box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.14);
+
+    >div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.694vw;
+        width: 13.889vw;
+
+        &.edit {
+            width: 1.389vw;
+        }
+
+        >img {
+            width: 1.389vw;
+            height: auto;
+        }
+
+        >p {
+            font-weight: 400;
+            line-height: 1.389vw;
+            font-family: Montserrat;
+            font-size: 1vw;
+            color: rgba(19, 18, 27, 1);
+            margin-bottom: 0.555vw;
+        }
+
+        &:first-child {
+            gap: 0.555vw;
+
+            img {
+                width: 3.333vw !important;
+                border-radius: 50%;
+            }
+
+
+            .userName {
+                p {
+                    font-weight: 400;
+                    line-height: 1.389vw;
+                    font-family: Montserrat;
+
+                    &.fullName {
+                        font-size: 1vw;
+                        color: rgba(19, 18, 27, 1);
+                        margin-bottom: 0.555vw;
+                    }
+
+                    &.userId {
+                        font-size: 0.972vw;
+                        color: rgba(112, 112, 112, 1);
+                    }
+                }
+            }
+        }
+    }
+}

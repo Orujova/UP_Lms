@@ -1,0 +1,291 @@
+/* src/app/admin/dashboard/targetgroups/filter.module.scss */
+
+$primary-color: #6d28d9;
+$secondary-color: #4f46e5;
+$background-color: #f3f4f6;
+$border-color: #ddd;
+$text-color: #333;
+$error-color: #dc2626;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  min-height: 100vh;
+
+  .filterSection {
+    padding: 20px;
+    width: 100%;
+
+    .TargetName{
+      width: 18.0556vw;
+      margin: auto;
+      margin-bottom:1.3889vw ;
+    }
+
+    .groupConditionSelector {
+      display: flex;
+      border: 1px solid #E8E8E8;
+      justify-content: space-between;
+      align-items: center;
+      width: 8.333vw;
+      padding: 0.4166vw;
+      border-radius: 0.2778vw;
+      margin: auto;
+      margin-bottom: 1.3889vw;
+
+      .conditionBtn {
+        width: 45%;
+        font-family: Work Sans;
+        font-size: 1.11;
+        font-weight: 500;
+        line-height: 1.666vw;
+        border-radius: 0.2778vw;
+        color: #000000;
+        height: 2.222vw;
+
+        &.active {
+          background: #058D66;
+          color: #fff;
+        }
+      }
+    }
+
+    .filterHeader {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .filterGroup {
+      background-color: #fff;
+      border: 1px solid $border-color;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding-left: 40px;
+
+      &.dragging {
+        border: 1px dashed $primary-color;
+        background-color: lighten($primary-color, 50%);
+      }
+
+      .dragHandle {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: move;
+
+        .dots {
+          display: grid;
+          grid-template-columns: repeat(3, 4px);
+          grid-template-rows: repeat(3, 4px);
+          gap: 2px;
+
+          div {
+            width: 4px;
+            height: 4px;
+            background-color: darken($primary-color, 20%);
+            border-radius: 50%;
+          }
+        }
+      }
+
+      .filterRow {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 10px;
+        margin-bottom: 10px;
+
+        .filterSelect,
+        .filterInput {
+          flex: 1;
+          position: relative;
+          width: 18.055vw;
+
+        }
+
+        .conditionSelector {
+          display: flex;
+          border: 1px solid #E8E8E8;
+          justify-content: space-between;
+          align-items: center;
+          width: 8.333vw;
+          padding: 0.4166vw;
+          border-radius: 0.2778vw;
+          margin-bottom: 0.5vw ;
+
+          .conditionBtn {
+            width: 45%;
+            font-family: Work Sans;
+            font-size: 1.11;
+            font-weight: 500;
+            line-height: 1.666vw;
+            border-radius: 0.2778vw;
+            color: #000000;
+            height: 2.222vw;
+
+            &.active {
+              background: #058D66;
+              color: #fff;
+            }
+          }
+        }
+      }
+
+      .removeBtn {
+        width: 2.5556vw;
+        height: 2.5556vw;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #E2E2E2;
+        border-radius: 0.2778vw;
+        cursor: pointer;
+        margin-bottom: 0.5vw ;
+
+        img {
+          width: 1.3889vw;
+          height: 1.3889vw;
+        }
+      }
+
+      .addFieldBtnContainer {
+        display: flex;
+        gap: 0.6944vw;
+        margin-top: 10px;
+
+        .addFieldBtn {
+          width: 2.5556vw;
+          height: 2.5556vw;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: center;
+          background: #058D66;
+          border-radius: 0.2778vw;
+
+          img {
+            width: 1.3889vw;
+            height: 1.3889vw;
+          }
+        }
+      }
+    }
+
+    .addGroupBtnContainer {
+      margin-top: 20px;
+
+      .addBtn {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5556vw;
+
+        p {
+          font-size: 1.111vw;
+          font-weight: 500;
+          line-height: 1.38889vw;
+          letter-spacing: 0.10000000149011612px;
+          color: #000000;
+        }
+
+        div {
+          width: 2.222vw;
+          height: 2.222vw;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: center;
+          background: #058D66;
+          border-radius: 0.2778vw;
+
+          img {
+            width: 1.111vw;
+            height: 1.111vw;
+          }
+        }
+
+        cursor: pointer;
+
+      }
+    }
+
+    .buttonBar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+
+      .showResults,
+      .saveBtn {
+        width: 7.5vw;
+        height: 2.5vw;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        border-radius: 0.2778vw;
+        opacity: 0px;
+        color: #FFFFFF;
+        background: #058D66;
+      }
+
+      .cancelBtn {
+        background: transparent;
+        color: #000000;
+        border: none;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+    }
+
+    .conditionTextDisplay {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: $background-color;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .refreshBtn {
+      background-color: transparent;
+      color: $primary-color;
+      border: none;
+      padding: 10px 0;
+      cursor: pointer;
+      font-size: 14px;
+      text-align: left;
+    }
+  }
+
+  .tableSection {
+    width: 80%;
+    margin-top: 20px;
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid $border-color;
+        text-align: left;
+      }
+
+      th {
+        background-color: $background-color;
+      }
+    }
+  }
+}

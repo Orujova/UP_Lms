@@ -1,0 +1,59 @@
+.courseButtonsPart {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.73611vw;
+
+    .title {
+        font-family: Montserrat;
+        font-size: 2.222vw;
+        font-weight: 600;
+        line-height: 2.7090278vw;
+        color: rgba(0, 0, 0, 1);
+    }
+
+    .courseButtons {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5556vw;
+        align-items: center;
+
+        >div {
+            cursor: pointer;
+            display: flex;
+            flex-direction: row;
+            border: 1px solid rgba(156, 156, 156, 1);
+            border-radius: 0.5556vw;
+            height: 2.5vw;
+            align-items: center;
+
+            &.courseButton {
+                gap: 0.5556vw;
+                padding: 0 0.8333vw;
+
+                img {
+                    width: 0.9722vw;
+                    height: 0.9722vw;
+                }
+
+                p {
+                    font-family: Lato;
+                    font-size: 0.9722vw;
+                    font-weight: 400;
+                    line-height: 1.167vw;
+                    color: rgba(156, 156, 156, 1);
+                }
+            }
+
+            &.setting {
+                padding: 0 0.41667vw;
+
+                img {
+                    width: 1.6667vw;
+                    height: 1.6667vw;
+                }
+            }
+        }
+    }
+}

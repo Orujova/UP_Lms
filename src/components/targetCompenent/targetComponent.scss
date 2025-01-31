@@ -1,0 +1,45 @@
+.targetComponent {
+    position: relative;
+    margin: 3.75vw 0 6.4583vw 0;
+
+    >img {
+        padding: 0 2vw;
+        width: 100%;
+    }
+
+    >div {
+        z-index: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        position: absolute;
+        top: 75%;
+        transform: translate(0, -25%);
+
+        >div {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            &.pending {
+                cursor: pointer;
+            }
+
+            img {
+                width: 2.222vw;
+                height: auto;
+                margin-bottom: 1.2153vw;
+            }
+
+            p {
+                font-family: Inter;
+                font-size: 0.9722vw;
+                font-weight: 600;
+                line-height: 1.11vw;
+                color: rgba(111, 111, 111, 1);
+            }
+        }
+    }
+}

@@ -1,0 +1,22 @@
+.sectionTitle {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 2.1527vw 0;
+    border-bottom: 1px solid rgba(213, 213, 213, 1);
+
+    p {
+        font-size: 1.9444vw;
+        font-weight: 600;
+        line-height: 2.3701389vw;
+        text-align: center;
+        color: rgba(144, 144, 144, 1);
+    }
+
+    .icon {
+        display: flex;
+        flex-direction: row;
+        gap: 1.6667vw;
+        align-items: center;
+    }
+}

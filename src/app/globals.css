@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* :root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+} */
+
+/*Global Styles*/
+* {
+  box-sizing: border-box;
+}
+
+.box {
+  max-width: 1440px;
+  padding: 0px 40px;
+  margin: 0px auto;
+}
+
+input {
+  outline: none;
+  width: 100%;
+}
+
+.side-menu svg {
+  fill: #a1a1a1;
+}
+
+.card-ellipsis {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/***/
+.ellipsis-1-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: min-content;
+}
+
+/***/
+
+.active-link {
+  color: #000;
+  background: #f4f4f4;
+  font-weight: 700;
+}
+
+.active-link svg {
+  fill: red;
+}
+
+.active-link svg {
+  fill: #000;
+}
+
+/* Fixed header */
+.fixed-header {
+  position: sticky;
+  top: 0px;
+  width: 100%;
+  z-index: 999;
+  left: 0;
+}
+
+.sticky-sidebar {
+  position: sticky;
+  top: 0;
+}
+
+.sticky-read {
+  position: sticky;
+  top: 0;
+}
+
+/* Single blog page defaults */
+.svg-24 svg {
+  width: 24px;
+  height: 24px;
+}

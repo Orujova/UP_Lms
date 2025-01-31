@@ -1,0 +1,23 @@
+.textAreaComponent {
+    label {
+        font-size: 0.9722vw;
+        font-weight: 600;
+        line-height: 1.3889vw;
+        letter-spacing: 0.10000000149011612px;
+        color: rgba(32, 41, 57, 1);
+        margin-bottom: 0.556vw;
+
+        span {
+            color: rgba(224, 0, 0, 1);
+            margin-left: 0.37vw;
+        }
+    }
+
+    input {
+        width: 100%;
+        height: 13.056vw;
+        padding: 1.181vw 1.3889vw;
+        border: 1px solid rgba(205, 213, 223, 1);
+        border-radius: 0.556vw;
+    }
+}

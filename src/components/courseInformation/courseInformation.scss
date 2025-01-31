@@ -1,0 +1,68 @@
+.courseInformation {
+    width: 68.61%;
+    padding: 1.666vw 0;
+
+    >div {
+
+        &:first-child {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.556vw;
+
+            p {
+                font-size: 0.972vw;
+                font-weight: 500;
+                line-height: 1.458vw;
+                color: rgba(132, 132, 132, 1);
+            }
+
+            >div {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 2.2vw;
+
+                .date {
+                    display: flex;
+                    flex-direction: row;
+                    gap: 1.25vw;
+                    align-items: center;
+
+                    img {
+                        width: 1.4vw;
+                    }
+                }
+            }
+        }
+
+        &.text {
+            padding-bottom: 0.833vw;
+            border-bottom: 1px solid rgba(208, 208, 208, 1);
+
+            p {
+                font-size: 0.833vw;
+                font-weight: 400;
+                line-height: 1.53vw;
+                color: rgba(154, 154, 154, 1);
+            }
+
+            h3 {
+                font-size: 1.11vw;
+                font-weight: 600;
+                line-height: 1.3542vw;
+                color: rgba(70, 70, 70, 1);
+                margin-bottom: 0.694vw;
+            }
+        }
+
+        &:last-child {
+            display: flex;
+            flex-direction: row;
+            // gap: 2.3264vw;
+            justify-content: space-between;
+            padding-top: 0.83vw;
+        }
+    }
+}

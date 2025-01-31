@@ -1,0 +1,11 @@
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr 3.15fr;
+    grid-template-rows: auto auto; /* или просто auto, чтобы высота строк определялась содержимым */
+    grid-auto-rows: auto;
+  
+    .pages {
+      width: 100%;
+      padding: 0 4.1667vw 0 1.6667vw;
+    }
+  }

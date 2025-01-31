@@ -1,0 +1,34 @@
+.controlsButtons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3.333vw 0 2.222vw 0;
+
+    .counter {
+        display: flex;
+        flex-direction: row;
+        gap: 0.4vw;
+
+        p {
+            font-size: 1.667vw;
+            font-weight: 600;
+            line-height: 2.5vw;
+
+            &:first-child {
+                color: rgba(0, 0, 0, 1);
+            }
+
+            &:last-child {
+                color: rgba(146, 146, 146, 1);
+            }
+        }
+    }
+
+    .buttons {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 2.5vw;
+    }
+}

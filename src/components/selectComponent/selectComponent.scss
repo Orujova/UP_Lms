@@ -1,0 +1,52 @@
+.selectComponent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
+  
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      line-height: 1.2rem;
+      color: rgba(32, 41, 57, 0.9);
+    }
+  
+    .selectWrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+  
+      select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        outline: none;
+        width: 100%;
+        height: 2.5rem; /* Compact height */
+        padding: 0.5rem 1rem; /* Compact padding */
+        padding-right: 2.5rem; /* Space for the dropdown icon */
+        font-size: 0.85rem;
+        font-weight: 400;
+        color: rgba(32, 41, 57, 0.9);
+        background: rgba(255, 255, 255, 1);
+        border: 1px solid rgba(205, 213, 223, 1);
+        border-radius: 0.4rem;
+        transition: border-color 0.3s;
+  
+        &:hover,
+        &:focus {
+          border-color: rgba(5, 141, 102, 1);
+        }
+      }
+  
+      .dropdownIcon {
+        position: absolute;
+        top: 50%;
+        right: 0.8rem; /* Adjust spacing */
+        transform: translateY(-50%);
+        pointer-events: none; /* Prevent interaction with the icon */
+        color: rgba(122, 122, 122, 1);
+      }
+    }
+  }
+  

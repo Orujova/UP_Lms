@@ -1,0 +1,33 @@
+.userList {
+    .listHead {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 1.389vw 0;
+        box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.14);
+
+        >div {
+            display: flex;
+            justify-content: space-between;
+            width: 13.889vw;
+            align-items: center;
+
+            img {
+                width: 1.53vw;
+                height: auto;
+            }
+
+            p {
+                font-family: Montserrat;
+                font-size: 1.11vw;
+                font-weight: 600;
+                line-height: 1.667vw;
+                color: rgba(135, 135, 135, 1);
+            }
+
+            &.edit {
+                width: 1.389vw;
+            }
+        }
+    }
+}

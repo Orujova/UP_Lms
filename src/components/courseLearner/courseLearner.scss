@@ -1,0 +1,61 @@
+.courseLearner {
+
+    >div {
+        display: flex;
+        flex-direction: row;
+        // gap: 1.875vw;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.31944vw;
+
+        >p {
+            font-size: 0.9722vw;
+            line-height: 1.18542vw;
+
+            &:first-child {
+                font-weight: 600;
+                color: rgba(70, 70, 70, 1);
+            }
+
+            &:last-child {
+                font-weight: 500;
+                color: rgba(93, 194, 187, 1);
+            }
+        }
+
+        .learnersImage {
+            display: flex;
+            flex-direction: row;
+
+            img {
+                width: 2.222vw;
+                height: auto;
+                border-radius: 50%;
+
+                &:not(:first-child) {
+                    margin-left: -0.694vw;
+                }
+            }
+
+            >div {
+                margin-left: -0.694vw;
+                width: 2.222vw;
+                height: 2.222vw;
+                font-family: Inter;
+                font-size: 0.833vw;
+                font-weight: 400;
+                line-height: 1.25;
+                letter-spacing: 0.20000000298023224px;
+                border: 1px solid rgba(255, 255, 255, 1);
+                border-radius: 50%;
+                background: rgba(242, 193, 31, 1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: rgba(255, 255, 255, 1);
+            }
+
+        }
+    }
+}

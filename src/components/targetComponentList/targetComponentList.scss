@@ -1,0 +1,49 @@
+.targetComponentList {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2778vw;
+
+    >div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 0 1.11vw;
+        border-bottom: 1px solid rgba(237, 237, 237, 1);
+        position: relative;
+
+        img {
+            position: absolute;
+            right: 1.25vw;
+            top: 1.25vw;
+            width: 1.6667vw;
+            height: 1.6667vw;
+        }
+
+        &:hover:not(.title) {
+            background: rgba(244, 244, 244, 1);
+            cursor: pointer;
+        }
+
+        >div {
+            width: 30%;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            font-size: 1.11vw;
+            font-weight: 600;
+            line-height: 1.6667vw;
+            height: 4.166vw;
+            color: rgba(58, 62, 61, 1);
+        }
+
+        &.title {
+            border-bottom: none;
+
+            >div {
+                height: 4.44vw;
+                color: rgba(135, 135, 135, 1);
+            }
+        }
+    }
+}
