@@ -1,63 +1,80 @@
-.userComponent {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.389vw 0;
-    box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.14);
+.user-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 80px;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
 
-    >div {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 0.694vw;
-        width: 13.889vw;
+  &:hover {
+    background: #f9fafb;
 
-        &.edit {
-            width: 1.389vw;
-        }
-
-        >img {
-            width: 1.389vw;
-            height: auto;
-        }
-
-        >p {
-            font-weight: 400;
-            line-height: 1.389vw;
-            font-family: Montserrat;
-            font-size: 1vw;
-            color: rgba(19, 18, 27, 1);
-            margin-bottom: 0.555vw;
-        }
-
-        &:first-child {
-            gap: 0.555vw;
-
-            img {
-                width: 3.333vw !important;
-                border-radius: 50%;
-            }
-
-
-            .userName {
-                p {
-                    font-weight: 400;
-                    line-height: 1.389vw;
-                    font-family: Montserrat;
-
-                    &.fullName {
-                        font-size: 1vw;
-                        color: rgba(19, 18, 27, 1);
-                        margin-bottom: 0.555vw;
-                    }
-
-                    &.userId {
-                        font-size: 0.972vw;
-                        color: rgba(112, 112, 112, 1);
-                    }
-                }
-            }
-        }
+    .edit-link {
+      opacity: 1;
     }
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f3f4f6;
+    }
+
+    .details {
+      .name {
+        font-weight: 500;
+        color: #111827;
+        margin-bottom: 4px;
+      }
+
+      .id {
+        font-size: 12px;
+        color: #6b7280;
+      }
+    }
+  }
+
+  .contact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #4b5563;
+
+    svg {
+      color: #9ca3af;
+    }
+  }
+
+  .department,
+  .position {
+    display: flex;
+    align-items: center;
+    color: #4b5563;
+  }
+
+  .actions {
+    display: flex;
+    // justify-content: flex-end;
+    align-items: center;
+
+    .edit-link {
+      padding: 8px;
+      border-radius: 6px;
+      color: #6b7280;
+      //   opacity: 0;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: #01dbc8;
+        background: #f3f4f6;
+      }
+    }
+  }
 }

@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        mainGreen: "#058D66",
+        mainGreen: "#0AAC9E",
         mainGreen2: "#007D571F",
         mainBlue: "#0070CC",
         mainBlue2: "#153B42",
@@ -57,6 +57,9 @@ module.exports = {
       flexBasis: {
         "3/16": "calc(100% / (3 / 16))",
         "1/16": "calc(100% / 16)",
+      },
+      fontFamily: {
+        montserrat: ["Montserrat", "sans-serif"],
       },
     },
   },

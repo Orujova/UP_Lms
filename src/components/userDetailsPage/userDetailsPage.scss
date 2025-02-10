@@ -1,41 +1,42 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap");
 .userDetailsPage {
-    padding: 2.8472vw 0 5.903vw 0;
+  padding: 2.8472vw 0 5.903vw 0;
 
-    h3 {
-        font-family: Montserrat;
+  h3 {
+    font-family: "Montserrat";
+    font-size: 1.11vw;
+    font-weight: 700;
+    line-height: 1.3542vw;
+    margin-bottom: 1.666vw;
+  }
+
+  .info {
+    width: 60.555vw;
+    display: flex;
+    flex-direction: row;
+    column-gap: 9.444vw;
+    row-gap: 1.667vw;
+    flex-wrap: wrap;
+    margin-bottom: 2.29167vw;
+
+    > div {
+      min-width: 13.888vw;
+
+      p {
+        font-family: "Montserrat";
         font-size: 1.11vw;
-        font-weight: 700;
+        font-weight: 600;
         line-height: 1.3542vw;
-        margin-bottom: 1.666vw;
-    }
 
-    .info {
-        width: 60.555vw;
-        display: flex;
-        flex-direction: row;
-        column-gap: 9.444vw;
-        row-gap: 1.667vw;
-        flex-wrap: wrap;
-        margin-bottom: 2.29167vw;
-
-        >div {
-            min-width: 13.888vw;
-
-            p {
-                font-family: Montserrat;
-                font-size: 1.11vw;
-                font-weight: 600;
-                line-height: 1.3542vw;
-
-                &:first-child {
-                    color: rgba(133, 133, 133, 1);
-                    margin-bottom: 0.556vw;
-                }
-
-                &:last-child {
-                    color: rgba(28, 28, 28, 1);
-                }
-            }
+        &:first-child {
+          color: rgba(133, 133, 133, 1);
+          margin-bottom: 0.556vw;
         }
+
+        &:last-child {
+          color: rgba(28, 28, 28, 1);
+        }
+      }
     }
+  }
 }

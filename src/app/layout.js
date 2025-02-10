@@ -1,7 +1,7 @@
 import { Montserrat } from "next/font/google";
 import Providers from "@/redux/providers";
 import "./globals.css";
-import Sidebar, { Header } from "@/components/all-menus";
+
 import Wrapper from "@/lib/wrapper";
 import { Toaster } from "sonner";
 import "@/styles/global.scss";

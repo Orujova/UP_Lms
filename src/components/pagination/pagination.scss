@@ -1,34 +1,128 @@
-.pagination {
+// pagination.scss
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 0;
+  user-select: none;
+
+  .pagination-container {
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 0.9722vw;
-    margin-top: 2.777778vw;
+    gap: 8px;
+    background: white;
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 
-    button {
-        padding: 0.5556vw;
-        margin: 0 5px;
-        border: none;
-        background-color: rgba(255, 255, 255, 1);
+    &:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .pagination-numbers {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0 4px;
+    }
+
+    .pagination-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover:not(:disabled) {
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      &:disabled {
+        color: #d1d5db;
+        cursor: not-allowed;
+      }
+
+      &.nav-button,
+      &.jump-button {
+        &:active:not(:disabled) {
+          transform: scale(0.95);
+        }
+      }
+
+      &.jump-button {
+        color: #9ca3af;
+
+        &:hover:not(:disabled) {
+          color: #4b5563;
+        }
+      }
+    }
+
+    .page-number {
+      min-width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #4b5563;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover:not(:disabled) {
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      &.active {
+        background: #01dbc8;
         color: white;
-        cursor: pointer;
-        border: 1px solid rgba(205, 213, 223, 1);
-
-        img {
-            width: 0.694444vw;
-            height: auto;
-        }
-
-        &:disabled {
-            background: rgba(205, 213, 223, 1);
-            cursor: not-allowed;
-        }
-    }
-
-    span {
-        font-size: 0.9722vw;
         font-weight: 600;
-        line-height: 1.38889vw;
-        letter-spacing: 0.10000000149011612px;
+
+        &:hover {
+          background: #00c4b3;
+        }
+      }
     }
+
+    .ellipsis {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      color: #6b7280;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+  }
+}
+
+// Responsive styles
+@media (max-width: 640px) {
+  .pagination-wrapper {
+    .pagination-container {
+      padding: 4px;
+      gap: 4px;
+
+      .pagination-button,
+      .page-number {
+        width: 32px;
+        height: 32px;
+      }
+
+      .jump-button {
+        display: none;
+      }
+    }
+  }
 }

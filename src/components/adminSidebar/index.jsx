@@ -31,10 +31,10 @@ import "./adminSidebar.scss";
 const AdminSidebar = () => {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState({
-    dashboard: false,
-    learning: false,
-    communications: false,
-    settings: false,
+    dashboard: true,
+    learning: true,
+    communications: true,
+    settings: true,
   });
 
   const toggleMenu = (menu) => {
@@ -47,16 +47,14 @@ const AdminSidebar = () => {
       <Link
         href={href}
         className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-          indent ? "ml-4 pl-4 border-l border-gray-200" : ""
+          indent ? "ml-4 pl-4 " : ""
         } ${
-          isActive
-            ? "bg-emerald-50 text-emerald-600"
-            : "text-gray-600 hover:bg-gray-100"
+          isActive ? " text-[#127D74]" : "text-[#808080] hover:bg-gray-100/80"
         }`}
       >
         <Icon
           size={20}
-          className={isActive ? "text-emerald-600" : "text-gray-500"}
+          className={isActive ? "text-[#127D74]" : "text-gray-500"}
         />
         <span className={`text-sm ${isActive ? "font-medium" : ""}`}>
           {label}
@@ -66,19 +64,19 @@ const AdminSidebar = () => {
   };
 
   const MenuDropdown = ({ title, icon: Icon, isOpen, onToggle, children }) => (
-    <div>
+    <div className="relative">
       <div
-        className={`px-4 py-2 rounded-lg cursor-pointer flex items-center justify-between ${
+        className={`px-4 py-3 rounded-lg cursor-pointer flex items-center justify-between transition-all duration-200 ${
           isOpen
-            ? "bg-emerald-50 text-emerald-600"
-            : "text-gray-600 hover:bg-gray-100"
+            ? "bg-[#01DBC8]/10 text-[#127D74]"
+            : "text-gray-700 hover:bg-gray-100/80"
         }`}
         onClick={onToggle}
       >
-        <div className="flex items-center space-x-3 ">
+        <div className="flex items-center space-x-3">
           <Icon
             size={20}
-            className={isOpen ? "text-emerald-600" : "text-gray-500"}
+            className={isOpen ? "text-[#127D74]" : "text-gray-500"}
           />
           <span className={`text-sm ${isOpen ? "font-medium" : ""}`}>
             {title}
@@ -86,16 +84,19 @@ const AdminSidebar = () => {
         </div>
         <ChevronDown
           size={16}
-          className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          } ${isOpen ? "text-[#127D74]" : "text-gray-400"}`}
         />
       </div>
-      {isOpen && children}
+      {isOpen && <div className="mt-1">{children}</div>}
     </div>
   );
 
   return (
-    <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col sticky top-0 shadow-sm">
-      <div className="p-6">
+    <div className="w-80 bg-white h-screen border-r border-gray-200 flex flex-col sticky top-0 shadow-sm">
+      <div className="p-6 py-6">
+        {/* <div className="p-6 border-b border-gray-200/80 py-3"> */}
         <Link
           href="/admin/dashboard"
           className="flex items-center justify-center"
@@ -103,14 +104,10 @@ const AdminSidebar = () => {
           <Image
             src={logo}
             alt="Logo"
-            width={100}
-            height={80}
+            width={140}
+            height={90}
             className="rounded"
           />
-          {/* <h1>
-            {" "}
-            |<span> LMS</span>
-          </h1> */}
         </Link>
       </div>
 
@@ -226,30 +223,6 @@ const AdminSidebar = () => {
               />
             </div>
           </MenuDropdown>
-
-          {/* Data Collection */}
-          {/* <MenuDropdown
-            title="Data Collection"
-            icon={ClipboardList}
-            isOpen={openMenus.dataCollection}
-            onToggle={() => toggleMenu("dataCollection")}
-          >
-            <div className="space-y-1">
-              <NavLink
-                href="/admin/dashboard/survey"
-                icon={ClipboardList}
-                label="Survey"
-                indent
-              />
-              <NavLink
-                href="/admin/dashboard/form"
-                icon={FileText}
-                label="Form"
-                indent
-              />
-            
-            </div>
-          </MenuDropdown> */}
 
           {/* Settings */}
           <MenuDropdown

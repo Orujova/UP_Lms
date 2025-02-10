@@ -1,10 +1,13 @@
 .dashboard {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  background-color: #f9fafb;
 
-    .pages {
-        width: 81vw;
-        padding: 0 4.1667vw 0 1.6667vw;
-    }
+  .pages {
+    width: 81vw;
+    // padding: 0 4.1667vw 0 1.6667vw;
+    // padding: 3.5vw 1.6667vw 0 1.6667vw;
+    padding: 5vw 4.1667vw 0 1.6667vw;
+  }
 }

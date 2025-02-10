@@ -1,48 +1,59 @@
-import Image from 'next/image'
-import UserComponent from '../userComponent'
+import { useEffect } from "react";
+import { ArrowUpDown } from "lucide-react";
+import UserComponent from "../userComponent";
+import "./userList.scss";
 
-//image
-import sort from '@/images/sort.svg'
-import test from '@/images/Frame 427320675.svg'
+export default function UserList({ adminApplicationUser }) {
+  useEffect(() => {
+    const tableHeader = document.querySelector(".table-header");
+    const tableBody = document.querySelector(".table-body");
 
-//style
-import './userList.scss'
+    const handleScroll = () => {
+      if (tableBody?.scrollTop > 0) {
+        tableHeader?.classList.add("scrolled");
+      } else {
+        tableHeader?.classList.remove("scrolled");
+      }
+    };
 
-export default function UserList({adminApplicationUser}) {
-    
-    return (
-        <div className='userList'>
-            <div className='listHead'>
-                <div className=''>
-                    <p>
-                        Full name
-                    </p>
-                    <Image src={sort} alt={'sort'} />
-                </div>
-                <div className=''>
-                    <p>
-                        Contact
-                    </p>
-                </div>
-                <div className=''>
-                    <p>
-                        Department
-                    </p>
-                    <Image src={sort} alt={'sort'} />
-                </div>
-                <div className=''>
-                    <p>
-                        Position
-                    </p>
-                    <Image src={sort} alt={'sort'} />
-                </div>
-                <div className='edit'></div>
-            </div>
-            {adminApplicationUser.appUsers?.map(user => {
-                return (
-                    <UserComponent img={test} fullName={`${user.firstName} ${user.lastName}`} id={user.id} phone={user.phoneNumber} department={user.department.name} position={user.position.name} />
-                )
-            })}
-        </div>
-    )
+    tableBody?.addEventListener("scroll", handleScroll);
+    return () => tableBody?.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const columns = [
+    { key: "fullName", label: "Full name", sortable: true },
+    { key: "contact", label: "Contact", sortable: false },
+    { key: "department", label: "Department", sortable: true },
+    { key: "position", label: "Position", sortable: true },
+    { key: "action", label: "Action", sortable: false },
+  ];
+
+  return (
+    <div className="user-list">
+      <div className="table-header">
+        {columns.map((column) => (
+          <div key={column.key} className={`column ${column.key}`}>
+            <span>{column.label}</span>
+            {column.sortable && <ArrowUpDown className="sort-icon" size={16} />}
+          </div>
+        ))}
+      </div>
+
+      <div className="table-body">
+        {adminApplicationUser.appUsers?.map((user) => (
+          <UserComponent
+            key={user.id}
+            img={user.imageUrl || "/placeholder.jpg"}
+            fullName={`${user.firstName} ${user.lastName}`}
+            id={user.id}
+            phone={user.phoneNumber}
+            department={user.department.name}
+            position={user.position.name}
+          />
+        ))}
+        {/* Scroll fade effect element */}
+        {/* <div className="scroll-fade" /> */}
+      </div>
+    </div>
+  );
 }

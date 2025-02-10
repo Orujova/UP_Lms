@@ -1,34 +1,66 @@
-.controlsButtons {
+.controls-header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  // margin-top: 20px;
+
+  .stats {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 3.333vw 0 2.222vw 0;
+    align-items: baseline;
+    gap: 8px;
 
-    .counter {
-        display: flex;
-        flex-direction: row;
-        gap: 0.4vw;
+    h2 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #111827;
+    }
 
-        p {
-            font-size: 1.667vw;
-            font-weight: 600;
-            line-height: 2.5vw;
+    span {
+      font-size: 16px;
+      color: #6b7280;
+    }
+  }
 
-            &:first-child {
-                color: rgba(0, 0, 0, 1);
-            }
+  .actions {
+    display: flex;
+    gap: 12px;
 
-            &:last-child {
-                color: rgba(146, 146, 146, 1);
-            }
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &-primary {
+        background: #0aac9e;
+        color: white;
+        border: none;
+
+        &:hover {
+          background: #00c4b3;
         }
-    }
+      }
 
-    .buttons {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 2.5vw;
+      &-secondary {
+        border: 1px solid #e5e7eb;
+        color: #4b5563;
+        background: white;
+
+        &:hover {
+          background: #f9fafb;
+          border-color: #d1d5db;
+        }
+      }
     }
+  }
 }

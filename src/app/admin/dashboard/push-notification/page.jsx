@@ -21,7 +21,15 @@ export default function Page() {
   });
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
 
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    const Useridd = Number(storedUserId);
+    if (storedUserId) {
+      setUserId(Useridd);
+    }
+  }, []);
   const targetGroups =
     useSelector((state) => state.getAllTargetGroups.data?.[0]?.targetGroups) ||
     [];
@@ -84,9 +92,9 @@ export default function Page() {
   }, [dispatch]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        {/* Header */}
+    <div className="bg-gray-50 py-8">
+      <div className=" mx-auto px-4">
+        {/* Headermax-w-4xl */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Send Push Notification
@@ -97,7 +105,7 @@ export default function Page() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Title Field */}
             <div className="space-y-2">
@@ -105,23 +113,21 @@ export default function Page() {
                 Notification Title
               </label>
               <div className="relative">
-                <div className="relative">
-                  <div className="absolute inset-y-0  flex items-center left-3 bottom-4 pointer-events-none">
-                    <Bell className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    placeholder="Enter notification title"
-                    maxLength={50}
-                    required
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                  <div className="mt-1 text-xs text-gray-500 flex justify-end">
-                    {formData.title.length}/50 characters
-                  </div>
+                <div className="absolute inset-y-4 bottom-8 left-3 flex items-center pointer-events-none">
+                  <Bell className="h-5 w-5 text-[#01DBC8]" />
+                </div>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="Enter notification title"
+                  maxLength={50}
+                  required
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#01DBC8] focus:border-transparent hover:border-[#01DBC8] transition-colors"
+                />
+                <div className="mt-1 text-xs text-gray-500 flex justify-end">
+                  {formData.title.length}/50 characters
                 </div>
               </div>
             </div>
@@ -140,7 +146,7 @@ export default function Page() {
                   maxLength={150}
                   required
                   rows={4}
-                  className="block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="block w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#01DBC8] focus:border-transparent hover:border-[#01DBC8] transition-colors resize-none outline-none"
                 />
                 <div className="mt-1 text-xs text-gray-500 flex justify-end">
                   {formData.body.length}/150 characters
@@ -156,16 +162,13 @@ export default function Page() {
 
             {/* Target Group Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target Group
-              </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Users className="h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Users className="h-5 w-5 text-[#01DBC8]" />
                 </div>
                 <SelectComponent
-                  text="Select target group"
-                  className="block w-full pl-10"
+                  text="Target Group"
+                  className="pl-10"
                   name="targetGroupId"
                   required
                   value={formData.targetGroupId}
@@ -180,8 +183,8 @@ export default function Page() {
               <div
                 className={`flex items-center gap-2 p-4 rounded-lg ${
                   status.type === "error"
-                    ? "bg-red-50 text-red-700 border border-red-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    ? "bg-red-50 text-red-700 border border-red-100"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-100"
                 }`}
               >
                 {status.type === "error" ? (
@@ -197,11 +200,11 @@ export default function Page() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full px-4 py-2 text-white font-medium rounded-lg flex items-center justify-center gap-2
+              className={`w-full px-4 py-3 text-white font-medium rounded-lg flex items-center justify-center gap-2
                 ${
                   isLoading
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                    : "bg-[#0aac9e] hover:bg-[#00c4b3] active:bg-[#00ad9f] transition-colors"
                 }`}
             >
               {isLoading ? (

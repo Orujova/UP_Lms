@@ -1,33 +1,39 @@
-import { ChevronDown } from 'lucide-react';
-import './selectComponent.scss';
+import { ChevronDown } from "lucide-react";
+import "./SelectComponent.scss";
 
 export default function SelectComponent({
   text,
-  className,
-  required,
+  className = "",
+  required = false,
   options = [],
   value,
   onChange,
   name,
+  error,
+  disabled = false,
 }) {
   return (
-    <div className={`selectComponent ${className}`}>
-      <label htmlFor={text}>
-      {required && <span>* </span>}
-      {text}
+    <div className={`selectComponent ${error ? "error" : ""} ${className}`}>
+      <label htmlFor={name}>
+        {required && <span>* </span>}
+        {text}
       </label>
       <div className="selectWrapper">
         <select
+          id={name}
           name={name}
-          id={text}
           required={required}
           value={value}
           onChange={onChange}
+          disabled={disabled}
         >
           <option value="" hidden></option>
           {options.map((option) => {
             const displayName =
-              option.categoryName || option.name || option.roleName || option.genderName;
+              option.categoryName ||
+              option.name ||
+              option.roleName ||
+              option.genderName;
             return (
               <option key={option.id} value={option.id}>
                 {displayName}
@@ -35,8 +41,9 @@ export default function SelectComponent({
             );
           })}
         </select>
-        <ChevronDown className="dropdownIcon" size={16} />
+        <ChevronDown className="dropdownIcon" />
       </div>
+      {error && <span className="errorMessage">{error}</span>}
     </div>
   );
 }

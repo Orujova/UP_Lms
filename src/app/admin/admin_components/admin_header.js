@@ -1,141 +1,227 @@
-"use client";
+// "use client";
+// import { useEffect, useState } from "react";
+// import { useRouter } from "next/navigation";
+// import { toast } from "sonner";
+// import { getToken, removeToken, getParsedToken } from "@/authtoken/auth.js";
 
-import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
-import { getToken, removeToken, getParsedToken } from "@/authtoken/auth.js";
+// import SearchBar from "./SearchBar";
+// import AddButton from "./AddButton";
+// import NotificationBell from "./NotificationBell";
+// import UserProfile from "./UserProfile";
+
+// export default function AdminHeader() {
+//   const [userData, setUserData] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [notifications, setNotifications] = useState([]);
+//   const [unreadCount, setUnreadCount] = useState(0);
+//   const router = useRouter();
+//   const token = getToken();
+
+//   useEffect(() => {
+//     const fetchUserData = async () => {
+//       try {
+//         const parsedToken = getParsedToken();
+//         if (!token || !parsedToken?.UserID) {
+//           throw new Error("Authorization token is missing or invalid.");
+//         }
+
+//         const response = await fetch(
+//           `https://bravoadmin.uplms.org/api/AdminApplicationUser/${parsedToken.UserID}`,
+//           {
+//             headers: {
+//               accept: "application/json",
+//               Authorization: `Bearer ${token}`,
+//             },
+//           }
+//         );
+//         if (!response.ok) throw new Error("Failed to fetch user data");
+
+//         const data = await response.json();
+//         setUserData(data);
+//       } catch (error) {
+//         console.error("Error:", error);
+//         setError("Failed to load user data.");
+//         toast.error("Failed to load user data.");
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchUserData();
+//   }, []);
+
+//   useEffect(() => {
+//     const fetchNotifications = async () => {
+//       try {
+//         const userId = localStorage.getItem("userId");
+//         if (!userId) return;
+
+//         const response = await fetch(
+//           `https://bravoadmin.uplms.org/api/Notification/getAllUserNotifications?UserId=${userId}`,
+//           {
+//             headers: {
+//               accept: "application/json",
+//               Authorization: `Bearer ${token}`,
+//             },
+//           }
+//         );
+//         const data = await response.json();
+
+//         setNotifications(data[0].userNotifications || []);
+//         setUnreadCount(data[0].unreadNotificationCount || 0);
+//       } catch (error) {
+//         console.error("Error fetching notifications:", error);
+//       }
+//     };
+
+//     fetchNotifications();
+//     const interval = setInterval(fetchNotifications, 30000);
+//     return () => clearInterval(interval);
+//   }, []);
+
+//   const handleLogout = () => {
+//     removeToken();
+//     localStorage.removeItem("userId");
+//     toast.success("Logged out successfully.");
+//     router.push("/admin/login");
+//   };
+
+//   const markAsRead = async (notificationId) => {
+//     try {
+//       const response = await fetch(
+//         "https://bravoadmin.uplms.org/api/Notification/updateReadStatus",
+//         {
+//           method: "PATCH",
+//           headers: {
+//             "Content-Type": "application/json",
+
+//             Authorization: `Bearer ${token}`,
+//           },
+//           body: JSON.stringify({
+//             notificationId,
+//             isRead: true,
+//           }),
+//         }
+//       );
+
+//       if (response.ok) {
+//         setNotifications(
+//           notifications.map((notif) =>
+//             notif.id === notificationId ? { ...notif, isRead: true } : notif
+//           )
+//         );
+//         setUnreadCount((prev) => Math.max(0, prev - 1));
+//       }
+//     } catch (error) {
+//       console.error("Error marking notification as read:", error);
+//     }
+//   };
+
+//   if (loading) return <div className="w-full h-16 bg-gray-100 animate-pulse" />;
+//   if (error) return <div className="text-red-500 p-4">{error}</div>;
+
+//   return (
+//     <div className="fixed top-0 right-0 left-[20rem] z-50">
+//       <div className="border-b bg-white shadow-sm px-[4.1667vw] pr-[6vw] py-[1.5rem]">
+//         <div className="flex items-center justify-between">
+//           <SearchBar />
+
+//           <div className="flex items-center gap-4">
+//             <AddButton />
+//             <NotificationBell
+//               notifications={notifications}
+//               unreadCount={unreadCount}
+//               onMarkAsRead={markAsRead}
+//             />
+//             <UserProfile userData={userData} onLogout={handleLogout} />
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// AdminHeader.js
+"use client";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, Bell, LogOut, Plus } from "lucide-react"; // Import Lucide icons
+import { useSelector, useDispatch } from "react-redux";
+import { removeToken, getParsedToken } from "@/authtoken/auth.js";
+import { fetchUser } from "@/redux/user/userSlice";
+import {
+  fetchNotificationsData,
+  markNotificationAsRead,
+} from "@/redux/notification/notification";
 
-//image
-import noPP from '@/images/noPP.png';
+import SearchBar from "./SearchBar";
+import AddButton from "./AddButton";
+import NotificationBell from "./NotificationBell";
+import UserProfile from "./UserProfile";
 
 export default function AdminHeader() {
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null); // Reference for dropdown
   const router = useRouter();
+  const dispatch = useDispatch();
+
+  const {
+    data: userData,
+    status: userStatus,
+    error: userError,
+  } = useSelector((state) => state.user);
+
+  const {
+    data: notifications,
+    unreadCount,
+    status: notificationStatus,
+    error: notificationError,
+  } = useSelector((state) => state.notification);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const token = getToken();
-        const parsedToken = getParsedToken();
-        if (!token || !parsedToken?.UserID) {
-          throw new Error("Authorization token is missing or invalid. Please log in again.");
-        }
+    const parsedToken = getParsedToken();
+    if (!parsedToken?.UserID) {
+      toast.error("Authorization token is missing or invalid.");
+      return;
+    }
 
-        const response = await fetch(`https://bravoadmin.uplms.org/api/AdminApplicationUser/${parsedToken.UserID}`, {
-          headers: {
-            "accept": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data");
-        }
-
-        const data = await response.json();
-
-        setUserData(data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setError("Failed to load user data.");
-        toast.error("Failed to load user data."); // Show error notification
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    dispatch(fetchUser(parsedToken.UserID));
+    dispatch(fetchNotificationsData(parsedToken.UserID));
+  }, [dispatch]);
 
   const handleLogout = () => {
-    removeToken(); // Clear the authentication token
-    toast.success("Logged out successfully."); // Show success notification
-    router.push("/admin/login"); // Redirect to the login page
+    removeToken();
+    localStorage.removeItem("userId");
+    toast.success("Logged out successfully.");
+    router.push("/admin/login");
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  const handleMarkAsRead = (notificationId) => {
+    dispatch(markNotificationAsRead({ notificationId, isRead: true }));
+  };
+
+  if (userStatus === "loading" || notificationStatus === "loading") {
+    return <div className="w-full h-16 bg-gray-100 animate-pulse" />;
+  }
+  if (userError || notificationError) {
+    return (
+      <div className="text-red-500 p-4">{userError || notificationError}</div>
+    );
+  }
 
   return (
-    <div className="fixed-header">
-      <div className="top-0 w-fully border-b-2 px-5 py-3 flex items-center justify-between bg-white">
-        {/* Search Section */}
-        <div className="flex justify-start items-center gap-4">
-          <Search className="w-6 h-6 text-black" />
-          <input
-            type="search"
-            placeholder="Search anything here..."
-            className="text-sm outline-0 placeholder-gray-500 focus:ring-0"
-          />
-        </div>
+    <div className="fixed top-0 right-0 left-[20rem] z-50">
+      <div className="border-b bg-white shadow-sm px-[4.1667vw] pr-[6vw] py-[1.5rem]">
+        <div className="flex items-center justify-between">
+          <SearchBar />
 
-        {/* Action Section */}
-        <div className="flex items-center justify-end gap-4">
-          {/* Add Button */}
-          <button className="flex items-center justify-center bg-mainGreen w-[36px] h-[36px] rounded-sm">
-            <Plus className="w-5 h-5 text-white" />
-          </button>
-
-          {/* Notifications */}
-          <div className="flex items-center justify-center border-2 border-gray-300 w-[36px] h-[36px] rounded-sm">
-            <Bell className="w-5 h-5 text-gray-600" />
-          </div>
-
-          {/* User Section with Dropdown */}
-          <div className="flex items-center gap-4 relative" ref={dropdownRef}>
-            {userData?.email && (
-              <>
-                <Image
-                  src={`https://bravoadmin.uplms.org/uploads/${userData?.imageUrl.replace(
-                        "https://100.42.179.27:7198/",
-                        ""
-                      )}` || noPP}
-                  width={44}
-                  height={44}
-                  className="rounded-full cursor-pointer"
-                  alt="User Profile"
-                  onClick={() => setDropdownOpen((prev) => !prev)} // Toggle dropdown
-                />
-                <div className="flex flex-col">
-                  <h1 className="text-sm font-bold">{userData?.firstName || "User"}</h1>
-                  <span className="text-xs font-bold text-gray-500">
-                    {userData?.roleId === 0 ? "Admin" : "User"}
-                  </span>
-                </div>
-              </>
-            )}
-            {/* Logout Dropdown */}
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg border z-50">
-                <ul className="text-sm text-gray-700">
-                  <li
-                    className="px-4 py-2 flex items-center gap-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="w-4 h-4 text-red-500" /> Logout
-                  </li>
-                </ul>
-              </div>
-            )}
+          <div className="flex items-center gap-4">
+            <AddButton />
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkAsRead={handleMarkAsRead}
+            />
+            <UserProfile userData={userData} onLogout={handleLogout} />
           </div>
         </div>
       </div>

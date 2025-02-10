@@ -1,11 +1,11 @@
-// targetGroups.scss
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap");
 
 .targetGroups {
   position: relative;
   min-height: 100vh; // Make sure the container takes the full height
 
   h3 {
-    font-family: Lato;
+    font-family: "Montserrat";
     font-size: 1.667vw;
     font-weight: 600;
     line-height: 2.5vw;

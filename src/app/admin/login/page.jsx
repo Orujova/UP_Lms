@@ -144,7 +144,7 @@ export default function Page() {
                     This is a hint text to help user
                   </span>{" "} */}
                   <Link
-                    href="/admin/login/forget-password"
+                    href="/admin/login/forget"
                     className="text-12 font-medium text-mainBlue"
                   >
                     Forget password?

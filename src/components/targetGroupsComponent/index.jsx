@@ -1,122 +1,276 @@
-import { useState } from 'react';
-import { ChevronDown, Users, ClipboardList } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  ChevronDown,
+  Users,
+  Search,
+  Filter,
+  Phone,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-export default function TargetGroupsComponent({ data = [] }) {
-    const [expandedGroup, setExpandedGroup] = useState(null);
-    const [userDetails, setUserDetails] = useState({});
-
-    const handleToggle = async (groupId) => {
-        if (expandedGroup === groupId) {
-            setExpandedGroup(null);
-        } else {
-            setExpandedGroup(groupId);
-            if (!userDetails[groupId]) {
-                await fetchUserDetails(groupId);
-            }
-        }
-    };
-
-    const fetchUserDetails = async (groupId) => {
-        try {
-            const response = await fetch(
-                `https://bravoadmin.uplms.org/api/TargetGroup/GetFilteredUsersByTargetGroupId?Page=1&TargetGroupId=${groupId}`,
-                {
-                    method: 'GET',
-                    headers: { accept: '*/*' },
-                }
-            );
-
-            if (!response.ok) throw new Error(`Failed to fetch data. Status: ${response.status}`);
-
-            const data = await response.json();
-            setUserDetails((prev) => ({
-                ...prev,
-                [groupId]: data?.[0]?.appUsers || []
-            }));
-        } catch (error) {
-            console.error(`Failed to fetch user details for group ${groupId}:`, error);
-        }
-    };
-
-    return (
-        <div className="w-full bg-white rounded-lg p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Target Groups</h2>
-
+// User Card Component
+const UserCard = ({ user }) => (
+  <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
+    <div className="flex items-start gap-3">
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-gray-800 truncate mb-2">
+          {user.firstName} {user.lastName}
+        </h3>
+        <div className="space-y-2">
+          <div className="flex justify-between  text-sm text-gray-600">
+            <div className="flex items-center">
+              <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="truncate ">{user.phoneNumber || "N/A"}</span>
             </div>
-
-            {/* Table Header */}
-            <div className="grid grid-cols-3 gap-4 px-6 py-3 bg-gray-50 rounded-t-lg font-semibold text-gray-600">
-                <div>Group Name</div>
-                <div>Number of Users</div>
-                <div className="text-right">Actions</div>
+            <div className="flex items-center">
+              <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="truncate">{user.departmentName || "N/A"}</span>
             </div>
+          </div>
 
-            {/* Group List */}
-            <div className="divide-y divide-gray-100">
-                {Array.isArray(data) && data.length > 0 ? (
-                    data.map((target, index) => (
-                        <div key={index} className="transition-all duration-200">
-                            {/* Group Row */}
-                            <div className="grid grid-cols-3 gap-4 px-6 py-4 hover:bg-gray-50 items-center">
-                                <div className="font-medium text-gray-800">{target.name || 'Unnamed Group'}</div>
-                                <div className="flex items-center gap-2">
-                                    <ClipboardList className="w-4 h-4 text-gray-400" />
-                                    <span className="text-gray-600">{target.userCount || 0}</span>
-                                </div>
-                                <div className="text-right">
-                                    <button
-                                        onClick={() => handleToggle(target.id)}
-                                        className="inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100"
-                                    >
-                                        <ChevronDown
-                                            className={`w-5 h-5 text-gray-500 transition-transform duration-200 
-                                            ${expandedGroup === target.id ? 'transform rotate-180' : ''}`}
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* User Details Section */}
-                            {expandedGroup === target.id && (
-                                <div className="bg-gray-50 px-6 py-4 rounded-lg mb-4">
-                                    <div className="grid grid-cols-4 gap-4 mb-3 text-sm font-semibold text-gray-600">
-                                        <div>Name</div>
-                                        <div>Phone</div>
-                                        <div>Department</div>
-                                        <div>Position</div>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        {userDetails[target.id]?.length > 0 ? (
-                                            userDetails[target.id].map((user) => (
-                                                <div key={user.id} 
-                                                    className="grid grid-cols-4 gap-4 px-4 py-2 bg-white rounded-lg text-sm">
-                                                    <div className="font-medium text-gray-800">
-                                                        {user.firstName} {user.lastName}
-                                                    </div>
-                                                    <div className="text-gray-600">{user.phoneNumber}</div>
-                                                    <div className="text-gray-600">{user.departmentName}</div>
-                                                    <div className="text-gray-600">{user.positionName}</div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="text-center py-4 text-gray-500">
-                                                No users found for this group.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))
-                ) : (
-                    <div className="text-center py-8 text-gray-500">
-                        No target groups available
-                    </div>
-                )}
-            </div>
+          <div className="mt-2">
+            <span className="inline-block px-3 py-2 text-xs font-medium text-[#0AAC9E] bg-[#f9f9f9] rounded-full text-center">
+              {user.positionName || "N/A"}
+            </span>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Users Grid with Pagination
+const UsersGrid = ({ users = [] }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 8;
+  const totalPages = Math.ceil(users.length / usersPerPage);
+
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const PaginationButton = ({ onClick, disabled, children }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center justify-center w-8 h-8 rounded-md 
+        ${
+          disabled
+            ? "text-gray-300 cursor-not-allowed"
+            : "text-gray-700 hover:bg-gray-100"
+        }`}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {currentUsers.map((user) => (
+          <UserCard key={user.id} user={user} />
+        ))}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 pt-4">
+          <PaginationButton
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </PaginationButton>
+
+          <div className="flex items-center gap-1">
+            {[...Array(totalPages)].map((_, idx) => (
+              <button
+                key={idx + 1}
+                onClick={() => paginate(idx + 1)}
+                className={`w-8 h-8 rounded-md text-sm font-medium transition-colors
+                  ${
+                    currentPage === idx + 1
+                      ? "bg-[#ecfcfb] text-[#0AAC9E]"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+              >
+                {idx + 1}
+              </button>
+            ))}
+          </div>
+
+          <PaginationButton
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </PaginationButton>
+        </div>
+      )}
+      {/* 
+      <div className="text-center text-sm text-gray-500">
+        Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, users.length)}{" "}
+        of {users.length} users
+      </div> */}
+    </div>
+  );
+};
+
+// Main Target Groups Component
+export default function TargetGroupsComponent({ data = [] }) {
+  const [expandedGroup, setExpandedGroup] = useState(null);
+  const [userDetails, setUserDetails] = useState({});
+  const [loading, setLoading] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredData, setFilteredData] = useState(data);
+
+  useEffect(() => {
+    setFilteredData(
+      data.filter((group) =>
+        group.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     );
+  }, [searchTerm, data]);
+
+  const handleToggle = async (groupId) => {
+    if (expandedGroup === groupId) {
+      setExpandedGroup(null);
+    } else {
+      setExpandedGroup(groupId);
+      if (!userDetails[groupId]) {
+        await fetchUserDetails(groupId);
+      }
+    }
+  };
+
+  const fetchUserDetails = async (groupId) => {
+    setLoading((prev) => ({ ...prev, [groupId]: true }));
+    try {
+      const response = await fetch(
+        `https://bravoadmin.uplms.org/api/TargetGroup/GetFilteredUsersByTargetGroupId?Page=1&TargetGroupId=${groupId}`,
+        {
+          method: "GET",
+          headers: { accept: "*/*" },
+        }
+      );
+
+      if (!response.ok)
+        throw new Error(`Failed to fetch data. Status: ${response.status}`);
+      const data = await response.json();
+      setUserDetails((prev) => ({
+        ...prev,
+        [groupId]: data?.[0]?.appUsers || [],
+      }));
+    } catch (error) {
+      console.error(
+        `Failed to fetch user details for group ${groupId}:`,
+        error
+      );
+      setUserDetails((prev) => ({
+        ...prev,
+        [groupId]: { error: true },
+      }));
+    } finally {
+      setLoading((prev) => ({ ...prev, [groupId]: false }));
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-900">Target Groups</h2>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search groups..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-1 focus:ring-[#01DBC8] focus:border-transparent"
+              />
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <Filter className="w-5 h-5" />
+              <span>Filter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Table Header */}
+      <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+        <div className="col-span-6">Group Name</div>
+        <div className="col-span-4">Members</div>
+        <div className="col-span-2 flex justify-end">Actions</div>
+      </div>
+
+      {/* Groups List */}
+      <div className="divide-y divide-gray-200">
+        {filteredData.length > 0 ? (
+          filteredData.map((group) => (
+            <div key={group.id || group.name}>
+              <div className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div className="col-span-6 font-medium text-gray-900">
+                  {group.name || "Unnamed Group"}
+                </div>
+                <div className="col-span-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-[#ecfcfb] rounded">
+                      <Users className="w-4 h-4 text-[#0AAC9E]" />
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      {group.userCount || 0} members
+                    </span>
+                  </div>
+                </div>
+                <div className="col-span-2 flex justify-end">
+                  <button
+                    onClick={() => handleToggle(group.id)}
+                    className={`p-2 rounded-md hover:bg-gray-100 transition-colors
+                      ${expandedGroup === group.id ? "bg-gray-100" : ""}`}
+                  >
+                    <ChevronDown
+                      className={`w-5 h-5 text-gray-500 transition-transform duration-200
+                        ${
+                          expandedGroup === group.id
+                            ? "transform rotate-180"
+                            : ""
+                        }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Expanded Content */}
+              {expandedGroup === group.id && (
+                <div className="px-6 py-4 bg-gray-50">
+                  {loading[group.id] ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+                    </div>
+                  ) : userDetails[group.id]?.error ? (
+                    <div className="text-center text-red-500 py-8">
+                      Failed to load users. Please try again later.
+                    </div>
+                  ) : (
+                    <UsersGrid users={userDetails[group.id] || []} />
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="text-center text-gray-500 py-8">
+            No target groups found
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

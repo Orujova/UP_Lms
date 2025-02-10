@@ -167,7 +167,7 @@ const FilterPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className=" mx-auto p-6">
       <div className="bg-white shadow-lg rounded-lg">
         <div className="border-b border-gray-200 p-6">
           <h2 className="text-2xl font-bold text-gray-800">
@@ -204,7 +204,7 @@ const FilterPage = () => {
                               className={`px-4 py-2 text-sm font-medium rounded-l-lg border 
                                 ${
                                   group.groupCondition === "AND"
-                                    ? "bg-emerald-600 text-white border-emerald-600"
+                                    ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
                                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                 }`}
                               onClick={() =>
@@ -217,7 +217,7 @@ const FilterPage = () => {
                               className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b
                                 ${
                                   group.groupCondition === "OR"
-                                    ? "bg-emerald-600 text-white border-emerald-600"
+                                    ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
                                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                 }`}
                               onClick={() =>
@@ -241,7 +241,7 @@ const FilterPage = () => {
                             className={`bg-white border rounded-lg p-6 relative
                               ${
                                 snapshot.isDragging
-                                  ? "border-emerald-500 shadow-lg"
+                                  ? "border-[#01DBC8] shadow-lg"
                                   : "border-gray-200"
                               }`}
                           >
@@ -263,7 +263,7 @@ const FilterPage = () => {
                                           className={`px-3 py-2 text-sm font-medium rounded-l-lg border
                                             ${
                                               row.rowCondition === "AND"
-                                                ? "bg-emerald-600 text-white border-emerald-600"
+                                                ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
                                                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                             }`}
                                           onClick={() =>
@@ -280,7 +280,7 @@ const FilterPage = () => {
                                           className={`px-3 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b
                                             ${
                                               row.rowCondition === "OR"
-                                                ? "bg-emerald-600 text-white border-emerald-600"
+                                                ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
                                                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                             }`}
                                           onClick={() =>
@@ -403,7 +403,7 @@ const FilterPage = () => {
                                 <Trash2 size={20} />
                               </button>
                               <button
-                                className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                                className="p-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8] flex items-center gap-2"
                                 onClick={() => addFilterRow(groupIndex)}
                               >
                                 <Plus size={20} />
@@ -423,7 +423,7 @@ const FilterPage = () => {
 
           <div className="mt-8 flex justify-center">
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              className="flex items-center gap-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
               onClick={addFilterGroup}
             >
               <Plus size={20} />
@@ -441,7 +441,7 @@ const FilterPage = () => {
               Cancel
             </button>
             <button
-              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              className="px-6 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
               onClick={handleSave}
             >
               Save

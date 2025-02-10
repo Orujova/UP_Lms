@@ -1,20 +1,23 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap");
 .userTrainingsPage {
-    padding: 2.71vw 0;
+  padding: 2.71vw 0;
 
-    h3 {
-        font-family: Montserrat;
-        font-size: 1.667vw;
-        font-weight: 600;
-        line-height: 2.031944vw;
-        letter-spacing: 0.01em;
-        margin-bottom: 2.22vw;
-    }
+  h3 {
+    font-family: "Montserrat";
+    font-size: 1.667vw;
+    font-weight: 600;
+    line-height: 2.031944vw;
+    letter-spacing: 0.01em;
+    margin-bottom: 2.22vw;
+  }
 
-    .trainingsList {
-        display: grid;
-        grid-template-columns: calc((100% - 3.334vw)/3) calc((100% - 3.334vw)/3) calc((100% - 3.334vw)/3);
-        column-gap: 1.667vw;
-        width: 90%;
-        margin-bottom: 2.778vw;
-    }
+  .trainingsList {
+    display: grid;
+    grid-template-columns: calc((100% - 3.334vw) / 3) calc((100% - 3.334vw) / 3) calc(
+        (100% - 3.334vw) / 3
+      );
+    column-gap: 1.667vw;
+    width: 90%;
+    margin-bottom: 2.778vw;
+  }
 }

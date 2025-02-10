@@ -1,35 +1,77 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { adminApplicationUserAsync } from "@/redux/adminApplicationUser/adminApplicationUser";
 import ControlsButtons from "@/components/controlsButtons";
 import UserList from "@/components/userList";
-import { useSelector } from 'react-redux';
-import { useDispatch } from 'react-redux';
-import { adminApplicationUserAsync } from '@/redux/adminApplicationUser/adminApplicationUser';
-import Pagination from '@/components/pagination';
-
-//style
-import './users.scss';
+import Pagination from "@/components/pagination";
+import "./users.scss";
 
 export default function Page() {
   const dispatch = useDispatch();
-  const adminApplicationUser = useSelector((state) => state.adminApplicationUser.data?.[0]) || [];
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Get data from Redux store
+  const adminApplicationUser =
+    useSelector((state) => state.adminApplicationUser.data?.[0]) || [];
+
+  // Calculate total pages
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(
+    (adminApplicationUser.totalAppUserCount || 0) / itemsPerPage
+  );
 
   useEffect(() => {
-    dispatch(adminApplicationUserAsync(currentPage));  // Fetch data based on the current page
-  }, [dispatch, currentPage]);  // Trigger useEffect when currentPage changes
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        await dispatch(adminApplicationUserAsync(currentPage));
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [dispatch, currentPage]);
 
   const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);  // Update the current page
+    // Scroll to top smoothly when changing pages
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setCurrentPage(newPage);
   };
 
   return (
-    <div className="users">
-      <ControlsButtons count={adminApplicationUser.totalAppUserCount} text={'Users in Total'} link={'/admin/dashboard/users/adduser/manualsetup'} buttonText={'Add User'}/>
-      <UserList adminApplicationUser={adminApplicationUser}/>
-      <Pagination currentPage={currentPage} totalPages={Math.ceil(adminApplicationUser.totalAppUserCount / 20)} onPageChange={handlePageChange} />
+    <div className="users-page">
+      {/* Header Section */}
+      <ControlsButtons
+        count={adminApplicationUser.totalAppUserCount}
+        text="Users in Total"
+        link="/admin/dashboard/users/adduser/manualsetup"
+        buttonText={"Add User"}
+      />
+
+      {/* Main Content */}
+      <div className="content-section">
+        <UserList
+          adminApplicationUser={adminApplicationUser}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Pagination Section */}
+      {totalPages > 1 && (
+        <div className="pagination-section">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

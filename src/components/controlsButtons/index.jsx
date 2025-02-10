@@ -1,26 +1,28 @@
-import AddButton from '../addButton'
-import ExportButton from '../exportButton'
-import FilterComponent from '../filterComponent'
+import { Filter, Download, CirclePlus } from "lucide-react";
+import Link from "next/link";
+import "./controlsButtons.scss";
 
-//style
-import './controlsButtons.scss'
-
-export default function ControlsButtons(props) {
-    return (
-        <div className='controlsButtons'>
-            <div className='counter'>
-                <p>
-                    {props.count}
-                </p>
-                <p>
-                    {props.text}
-                </p>
-            </div>
-            <div className="buttons">
-                <FilterComponent />
-                <AddButton text={props.buttonText} link={props.link}/>
-                <ExportButton text={'Export'}/>
-            </div>
-        </div>
-    )
+export default function ControlsButtons({ count, text, link, buttonText }) {
+  return (
+    <div className="controls-header">
+      <div className="stats">
+        <h2>{count}</h2>
+        <span>{text}</span>
+      </div>
+      <div className="actions">
+        <button className="btn btn-secondary">
+          <Filter size={18} />
+          <span>Filter</span>
+        </button>
+        <Link href={link} className="btn btn-primary">
+          <CirclePlus size={18} />
+          <span>{buttonText}</span>
+        </Link>
+        <button className="btn btn-secondary">
+          <Download size={18} />
+          <span>Export</span>
+        </button>
+      </div>
+    </div>
+  );
 }
