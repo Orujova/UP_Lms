@@ -11,9 +11,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  SortAsc,
+  ChevronDown,
+  SquareArrowOutUpRight,
 } from "lucide-react";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
+
+const SORT_OPTIONS = [
+  { value: "nameasc", label: "Name (A-Z)" },
+  { value: "namedesc", label: "Name (Z-A)" },
+  { value: "dateasc", label: "Date (Oldest)" },
+  { value: "datedesc", label: "Date (Newest)" },
+];
 
 export default function EventList() {
   const [events, setEvents] = useState([]);
@@ -21,17 +31,19 @@ export default function EventList() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [sortOrder, setSortOrder] = useState("nameasc");
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     fetchEvents();
-  }, [currentPage, search]);
+  }, [currentPage, search, sortOrder]);
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Event?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${search}`
+        `https://bravoadmin.uplms.org/api/Event?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${search}&OrderBy=${sortOrder}`
       );
       const data = await response.json();
       setEvents(data[0].events);
@@ -56,6 +68,7 @@ export default function EventList() {
 
       if (response.ok) {
         setEvents((prev) => prev.filter((events) => events.id !== id));
+        fetchEvents();
       } else {
         throw new Error("Failed to delete event.");
       }
@@ -76,32 +89,78 @@ export default function EventList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-t-[#0AAC9E] border-b-[#0AAC9E] rounded-full animate-spin"></div>
+          <p className="mt-2 text-gray-600">Loading event data...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-50 p-2 rounded-md">
-                <Calendar className="w-5 h-5 text-emerald-600" />
+    <div className="min-h-screen bg-gray-50/50 pt-14">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+        <h1 className="text-lg font-bold text-gray-900">Events Management</h1>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="bg-white rounded-xl shadow-sm p-3 md:p-5">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-[#f9f9f9] p-2.5 rounded-lg">
+                <Calendar className="w-4 h-4 text-[#0AAC9E]" />
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-semibold text-gray-900">
+              <div className="flex gap-3">
+                <span className="text-lg font-semibold text-gray-900">
                   {totalCount}
                 </span>
-                <span className="text-gray-500">Events in Total</span>
+                <p className="text-sm text-gray-500">Total Events</p>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
+          <div className="bg-white rounded-xl shadow-sm p-3 md:p-5">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-[#f9f9f9] p-2.5 rounded-lg">
+                <Eye className="w-4 h-4 text-[#0AAC9E]" />
+              </div>
+              <div className="flex gap-3">
+                <span className="text-lg font-semibold text-gray-900">
+                  {events.reduce(
+                    (sum, event) => sum + (event.countDown || 0),
+                    0
+                  )}
+                </span>
+                <p className="text-sm text-gray-500">Total Views</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-3 md:p-5">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-[#f9f9f9] p-2.5 rounded-lg">
+                <Calendar className="w-4 h-4 text-[#0AAC9E]" />
+              </div>
+              <div className="flex gap-3">
+                <span className="text-lg font-semibold text-gray-900">
+                  {
+                    events.filter(
+                      (e) =>
+                        new Date(e.createdDate) >
+                        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                    ).length
+                  }
+                </span>
+                <p className="text-sm text-gray-500">New This Week</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Actions */}
+        <div className="bg-white rounded-xl shadow-sm p-4 md:p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
@@ -111,70 +170,113 @@ export default function EventList() {
                     setSearch(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-9 pr-4 py-2 w-64 rounded-md border border-gray-200 focus:outline-none focus:border-emerald-500 text-sm"
+                  className="pl-9 pr-4 py-2.5 w-full rounded-lg border border-gray-200 focus:outline-none focus:border-[#01DBC8] focus:ring-2 focus:ring-[#01DBC8]/20 text-sm transition-all"
                 />
               </div>
-              <button
-                onClick={() => router.push("/admin/dashboard/events/add")}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md 
-                       flex items-center gap-2 text-sm transition-colors duration-200"
-              >
-                <Plus className="w-4 h-4" />
-                Create New
-              </button>
+
+              {/* Sort Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSortDropdown(!showSortDropdown)}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-[#01DBC8] text-gray-700 hover:text-[#01DBC8] transition-all text-sm whitespace-nowrap"
+                >
+                  <SortAsc className="w-4 h-4" />
+                  <span>Sort by</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showSortDropdown && (
+                  <div className="absolute top-full mt-1 right-0 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10 min-w-[180px]">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortOrder(option.value);
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 text-sm ${
+                          sortOrder === option.value
+                            ? "text-[#0AAC9E] font-medium"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
+            <button
+              onClick={() => router.push("/admin/dashboard/events/add")}
+              className="bg-[#0AAC9E] hover:bg-[#127D74] text-white px-4 py-2.5 rounded-lg
+                     flex items-center justify-center gap-2 text-sm font-medium transition-all
+                     hover:shadow-lg hover:shadow-[#0AAC9E]/20"
+            >
+              <Plus className="w-4 h-4" />
+              Create New Event
+            </button>
           </div>
         </div>
 
-        {/* Events List */}
+        {/* Events Grid */}
         {events.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-8 md:p-10 text-center">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">No events found</p>
+            <p className="text-base font-medium text-gray-900 mb-1">
+              No events found
+            </p>
+            <p className="text-sm text-gray-500">
+              Try adjusting your search or create a new event
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {events.map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <div className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
+                <div className="p-4 md:p-5">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
                       <h2
-                        className="text-base font-semibold text-gray-800 hover:text-emerald-600 cursor-pointer mb-2"
+                        className="text-base font-medium flex items-center text-gray-900 hover:text-[#0AAC9E] cursor-pointer mb-2 truncate"
                         onClick={() =>
                           router.push(`/admin/dashboard/events/${event.id}`)
                         }
                       >
                         {event.subject}
+                        <SquareArrowOutUpRight className="w-3.5 h-3.5 ml-2 cursor-pointer" />
                       </h2>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="flex items-center gap-1.5 text-gray-500 text-sm">
+                          <Calendar className="w-4 h-4" />
                           {formatDate(event.createdDate)}
                         </span>
-                        <span className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">
-                          <Eye className="w-3 h-3" />
-                          {event.countDown || 0}
+                        <span className="flex items-center gap-1.5 bg-[#f0fdfb] text-[#0AAC9E] px-2.5 py-1 rounded-full text-sm">
+                          <Eye className="w-3.5 h-3.5" />
+                          {event.countDown || 0} views
                         </span>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <button
                         onClick={() =>
                           router.push(
                             `/admin/dashboard/events/edit/${event.id}`
                           )
                         }
-                        className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-[#0AAC9E] hover:bg-[#f0fdfb] rounded-md transition-all"
+                        title="Edit event"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => deleteEvent(event.id)}
-                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                        title="Delete event"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -188,14 +290,14 @@ export default function EventList() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-4 gap-1">
+          <div className="flex justify-center items-center gap-1 bg-white rounded-xl shadow-sm p-3">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className={`p-2 rounded-md ${
+              className={`p-2 rounded-md transition-all ${
                 currentPage === 1
                   ? "bg-gray-100 text-gray-400"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  : "bg-white text-gray-700 hover:bg-gray-50 hover:text-[#0AAC9E]"
               }`}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -204,10 +306,10 @@ export default function EventList() {
               <button
                 key={index + 1}
                 onClick={() => setCurrentPage(index + 1)}
-                className={`px-3 py-1 rounded-md text-sm ${
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   currentPage === index + 1
-                    ? "bg-emerald-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    ? "bg-[#0AAC9E] text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 hover:text-[#0AAC9E]"
                 }`}
               >
                 {index + 1}
@@ -218,10 +320,10 @@ export default function EventList() {
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
               }
               disabled={currentPage === totalPages}
-              className={`p-2 rounded-md ${
+              className={`p-2 rounded-md transition-all ${
                 currentPage === totalPages
                   ? "bg-gray-100 text-gray-400"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  : "bg-white text-gray-700 hover:bg-gray-50 hover:text-[#0AAC9E]"
               }`}
             >
               <ChevronRight className="w-4 h-4" />

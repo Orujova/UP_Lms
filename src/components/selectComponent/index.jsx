@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import "./SelectComponent.scss";
+import "./selectComponent.scss";
 
 export default function SelectComponent({
   text,
@@ -15,8 +15,8 @@ export default function SelectComponent({
   return (
     <div className={`selectComponent ${error ? "error" : ""} ${className}`}>
       <label htmlFor={name}>
-        {required && <span>* </span>}
         {text}
+        {required && <span>* </span>}
       </label>
       <div className="selectWrapper">
         <select

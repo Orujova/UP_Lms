@@ -2,6 +2,7 @@
 import { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import UserDropdown from "./UserDropdown";
+import noPP from "@/images/noPP.png";
 
 export default function UserProfile({ userData, onLogout }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,18 +32,18 @@ export default function UserProfile({ userData, onLogout }) {
                   "https://100.42.179.27:7198/",
                   ""
                 )}`
-              : "/api/placeholder/40/40"
+              : noPP
           }
-          width={40}
-          height={40}
+          width={35}
+          height={35}
           className="rounded-lg"
           alt="User Profile"
         />
         <div className="flex flex-col">
-          <span className="text-sm font-medium">
+          <span className="text-xs font-medium">
             {userData?.firstName || "User"}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-[0.6rem] text-gray-500">
             {userData?.roleId === 0 ? "Admin" : "User"}
           </span>
         </div>

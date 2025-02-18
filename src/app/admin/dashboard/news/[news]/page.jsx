@@ -1,41 +1,85 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import dynamic from "next/dynamic";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { getToken, getCookie } from "@/authtoken/auth.js";
-
-//style
-import "./innerNews.scss";
+import {
+  Clock,
+  Eye,
+  ChevronLeft,
+  Edit2,
+  ThumbsUp,
+  MessageCircle,
+  Bookmark,
+  ChevronRight,
+} from "lucide-react";
 
 const PageTextComponent = dynamic(
   () => import("@/components/pageTextComponent"),
   { ssr: false }
 );
 
-export default function Page() {
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date
+    .toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replace(",", "");
+};
+
+const LoadingOverlay = () => (
+  <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+    <div className="relative flex flex-col items-center">
+      <div className="w-12 h-12 relative">
+        <div className="absolute inset-0 border-4 border-[#f9fefe] rounded-full"></div>
+        <div className="absolute inset-0 border-4 border-[#0AAC9E] rounded-full animate-spin border-t-transparent"></div>
+      </div>
+      <div className="mt-4 space-y-1 text-center">
+        <h3 className="text-xs font-semibold text-gray-900">Loading...</h3>
+        <p className="text-gray-400 text-[10px]">
+          Please wait while we fetch your content...
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const ErrorDisplay = ({ error }) => (
+  <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+    <div className="bg-white shadow-2xl rounded-3xl p-12 max-w-lg w-full">
+      <div className="bg-red-100 text-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+        <span className="text-2xl">⚠️</span>
+      </div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-4">
+        Unable to Load Article
+      </h3>
+      <p className="text-gray-600 mb-8">{error}</p>
+      <Link
+        href="/admin/dashboard/news"
+        className="inline-flex items-center gap-3 text-emerald-600 hover:text-emerald-700 font-semibold transition-colors group"
+      >
+        <ChevronLeft className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" />
+        Return to News Feed
+      </Link>
+    </div>
+  </div>
+);
+
+export default function NewsPage() {
   const [newsData, setNewsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isBookmarked, setIsBookmarked] = useState(null);
   const pathname = usePathname();
-
   const newsId = pathname?.split("/").pop();
-  const userId = getCookie("userId") || localStorage.getItem("userId"); // Fetch userId dynamically
-
-  function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date
-      .toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-      .replace(",", "");
-  }
+  const userId = getCookie("userId") || localStorage.getItem("userId");
 
   useEffect(() => {
     if (!newsId || !userId) return;
@@ -76,8 +120,8 @@ export default function Page() {
     fetchNewsData();
   }, [newsId, userId]);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (loading) return <LoadingOverlay />;
+  if (error) return <ErrorDisplay error={error} />;
 
   let jsonObject;
   try {
@@ -88,47 +132,126 @@ export default function Page() {
   }
 
   return (
-    <div className="innerNews">
-      <div className="edit">
-        <p className="id">#{newsData.id}</p>
-        <Link
-          className="button"
-          href={`/admin/dashboard/news/edit/${newsData.id}`}
-        >
-          Edit
-        </Link>
-      </div>
+    <div className="min-h-screen bg-[#F8FAFC]">
+      {/* Hero Image Section */}
+      <div className="h-[65vh] relative">
+        {newsData.newsImages && newsData.newsImages.length > 0 ? (
+          <img
+            src={`https://bravoadmin.uplms.org/uploads/${newsData.newsImages[0].replace(
+              "https://100.42.179.27:7198/",
+              ""
+            )}`}
+            alt="News cover"
+            className="w-full h-full "
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#127D74] to-[#1B4E4A] flex items-center justify-center">
+            <p className="text-white text-xl font-medium">No image available</p>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
-      {newsData.newsImages && newsData.newsImages.length > 0 ? (
-        <img
-          src={`https://bravoadmin.uplms.org/uploads/${newsData.newsImages[0].replace(
-            "https://100.42.179.27:7198/",
-            ""
-          )}`}
-          alt="banner"
-          width={800}
-          height={400}
-          priority
-        />
-      ) : (
-        <p>No photo</p>
-      )}
-
-      <div className="view">
-        <h2>{newsData.subTitle}</h2>
-        <div>
-          <p>{newsData.view} views</p>
-          <p>•</p>
-          <p>{formatDate(newsData.createdDate)}</p>
+        {/* Floating Category Badge */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+          <span className="px-6 py-2 bg-white/90 backdrop-blur-sm text-[#0AAC9E] rounded-full text-sm font-medium shadow-lg">
+            {newsData.subTitle}
+          </span>
         </div>
       </div>
 
-      <div className="info">
-        <h3>{newsData.title}</h3>
-        <div>
-          <PageTextComponent desc={jsonObject} readOnly={true} />
+      {/* Content Section */}
+      <main className="-mt-32 relative z-10 pb-12">
+        <div className="max-w-4xl mx-auto px-4">
+          <article className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-white border-b border-gray-100">
+              <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Link
+                    href="/admin/dashboard"
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    Dashboard
+                  </Link>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <Link
+                    href="/admin/dashboard/news"
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    News
+                  </Link>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <span className="text-[#0AAC9E] font-medium">
+                    Article Details
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="p-7">
+              {/* Title and Actions */}
+              <div className="mb-7">
+                <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-5">
+                  {newsData.title}
+                </h1>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <span className="inline-flex items-center gap-2 text-xs text-gray-500">
+                      <Eye className="w-4 h-4" />
+                      {newsData.view} views
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-xs text-gray-500">
+                      <Clock className="w-4 h-4" />
+                      {formatDate(newsData.createdDate)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setIsBookmarked(!isBookmarked)}
+                      className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+                    >
+                      <Bookmark
+                        className={`w-5 h-5 ${
+                          isBookmarked
+                            ? "fill-[#0AAC9E] text-[#0AAC9E]"
+                            : "text-gray-400"
+                        }`}
+                      />
+                    </button>
+
+                    <Link
+                      href={`/admin/dashboard/news/edit/${newsData.id}`}
+                      className="inline-flex items-center gap-2 text-xs bg-[#0AAC9E] text-white px-4 py-2 rounded-lg hover:bg-[#009688] transition-colors"
+                    >
+                      <Edit2 className="w-4 h-3" />
+                      <span>Edit News</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Engagement Section */}
+              <div className="border-t border-b border-gray-100 py-3 mb-8">
+                <div className="flex items-center gap-6">
+                  <button className="flex items-center gap-2 text-gray-500 hover:text-[#0AAC9E] transition-colors">
+                    <ThumbsUp className="w-5 h-4" />
+                    <span className="text-xs font-medium">123 Likes</span>
+                  </button>
+                  <button className="flex items-center gap-2 text-gray-500 hover:text-[#0AAC9E] transition-colors">
+                    <MessageCircle className="w-5 h-4" />
+                    <span className="text-xs font-medium">24 Comments</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="prose prose-lg max-w-none">
+                <div className="text-gray-700">
+                  <PageTextComponent desc={jsonObject} readOnly={true} />
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

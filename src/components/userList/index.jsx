@@ -3,6 +3,16 @@ import { ArrowUpDown } from "lucide-react";
 import UserComponent from "../userComponent";
 import "./userList.scss";
 
+const BASE_IMAGE_URL = "https://bravoadmin.uplms.org/uploads/";
+
+const formatImageUrl = (imageUrl) => {
+  if (!imageUrl) return "";
+
+  const cleanPath = imageUrl.replace("https://100.42.179.27:7198/", "");
+
+  return `${BASE_IMAGE_URL}${cleanPath}`;
+};
+
 export default function UserList({ adminApplicationUser }) {
   useEffect(() => {
     const tableHeader = document.querySelector(".table-header");
@@ -43,7 +53,7 @@ export default function UserList({ adminApplicationUser }) {
         {adminApplicationUser.appUsers?.map((user) => (
           <UserComponent
             key={user.id}
-            img={user.imageUrl || "/placeholder.jpg"}
+            img={formatImageUrl(user.imageUrl)}
             fullName={`${user.firstName} ${user.lastName}`}
             id={user.id}
             phone={user.phoneNumber}
@@ -51,8 +61,6 @@ export default function UserList({ adminApplicationUser }) {
             position={user.position.name}
           />
         ))}
-        {/* Scroll fade effect element */}
-        {/* <div className="scroll-fade" /> */}
       </div>
     </div>
   );

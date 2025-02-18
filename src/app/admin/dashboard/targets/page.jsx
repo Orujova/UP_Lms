@@ -17,7 +17,7 @@ export default function TargetPage() {
   }, [dispatch]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50/50 pt-14">
       <div className="mx-auto">
         {/* Header Section */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4 leading-tight">
@@ -25,13 +25,15 @@ export default function TargetPage() {
             {/* Counter Section */}
             <div className="flex items-center gap-3">
               <div className="bg-[#e6fbf9] p-2 rounded-md">
-                <Users className="w-5 h-5 text-[#0AAC9E]" />
+                <Users className="w-4 h-4 text-[#0AAC9E]" />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-xl font-semibold text-gray-900">
+                <span className="text-base font-semibold text-gray-900">
                   {targetGroups.totalTargetGroupCount || 0}
                 </span>
-                <span className="text-gray-500">Target Groups in Total</span>
+                <span className="text-gray-500 text-sm">
+                  Target Groups in Total
+                </span>
               </div>
             </div>
 

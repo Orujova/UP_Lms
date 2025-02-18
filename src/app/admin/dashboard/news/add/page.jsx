@@ -25,12 +25,12 @@ const Switch = ({ checked, onCheckedChange }) => {
       role="switch"
       aria-checked={checked}
       onClick={() => onCheckedChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+      className={`relative inline-flex h-5 w-11 items-center rounded-full transition-colors ${
         checked ? "bg-[#0AAC9E]" : "bg-gray-200"
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        className={`inline-block h-3 w-4 transform rounded-full bg-white transition-transform ${
           checked ? "translate-x-6" : "translate-x-1"
         }`}
       />
@@ -52,7 +52,7 @@ const Alert = ({ variant = "default", children }) => {
 };
 
 const AlertDescription = ({ children }) => {
-  return <div className="text-sm">{children}</div>;
+  return <div className="text-xs">{children}</div>;
 };
 
 export default function Page() {
@@ -234,7 +234,7 @@ export default function Page() {
   ];
 
   return (
-    <main className="px-10 py-10 min-h-screen">
+    <main className="pt-14 bg-gray-50/50 min-h-screen">
       {showCropModal && (
         <CropModal
           image={tempImage}
@@ -247,13 +247,12 @@ export default function Page() {
       )}
 
       <div className="flex flex-col gap-10">
-        <h1 className="text-3xl font-semibold text-gray-800">Add News</h1>
+        <h1 className="text-xl font-semibold text-gray-800">Add News</h1>
 
         {isSuccess ? (
           <SuccessComponent link={"/admin/dashboard/news"} title={"News"} />
         ) : (
           <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
-            {/* Image Upload Section */}
             <div className="border-dashed border-2 border-[#0AAC9E] flex justify-center items-center py-16 flex-col gap-4 bg-white rounded-lg">
               {imagePreview ? (
                 <div className="flex flex-col items-center">
@@ -271,17 +270,17 @@ export default function Page() {
                         setFormData((prev) => ({ ...prev, newsImages: null }));
                       }}
                     >
-                      <X className="w-5 h-5 text-gray-600 hover:text-gray-800" />
+                      <X className="w-4 h-4 text-gray-600 hover:text-gray-800" />
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="w-16 h-16 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
-                    <Upload className="w-8 h-8 text-white" />
+                  <div className="w-14 h-14 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
+                    <Upload className="w-7 h-7 text-white" />
                   </div>
                   <div className="font-medium text-gray-700">
-                    <label className="text-[#0AAC9E] hover:text-[#127D74] cursor-pointer">
+                    <label className="text-[#0AAC9E] hover:text-[#127D74] cursor-pointer ">
                       Click to upload
                       <input
                         className="hidden"
@@ -289,10 +288,10 @@ export default function Page() {
                         onChange={handleImageChange}
                         accept="image/jpeg, image/png"
                       />
-                    </label>{" "}
+                    </label>
                     or drag and drop
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-xs text-gray-500 mt-2">
                     Image will be cropped to 16:9 ratio
                   </p>
                 </div>
@@ -346,20 +345,22 @@ export default function Page() {
               />
 
               {/* Notification Toggle */}
-              <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-medium">Push Notification</h3>
-                    <p className="text-sm text-gray-500">
+                    <label className="text-sm font-medium leading-5 text-gray-800/90">
+                      Push Notification
+                    </label>
+                    <p className="text-xs font-normal text-gray-400">
                       Send push notification to users when this news is
                       published
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {formData.hasNotification ? (
-                      <Bell className="w-5 h-5 text-[#0AAC9E]" />
+                      <Bell className="w-4 h-4 text-[#0AAC9E]" />
                     ) : (
-                      <BellOff className="w-5 h-5 text-gray-400" />
+                      <BellOff className="w-4 h-4 text-gray-400" />
                     )}
                     <Switch
                       checked={formData.hasNotification}
@@ -376,10 +377,12 @@ export default function Page() {
 
               {/* Target Group Selection */}
               <div
-                className="bg-white rounded-lg p-6 border border-gray-200"
+                className="bg-white rounded-lg p-4 border border-gray-200"
                 ref={targetGroupRef}
               >
-                <h2 className="text-lg font-medium mb-4">Target Group</h2>
+                <h3 className="text-sm font-medium mb-2 leading-5 text-gray-800/90">
+                  Target Group
+                </h3>
                 <div className="relative">
                   <input
                     type="text"
@@ -390,11 +393,11 @@ export default function Page() {
                       setShowTargetGroupDropdown(true);
                     }}
                     onClick={() => setShowTargetGroupDropdown(true)}
-                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-2 text-[0.85rem] font-normal border rounded-md focus:outline-none focus:border-[#01dbc8]"
                   />
                   <Search
                     className="absolute right-3 top-2.5 text-gray-400"
-                    size={20}
+                    size={18}
                   />
 
                   {showTargetGroupDropdown && (
@@ -439,7 +442,7 @@ export default function Page() {
                   )}
                 </div>
                 {formData.targetGroupId && (
-                  <div className="mt-2 bg-emerald-50 text-[#127D74] px-3 py-2 rounded-lg flex justify-between items-center">
+                  <div className="mt-2 bg-[#f9fefe] text-[#127D74] px-3 py-2 rounded-lg flex justify-between items-center">
                     <span>
                       Selected Target Group ID: {formData.targetGroupId}
                     </span>
@@ -463,7 +466,9 @@ export default function Page() {
               </div>
 
               <div className="descriptionEditor">
-                <label className="block text-lg font-medium mb-4">Body</label>
+                <label className="block text-sm font-medium mb-2 text-gray-800/90">
+                  Body
+                </label>
                 <div>
                   <PageTextComponent
                     onChange={handleDescriptionChange}
@@ -479,11 +484,11 @@ export default function Page() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 items-center justify-end mt-10">
+            <div className="flex gap-4 items-center justify-end ">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-[#0AAC9E] text-white rounded-lg px-6 py-2 font-medium hover:bg-[#127D74] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-[#0AAC9E] text-white text-sm rounded-lg px-5 py-2 font-medium hover:bg-[#127D74] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -496,19 +501,19 @@ export default function Page() {
               </button>
               <button
                 type="button"
-                className="bg-white text-gray-700 rounded-lg px-6 py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
+                className="bg-white text-gray-700 rounded-lg text-sm px-5 py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
               >
                 Schedule
               </button>
               <button
                 type="button"
-                className="bg-white text-gray-700 rounded-lg px-6 py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
+                className="bg-white text-gray-700 rounded-lg px-5 text-sm py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
               >
                 Save as draft
               </button>
               <button
                 type="button"
-                className="bg-white text-gray-700 rounded-lg px-6 py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
+                className="bg-white text-gray-700 rounded-lg px-5 text-sm py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
               >
                 Cancel
               </button>
@@ -583,7 +588,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Crop Image (16:9 ratio)</h3>
+          <h3 className="text-base font-semibold">Crop Image (16:9 ratio)</h3>
           <button
             onClick={onCancel}
             className="text-gray-500 hover:text-gray-700"
@@ -607,7 +612,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
         </div>
 
         <div className="flex items-center gap-4 mb-4">
-          <span className="text-sm text-gray-600">Zoom:</span>
+          <span className="text-xs text-gray-600">Zoom:</span>
           <input
             type="range"
             min={1}
@@ -622,13 +627,13 @@ const CropModal = ({ image, onCancel, onCrop }) => {
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             onClick={createCroppedImage}
-            className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#127D74]"
+            className="px-3 text-sm py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#127D74]"
           >
             Apply Crop
           </button>

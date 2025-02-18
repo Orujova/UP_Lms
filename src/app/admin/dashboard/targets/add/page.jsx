@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import "./target.scss";
 
 //image
-import add from "@/images/plus.svg";
+
 import deleteIcon from "@/images/delete.svg";
 
 const DragDropContext = dynamic(
@@ -106,7 +106,7 @@ const FilterPage = () => {
       const result = await response.json();
       if (!response.ok) {
         toast.success("Filter group saved successfully!");
-        // toast.error(result.message || 'An error occurred during the save operation.');
+
         setTimeout(() => {
           router.push("/admin/dashboard/targets/"); // Replace with your desired path
         }, 1500); // Delay for user to see the success message
@@ -116,9 +116,8 @@ const FilterPage = () => {
 
       toast.success("Filter group saved successfully!");
     } catch (error) {
-      // toast.error('An error occurred. Please try again.');
       toast.success("Filter group saved successfully!");
-      // toast.error(result.message || 'An error occurred during the save operation.');
+
       setTimeout(() => {
         router.push("/admin/dashboard/targets/"); // Replace with your desired path
       }, 1500); // Delay for user to see the success message
@@ -167,14 +166,14 @@ const FilterPage = () => {
   };
 
   return (
-    <div className=" mx-auto p-6">
+    <div className=" min-h-screen bg-gray-50/50 pt-14">
       <div className="bg-white shadow-lg rounded-lg">
-        <div className="border-b border-gray-200 p-6">
-          <h2 className="text-2xl font-bold text-gray-800">
+        <div className="border-b border-gray-200 p-5">
+          <h2 className="text-lg font-bold text-gray-800">
             Create Target Group
           </h2>
         </div>
-        <div className="p-6">
+        <div className="p-5">
           <div className="mb-8">
             <InputComponent
               text="Target Name"
@@ -201,7 +200,7 @@ const FilterPage = () => {
                         <div className="flex justify-center mb-4">
                           <div className="inline-flex rounded-md shadow-sm">
                             <button
-                              className={`px-4 py-2 text-sm font-medium rounded-l-lg border 
+                              className={`px-4 py-1.5 text-xs font-medium rounded-l-lg border 
                                 ${
                                   group.groupCondition === "AND"
                                     ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
@@ -214,7 +213,7 @@ const FilterPage = () => {
                               AND
                             </button>
                             <button
-                              className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b
+                              className={`px-4 py-1.5 text-xs font-medium rounded-r-lg border-t border-r border-b
                                 ${
                                   group.groupCondition === "OR"
                                     ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
@@ -249,7 +248,7 @@ const FilterPage = () => {
                               {...provided.dragHandleProps}
                               className="absolute left-2 top-1/2 -translate-y-1/2 cursor-move text-gray-400 hover:text-gray-600"
                             >
-                              <GripVertical size={20} />
+                              <GripVertical size={18} />
                             </div>
 
                             <div className="space-y-4 pl-8">
@@ -260,7 +259,7 @@ const FilterPage = () => {
                                     <div className="flex justify-center mb-4">
                                       <div className="inline-flex rounded-md shadow-sm">
                                         <button
-                                          className={`px-3 py-2 text-sm font-medium rounded-l-lg border
+                                          className={`px-3 py-1.5 text-xs font-medium rounded-l-lg border
                                             ${
                                               row.rowCondition === "AND"
                                                 ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
@@ -277,7 +276,7 @@ const FilterPage = () => {
                                           AND
                                         </button>
                                         <button
-                                          className={`px-3 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b
+                                          className={`px-3 py-1.5 text-xs font-medium rounded-r-lg border-t border-r border-b
                                             ${
                                               row.rowCondition === "OR"
                                                 ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
@@ -387,7 +386,7 @@ const FilterPage = () => {
                                           removeFilterRow(groupIndex, rowIndex)
                                         }
                                       >
-                                        <Trash2 size={20} />
+                                        <Trash2 size={18} />
                                       </button>
                                     </div>
                                   </div>
@@ -400,14 +399,14 @@ const FilterPage = () => {
                                 className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-100"
                                 onClick={() => removeFilterGroup(groupIndex)}
                               >
-                                <Trash2 size={20} />
+                                <Trash2 size={18} />
                               </button>
                               <button
                                 className="p-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8] flex items-center gap-2"
                                 onClick={() => addFilterRow(groupIndex)}
                               >
-                                <Plus size={20} />
-                                <span>Add Field</span>
+                                <Plus size={18} />
+                                <span className="text-xs">Add Field</span>
                               </button>
                             </div>
                           </div>
@@ -426,14 +425,14 @@ const FilterPage = () => {
               className="flex items-center gap-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
               onClick={addFilterGroup}
             >
-              <Plus size={20} />
-              <span>Add Target Group</span>
+              <Plus size={18} />
+              <span className="text-xs">Add Target Group</span>
             </button>
           </div>
 
           <div className="mt-8 flex justify-end gap-4">
             <button
-              className="px-6 py-2 text-gray-600 hover:text-gray-800"
+              className="px-5 text-s py-2 text-gray-600 hover:text-gray-800"
               onClick={() => {
                 /* handle cancel */
               }}
@@ -441,7 +440,7 @@ const FilterPage = () => {
               Cancel
             </button>
             <button
-              className="px-6 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
+              className="px-5 py-1.5 text-s bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
               onClick={handleSave}
             >
               Save

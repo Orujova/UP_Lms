@@ -1,11 +1,11 @@
 "use client";
 import Image from "next/image";
 import { User, Settings, Mail, HelpCircle, LogOut } from "lucide-react";
-
+import noPP from "@/images/noPP.png";
 export default function UserDropdown({ userData, onLogout, onClose }) {
   return (
-    <div className="absolute right-0 mt-2 w-[20rem] bg-white rounded-lg shadow-lg border overflow-hidden">
-      <div className="p-3 border-b bg-gray-50">
+    <div className="absolute right-0 mt-2 w-[18rem] bg-white rounded-lg shadow-lg border overflow-hidden">
+      <div className="p-2 border-b bg-gray-50">
         <div className="flex items-center gap-3">
           <Image
             src={
@@ -14,43 +14,43 @@ export default function UserDropdown({ userData, onLogout, onClose }) {
                     "https://100.42.179.27:7198/",
                     ""
                   )}`
-                : "/api/placeholder/40/40"
+                : noPP
             }
-            width={40}
-            height={40}
+            width={35}
+            height={35}
             className="rounded-lg"
             alt="User Profile"
           />
           <div>
-            <h4 className="text-sm font-medium">
+            <h4 className="text-xs font-medium">
               {userData?.firstName || "User"}
             </h4>
-            <p className="text-xs text-gray-500">{userData?.email}</p>
+            <p className="text-[0.6rem] text-gray-500">{userData?.email}</p>
           </div>
         </div>
       </div>
-      <div className="py-2">
-        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3">
+      <div>
+        <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
           <User className="w-4 h-4 text-gray-500" />
           Profile
         </button>
-        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3">
+        <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
           <Settings className="w-4 h-4 text-gray-500" />
           Settings
         </button>
-        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3">
+        <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
           <Mail className="w-4 h-4 text-gray-500" />
           Messages
         </button>
-        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3">
+        <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
           <HelpCircle className="w-4 h-4 text-gray-500" />
           Help Center
         </button>
       </div>
-      <div className="border-t py-2">
+      <div className="border-t py-2 hover:bg-red-50">
         <button
           onClick={onLogout}
-          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+          className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-3"
         >
           <LogOut className="w-4 h-4" />
           Logout

@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import EditorJS from '@editorjs/editorjs';
-import Header from '@editorjs/header';
-import Quote from '@editorjs/quote';
-import Delimiter from '@editorjs/delimiter';
-import List from '@editorjs/list';
-import Paragraph from '@editorjs/paragraph';
-import Marker from '@editorjs/marker';
-import Title from 'title-editorjs';
-import Table from '@editorjs/table';
-import DragDrop from 'editorjs-drag-drop';
+import React, { useEffect, useRef } from "react";
+import EditorJS from "@editorjs/editorjs";
+import Header from "@editorjs/header";
+import Quote from "@editorjs/quote";
+import Delimiter from "@editorjs/delimiter";
+import List from "@editorjs/list";
+import Paragraph from "@editorjs/paragraph";
+import Marker from "@editorjs/marker";
+import Title from "title-editorjs";
+import Table from "@editorjs/table";
+import DragDrop from "editorjs-drag-drop";
 
 //style
-import './pageTextComponent.scss'
+import "./pageTextComponent.scss";
 
 const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
   const editorInstance = useRef(null);
@@ -22,16 +22,16 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
     if (!editorInstance.current) {
       const editor = new EditorJS({
         readOnly,
-        holder: 'editorjs',
+        holder: "editorjs",
         tools: {
           header: Header,
           quote: {
             class: Quote,
             inlineToolbar: true,
-            shortcut: 'CMD+SHIFT+O',
+            shortcut: "CMD+SHIFT+O",
             config: {
-              quotePlaceholder: 'Enter a quote',
-              captionPlaceholder: 'Quote\'s author',
+              quotePlaceholder: "Enter a quote",
+              captionPlaceholder: "Quote's author",
             },
           },
           table: {
@@ -46,7 +46,7 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
           title: Title,
           list: List,
           paragraph: Paragraph,
-          marker: Marker, 
+          marker: Marker,
         },
         data: desc,
         onReady: () => {
@@ -65,7 +65,12 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
   }, [desc, onChange, readOnly]);
 
   useEffect(() => {
-    if (editorInstance.current && desc && desc.blocks && Array.isArray(desc.blocks)) {
+    if (
+      editorInstance.current &&
+      desc &&
+      desc.blocks &&
+      Array.isArray(desc.blocks)
+    ) {
       editorInstance.current.isReady.then(() => {
         editorInstance.current.render(desc);
       });
@@ -74,7 +79,7 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
     }
   }, [desc]);
 
-  return <div id="editorjs" className='p-4'></div>;
+  return <div id="editorjs" className="p-4"></div>;
 };
 
 export default PageTextComponent;

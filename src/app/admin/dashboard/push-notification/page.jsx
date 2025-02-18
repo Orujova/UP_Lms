@@ -96,17 +96,17 @@ export default function Page() {
       <div className=" mx-auto px-4">
         {/* Headermax-w-4xl */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-lg font-bold text-gray-900">
             Send Push Notification
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-xs text-gray-600">
             Send targeted notifications to specific user groups
           </p>
         </div>
 
         {/* Form Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-5 space-y-5">
             {/* Title Field */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -114,7 +114,7 @@ export default function Page() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-4 bottom-8 left-3 flex items-center pointer-events-none">
-                  <Bell className="h-5 w-5 text-[#01DBC8]" />
+                  <Bell className="h-4 w-4 text-[#01DBC8]" />
                 </div>
                 <input
                   type="text"
@@ -124,7 +124,7 @@ export default function Page() {
                   placeholder="Enter notification title"
                   maxLength={50}
                   required
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#01DBC8] focus:border-transparent hover:border-[#01DBC8] transition-colors"
+                  className="block w-full text-sm pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg  outline-0 focus:border-[#01DBC8]   transition-colors"
                 />
                 <div className="mt-1 text-xs text-gray-500 flex justify-end">
                   {formData.title.length}/50 characters
@@ -146,7 +146,7 @@ export default function Page() {
                   maxLength={150}
                   required
                   rows={4}
-                  className="block w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#01DBC8] focus:border-transparent hover:border-[#01DBC8] transition-colors resize-none outline-none"
+                  className="block w-full p-3 border border-gray-200 rounded-lg outline-0 focus:border-[#01DBC8]   transition-colors resize-none outline-none"
                 />
                 <div className="mt-1 text-xs text-gray-500 flex justify-end">
                   {formData.body.length}/150 characters
@@ -163,12 +163,8 @@ export default function Page() {
             {/* Target Group Field */}
             <div className="space-y-2">
               <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <Users className="h-5 w-5 text-[#01DBC8]" />
-                </div>
                 <SelectComponent
                   text="Target Group"
-                  className="pl-10"
                   name="targetGroupId"
                   required
                   value={formData.targetGroupId}
@@ -197,28 +193,31 @@ export default function Page() {
             )}
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full px-4 py-3 text-white font-medium rounded-lg flex items-center justify-center gap-2
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={` text-center px-4 py-2 text-white font-medium rounded-lg flex items-center justify-center gap-2
                 ${
                   isLoading
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-[#0aac9e] hover:bg-[#00c4b3] active:bg-[#00ad9f] transition-colors"
                 }`}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Bell className="h-5 w-5" />
-                  Send Notification
-                </>
-              )}
-            </button>
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+
+                    <span className="text-sm">Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Bell className="h-4 w-4" />
+                    <span className="text-sm">Send Notification</span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>

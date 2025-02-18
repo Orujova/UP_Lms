@@ -6,7 +6,7 @@
   position: relative;
 
   label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     line-height: 1.2rem;
     color: rgba(32, 41, 57, 0.9);
@@ -24,7 +24,7 @@
 
     input {
       width: 100%;
-      padding: 0.5rem 1rem;
+      padding: 8px 16px;
       padding-right: 2.5rem; /* Space for the icon */
       font-size: 0.85rem;
       font-weight: 400;
@@ -32,7 +32,7 @@
       background: rgba(255, 255, 255, 1);
       border: 1px solid rgba(205, 213, 223, 1);
       border-radius: 0.4rem;
-      height: 2.5rem; /* Adjusted for compact styling */
+      // height: 2.5rem; /* Adjusted for compact styling */
       transition: border-color 0.3s;
 
       &:hover,

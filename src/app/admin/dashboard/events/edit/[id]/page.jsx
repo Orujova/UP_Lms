@@ -14,7 +14,6 @@ const CropModal = ({ image, onCancel, onCrop }) => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
-
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
@@ -112,7 +111,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
           </button>
           <button
             onClick={createCroppedImage}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            className="px-4 py-2 bg-[#127D74] text-white rounded-md hover:bg-[#2a8a82]"
           >
             Apply Crop
           </button>
@@ -135,7 +134,6 @@ const EditEventForm = ({ params }) => {
   });
 
   const router = useRouter();
-
   const [errors, setErrors] = useState({});
   const [dragActive, setDragActive] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -151,12 +149,15 @@ const EditEventForm = ({ params }) => {
   const [showTargetGroupDropdown, setShowTargetGroupDropdown] = useState(false);
   const targetGroupRef = useRef(null);
 
+  const token = getToken();
+  const userId = localStorage.getItem("userId");
+
   // Fetch event data
   useEffect(() => {
     const fetchEventData = async () => {
       try {
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/Event/${id}`
+          `https://bravoadmin.uplms.org/api/Event/${id}?userid=${userId}`
         );
         const data = await response.json();
 
@@ -306,19 +307,16 @@ const EditEventForm = ({ params }) => {
         form.append(key, formData[key]);
       }
     });
-    form.append('EventId', id);
-    
+    form.append("EventId", id);
+
     try {
-      const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Event`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: form,
-        }
-      );
+      const response = await fetch(`https://bravoadmin.uplms.org/api/Event`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -339,7 +337,7 @@ const EditEventForm = ({ params }) => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-t-[#0AAC9E] border-b-[#0AAC9E] rounded-full animate-spin"></div>
           <p className="mt-2 text-gray-600">Loading event data...</p>
         </div>
       </div>
@@ -359,12 +357,12 @@ const EditEventForm = ({ params }) => {
         />
       )}
 
-      <div className="max-w-3xl mx-auto">
+      <div className="min-h-screen bg-gray-50/50 pt-10">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="bg-emerald-50 p-2 rounded-md">
-              <Calendar className="w-5 h-5 text-emerald-600" />
+            <div className="bg-[#f9f9f9] p-2 rounded-md">
+              <Calendar className="w-5 h-5 text-[#0AAC9E]" />
             </div>
             <h1 className="text-xl font-semibold text-gray-900">Edit Event</h1>
           </div>
@@ -391,7 +389,7 @@ const EditEventForm = ({ params }) => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-[0.8rem] font-medium text-gray-700 mb-1">
                   Event Date & Time
                 </label>
                 <input
@@ -399,7 +397,7 @@ const EditEventForm = ({ params }) => {
                   name="eventDateTime"
                   value={formData.eventDateTime}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
                   required
                 />
                 {errors.EventDateTime && (
@@ -411,14 +409,14 @@ const EditEventForm = ({ params }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[0.8rem] font-medium text-gray-700 mb-1">
                 Description
               </label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0  focus:border-[#01DBC8]"
                 rows="4"
               ></textarea>
               {errors.Description && (
@@ -431,9 +429,7 @@ const EditEventForm = ({ params }) => {
             {/* Image Upload */}
             <div
               className={`border-2 border-dashed rounded-lg p-6 ${
-                dragActive
-                  ? "border-emerald-500 bg-emerald-50"
-                  : "border-gray-300"
+                dragActive ? "border-[#01DBC8] bg-[#f9f9f9]" : "border-gray-300"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -442,10 +438,10 @@ const EditEventForm = ({ params }) => {
               {!imagePreview ? (
                 <div className="flex flex-col items-center text-center">
                   <div className="p-3 bg-emerald-100 rounded-full mb-3">
-                    <Upload className="w-6 h-6 text-emerald-600" />
+                    <Upload className="w-6 h-6 text-[#0AAC9E]" />
                   </div>
                   <div className="text-sm">
-                    <label className="text-emerald-600 hover:text-emerald-700 cursor-pointer font-medium">
+                    <label className="text-[#0AAC9E] hover:text-[#127D74] cursor-pointer font-medium">
                       Click to upload
                       <input
                         type="file"
@@ -482,10 +478,10 @@ const EditEventForm = ({ params }) => {
             </div>
             {/* Target Group Dropdown */}
             <div
-              className="bg-white rounded-lg p-6 border border-gray-200"
+              className="bg-white rounded-lg p-5 border border-gray-200"
               ref={targetGroupRef}
             >
-              <h2 className="text-lg font-medium mb-4">Target Group</h2>
+              <h2 className="text-sm font-medium mb-4">Target Group</h2>
               <div className="relative">
                 <input
                   type="text"
@@ -496,11 +492,11 @@ const EditEventForm = ({ params }) => {
                     setShowTargetGroupDropdown(true);
                   }}
                   onClick={() => setShowTargetGroupDropdown(true)}
-                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-[#01DBC8]"
                 />
                 <Search
                   className="absolute right-3 top-2.5 text-gray-400"
-                  size={20}
+                  size={18}
                 />
 
                 {showTargetGroupDropdown && (
@@ -545,7 +541,7 @@ const EditEventForm = ({ params }) => {
                 )}
               </div>
               {formData.TargetGroupId && (
-                <div className="mt-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg flex justify-between items-center">
+                <div className="mt-2 bg-[#f9fefe] text-[#1B4E4A] px-3 py-2 rounded-lg flex justify-between items-center">
                   <span>
                     Selected Target Group ID: {formData.TargetGroupId}
                   </span>
@@ -555,7 +551,7 @@ const EditEventForm = ({ params }) => {
                       setFormData((prev) => ({ ...prev, TargetGroupId: "" }));
                       setSearchTargetGroup("");
                     }}
-                    className="text-emerald-700 hover:text-emerald-800"
+                    className="text-[#1B4E4A] hover:text-emerald-800"
                   >
                     <X size={16} />
                   </button>
@@ -565,14 +561,14 @@ const EditEventForm = ({ params }) => {
 
             {/* Countdown */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[0.8rem] font-medium text-gray-700 mb-1">
                 Count Down Format
               </label>
               <select
                 name="countDown"
                 value={formData.countDown}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
               >
                 <option value="">Select format</option>
                 <option value="1">Days only</option>
@@ -596,7 +592,7 @@ const EditEventForm = ({ params }) => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
+                className="px-4 py-2 bg-[#127D74] text-white rounded-md hover:bg-[#2a8a82] transition-colors"
                 disabled={loading}
               >
                 {loading ? "Updating..." : "Update Event"}

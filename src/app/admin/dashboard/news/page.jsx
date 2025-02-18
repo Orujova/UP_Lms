@@ -18,42 +18,86 @@ import {
   FileText,
   ArrowUpDown,
   CalendarDays,
+  SquareArrowOutUpRight,
 } from "lucide-react";
 import { newsAsync, removeNews } from "@/redux/news/news";
 import { getToken } from "@/authtoken/auth.js";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-const TableHeader = () => (
-  <div className="grid grid-cols-12 gap-6 px-6 py-4 bg-gray-50 border-b border-gray-200">
-    <div className="col-span-4 flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-600">Title</span>
-      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+const TableHeader = ({ onSort, currentSort }) => {
+  const handleSort = (field) => {
+    let newOrder;
+
+    switch (field) {
+      case "title":
+        newOrder = currentSort === "titleasc" ? "titledesc" : "titleasc";
+        break;
+      case "view":
+        newOrder = currentSort === "viewasc" ? "viewdesc" : "viewasc";
+        break;
+      case "date":
+        newOrder = currentSort === "dateasc" ? "datedesc" : "dateasc";
+        break;
+      default:
+        newOrder = `${field}asc`;
+    }
+
+    onSort(newOrder);
+  };
+
+  const getSortIcon = (field) => {
+    const isActive = currentSort?.toLowerCase().startsWith(field);
+    const isAsc = currentSort?.toLowerCase().endsWith("asc");
+
+    return (
+      <ArrowUpDown
+        className={`w-4 h-3 ${isActive ? "text-[#0AAC9E]" : "text-gray-400"} ${
+          isActive && isAsc ? "transform rotate-180" : ""
+        }`}
+      />
+    );
+  };
+
+  return (
+    <div className="grid grid-cols-12 gap-6 px-6 py-4  bg-gray-50 border-b border-gray-200">
+      <div
+        className="col-span-4 flex items-center  gap-2 cursor-pointer hover:text-[#0AAC9E]"
+        onClick={() => handleSort("title")}
+      >
+        <span className="text-xs font-medium  text-gray-600">Title</span>
+        {getSortIcon("title")}
+      </div>
+      <div className="col-span-2 flex items-center justify-center gap-2">
+        <span className="text-xs font-medium text-gray-600">Category</span>
+      </div>
+      <div
+        className="col-span-2 flex items-center gap-2 cursor-pointer hover:text-[#0AAC9E]"
+        onClick={() => handleSort("date")}
+      >
+        <span className="text-xs font-medium text-gray-600">Date</span>
+        {getSortIcon("date")}
+      </div>
+      <div className="col-span-2 flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-600">ID</span>
+      </div>
+      <div
+        className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-[#0AAC9E]"
+        onClick={() => handleSort("view")}
+      >
+        <span className="text-xs font-medium text-gray-600">Views</span>
+        {getSortIcon("view")}
+      </div>
+      <div className="col-span-1 flex justify-end">
+        <span className="text-xs font-medium text-gray-600">Actions</span>
+      </div>
     </div>
-    <div className="col-span-2 flex items-center justify-center gap-2">
-      <span className="text-sm font-medium text-gray-600">Category</span>
-      <ArrowUpDown className="w-4 h-4 text-gray-400" />
-    </div>
-    <div className="col-span-2 flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-600">Date</span>
-      <ArrowUpDown className="w-4 h-4 text-gray-400" />
-    </div>
-    <div className="col-span-2 flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-600">ID</span>
-      <ArrowUpDown className="w-4 h-4 text-gray-400" />
-    </div>
-    <div className="col-span-1 flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-600">Views</span>
-      <ArrowUpDown className="w-4 h-4 text-gray-400" />
-    </div>
-    <div className="col-span-1 flex justify-end">
-      <span className="text-sm font-medium text-gray-600">Actions</span>
-    </div>
-  </div>
-);
+  );
+};
 
 const NewsRow = React.memo(({ data, onDelete }) => {
   const { id, title, createdDate, newsCategoryName, view } = data;
-
+  const router = useRouter();
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date
@@ -68,46 +112,50 @@ const NewsRow = React.memo(({ data, onDelete }) => {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-6 px-6 py-5 hover:bg-gray-50 group border-b border-gray-100">
+    <div className="grid grid-cols-12 gap-6 px-5 py-4 justify-center hover:bg-gray-50 group border-b border-gray-100">
       <div className="col-span-4 flex items-center gap-3 min-w-0">
-        <div className="w-10 h-10 rounded-lg bg-[#f2fdfc] flex items-center justify-center flex-shrink-0">
-          <FileText className="w-5 h-5 text-[#0AAC9E]" />
+        <div className="w-8 h-8 rounded-lg bg-[#f9f9f9] flex items-center justify-center flex-shrink-0">
+          <FileText className="w-4 h-4 text-[#808080]" />
         </div>
         <div className="truncate">
-          <h3 className="text-sm font-medium text-gray-900 truncate">
+          <h3
+            className="text-xs font-medium text-gray-900  flex items-center  hover:text-[#0AAC9E] cursor-pointer mb-2 truncate"
+            onClick={() => router.push(`/admin/dashboard/news/${id}`)}
+          >
             {title}
+            <SquareArrowOutUpRight className="w-3.5 h-3.5 ml-2 cursor-pointer" />
           </h3>
         </div>
       </div>
       <div className="col-span-2 flex items-center justify-center">
-        <span className="inline-flex px-2.5 py-1 rounded-full text-sm text-center font-medium bg-[#f9f9f9] text-[#127D74]">
+        <span className="inline-flex px-2.5 py-1 rounded-full text-[0.7rem] text-center font-medium bg-[#f9f9f9] text-[#127D74]">
           {newsCategoryName}
         </span>
       </div>
       <div className="col-span-2 flex items-center">
-        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-          <Clock className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-1.5 text-[0.7rem] text-gray-600">
+          <Clock className="w-4 h-3 text-gray-400" />
           {formatDate(createdDate)}
         </div>
       </div>
       <div className="col-span-2 flex items-center">
-        <span className="text-sm text-gray-600">#{id}</span>
+        <span className="text-[0.7rem] text-gray-600">#{id}</span>
       </div>
       <div className="col-span-1 flex items-center gap-1.5">
-        <Eye className="w-4 h-4 text-gray-400" />
-        <span className="text-sm text-gray-600">{view}</span>
+        <Eye className="w-4 h-3 text-gray-400" />
+        <span className="text-xs text-gray-600">{view}</span>
       </div>
       <div className="col-span-1 flex items-center justify-end gap-2">
-        <Link href={`/admin/dashboard/news/${id}`}>
+        <Link href={`/admin/dashboard/news/edit/${id}`}>
           <button className="p-2 text-gray-400 hover:text-[#0AAC9E] hover:bg-[#f2fdfc] rounded-lg transition-all">
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className="w-4 h-3" />
           </button>
         </Link>
         <button
           onClick={() => onDelete(id)}
           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-3" />
         </button>
       </div>
     </div>
@@ -166,27 +214,27 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-6">
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-5 border-b border-gray-100">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#f2fdfc] rounded-lg">
-              <Filter className="w-5 h-5 text-[#0AAC9E]" />
+            <div className="p-1 bg-[#f2fdfc] rounded-lg">
+              <Filter className="w-4 h-4 text-[#0AAC9E]" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-sm font-semibold text-gray-900">
               Filter Options
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-1 hover:bg-gray-100 rounded-lg"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
 
         <div className="grid grid-cols-4 gap-6">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700">
               Title
             </label>
             <div className="relative">
@@ -196,13 +244,13 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
                 value={filters.SearchInput || ""}
                 onChange={(e) => handleChange("SearchInput", e.target.value)}
                 placeholder="Search by title..."
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700">
               Category
             </label>
             <div className="relative">
@@ -214,13 +262,13 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
                   handleChange("NewsCategoryName", e.target.value)
                 }
                 placeholder="Enter category..."
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700">
               Start Date
             </label>
             <div className="relative">
@@ -229,13 +277,13 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
                 type="date"
                 value={filters.StartDate || ""}
                 onChange={(e) => handleChange("StartDate", e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700">
               End Date
             </label>
             <div className="relative">
@@ -244,7 +292,7 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
                 type="date"
                 value={filters.EndDate || ""}
                 onChange={(e) => handleChange("EndDate", e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
           </div>
@@ -252,7 +300,7 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
 
         <div className="grid grid-cols-4 gap-6 mt-6">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700">
               Views Range
             </label>
             <div className="flex items-center gap-2">
@@ -266,7 +314,7 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
                   })
                 }
                 placeholder="Min"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
               <span className="text-gray-500">to</span>
               <input
@@ -279,25 +327,42 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
                   })
                 }
                 placeholder="Max"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-medium text-gray-700">
               Order By
             </label>
             <div className="relative">
               <select
                 value={filters.OrderBy || ""}
                 onChange={(e) => handleChange("OrderBy", e.target.value)}
-                className="w-full px-3 py-2.5 bg-gray-50 border outline-none border-gray-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-full px-3 py-2 bg-gray-50 border outline-none border-gray-200 rounded-lg text-xs appearance-none focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               >
                 <option value="">Select Order</option>
-                <option value="date">Date</option>
-                <option value="views">Views</option>
-                <option value="title">Title</option>
+                <optgroup label="Title">
+                  <option value="titleasc">Title (A-Z)</option>
+                  <option value="titledesc">Title (Z-A)</option>
+                </optgroup>
+                <optgroup label="Views">
+                  <option value="viewasc">Views (Low to High)</option>
+                  <option value="viewdesc">Views (High to Low)</option>
+                </optgroup>
+                <optgroup label="Total Views">
+                  <option value="totalviewasc">
+                    Total Views (Low to High)
+                  </option>
+                  <option value="totalviewdesc">
+                    Total Views (High to Low)
+                  </option>
+                </optgroup>
+                <optgroup label="Date">
+                  <option value="dateasc">Date (Oldest First)</option>
+                  <option value="datedesc">Date (Newest First)</option>
+                </optgroup>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
@@ -305,16 +370,16 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+      <div className="px-6 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
         <button
           onClick={() => onFilterChange({})}
-          className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+          className="px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
         >
           Clear Filters
         </button>
         <button
           onClick={applyFilters}
-          className="px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]"
+          className="px-4 py-2 text-xs font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]"
         >
           Apply Filters
         </button>
@@ -326,6 +391,7 @@ const FilterPanel = ({ filters, onFilterChange, onClose }) => {
 export default function NewsManagement() {
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters] = useState({});
+  const [sortOrder, setSortOrder] = useState("datedesc");
   const [pagination, setPagination] = useState({
     Page: 1,
     ShowMore: { Take: 10 },
@@ -339,7 +405,11 @@ export default function NewsManagement() {
     [newsData]
   );
   const totalPages = Math.ceil(totalNewsCount / pagination.ShowMore.Take);
-
+  const handleSort = (newOrder) => {
+    setSortOrder(newOrder);
+    setFilters((prev) => ({ ...prev, OrderBy: newOrder }));
+    setPagination((prev) => ({ ...prev, Page: 1 })); // Reset to first page when sorting
+  };
   useEffect(() => {
     // Format filter parameters before dispatch
     const queryParams = {
@@ -406,21 +476,19 @@ export default function NewsManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-8">
+    <div className="min-h-screen bg-gray-50/50 pt-14 ">
       <div className="mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-gray-900">
-              News Management
-            </h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-lg font-bold text-gray-900">News Management</h1>
+            <p className="text-[0.65rem] text-gray-400 font-normal">
               {totalNewsCount > 0
                 ? `Managing ${totalNewsCount} news items`
                 : "No news items yet"}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -433,26 +501,26 @@ export default function NewsManagement() {
                   }))
                 }
                 placeholder="Search news..."
-                className="w-64 pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
+                className="w-60 pl-10 pr-4 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
 
             <button
               onClick={() => setFilterVisible(!filterVisible)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
             >
-              <Filter className="w-4 h-4" />
+              <Filter className="w-4 h-3" />
               Filter
             </button>
 
             <Link href="/admin/dashboard/news/add">
-              <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]">
+              <button className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]">
                 <Plus className="w-4 h-4" />
                 Add News
               </button>
             </Link>
 
-            <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+            <button className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -468,7 +536,7 @@ export default function NewsManagement() {
         )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <TableHeader />
+          <TableHeader onSort={handleSort} currentSort={sortOrder} />
 
           <div className="divide-y divide-gray-100">
             {newsData?.[0]?.news?.map((newsItem, index) => (
@@ -479,9 +547,9 @@ export default function NewsManagement() {
           {(!newsData?.[0]?.news || newsData[0].news.length === 0) && (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-[#0AAC9E]" />
+                <FileText className="w-6 h-6 text-[#0AAC9E]" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
+              <h3 className="text-sm font-medium text-gray-900 mb-1">
                 No news items found
               </h3>
               <p className="text-sm text-gray-500 max-w-sm text-center">
@@ -490,7 +558,7 @@ export default function NewsManagement() {
                   : "Start by adding your first news item."}
               </p>
               <Link href="/admin/dashboard/news/add">
-                <button className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]">
+                <button className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]">
                   <Plus className="w-4 h-4" />
                   Add First News
                 </button>
@@ -501,7 +569,7 @@ export default function NewsManagement() {
           {newsData?.[0]?.news?.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
               <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-500">
+                <div className="text-xs text-gray-500">
                   <span className="font-medium">{totalNewsCount}</span> items
                   total
                 </div>
@@ -511,7 +579,7 @@ export default function NewsManagement() {
                 <button
                   onClick={() => handlePageChange(pagination.Page - 1)}
                   disabled={pagination.Page === 1}
-                  className="inline-flex items-center gap-1 px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-md disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md disabled:opacity-50"
                 >
                   Previous
                 </button>
@@ -519,7 +587,7 @@ export default function NewsManagement() {
                 <div className="flex items-center">
                   <button
                     onClick={() => handlePageChange(1)}
-                    className={`px-3 py-1 text-sm ${
+                    className={`px-2.5 py-1 text-xs ${
                       pagination.Page === 1
                         ? "text-white bg-[#0AAC9E]"
                         : "text-gray-600 hover:bg-gray-100"
@@ -564,7 +632,7 @@ export default function NewsManagement() {
                   {totalPages > 1 && (
                     <button
                       onClick={() => handlePageChange(totalPages)}
-                      className={`px-3 py-1 text-sm ${
+                      className={`px-2 py-1 text-xs ${
                         pagination.Page === totalPages
                           ? "text-white bg-[#0AAC9E]"
                           : "text-gray-600 hover:bg-gray-100"
@@ -578,7 +646,7 @@ export default function NewsManagement() {
                 <button
                   onClick={() => handlePageChange(pagination.Page + 1)}
                   disabled={pagination.Page === totalPages}
-                  className="inline-flex items-center gap-1 px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-md disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md disabled:opacity-50"
                 >
                   Next
                 </button>

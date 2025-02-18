@@ -84,7 +84,8 @@ export default function EditAnnouncement({ params }) {
         Priority: data.priority || "NORMAL",
         ScheduledDate: data.scheduledDate?.split("T")[0] || "",
         ExpiryDate: data.expiryDate?.split("T")[0] || "",
-        PollUnitId: data.pollUnitId === 0 ? "" : data.pollUnitId?.toString() || "",
+        PollUnitId:
+          data.pollUnitId === 0 ? "" : data.pollUnitId?.toString() || "",
         TargetGroupId: data.targetGroupId?.toString() || "",
       });
 
@@ -209,7 +210,7 @@ export default function EditAnnouncement({ params }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-t- #C0F6F1 border-b-#0AAC9E rounded-full animate-spin"></div>
           <p className="mt-2 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -217,7 +218,7 @@ export default function EditAnnouncement({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50/50 pt-10">
       <Toaster position="top-right" />
       {showCropModal && (
         <CropModal
@@ -229,10 +230,11 @@ export default function EditAnnouncement({ params }) {
           onCrop={handleCropComplete}
         />
       )}
-      <div className="max-w-5xl mx-auto px-4 py-8">
+
+      <div className="min-h-screen bg-gray-50/50 ">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <div>
+          <div className="flex justify-between w-full">
             <button
               onClick={() => router.push("/admin/dashboard/announcements")}
               className="text-gray-500 hover:text-gray-700 flex items-center gap-2"
@@ -240,14 +242,16 @@ export default function EditAnnouncement({ params }) {
               <ArrowLeft className="w-5 h-5" />
               Back
             </button>
-            <h1 className="text-2xl font-semibold mt-2">Edit Announcement</h1>
+            <h1 className="text-lg font-semibold mt-2">Edit Announcement</h1>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Image Upload */}
           <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-4">Cover Image (9:16)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-4">
+              Cover Image (9:16)
+            </label>
             <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
               <div className="space-y-1 text-center">
                 {imagePreview ? (
@@ -261,7 +265,7 @@ export default function EditAnnouncement({ params }) {
                       type="button"
                       onClick={() => {
                         setImagePreview(null);
-                        setFormData(prev => ({ ...prev, ImageFile: null }));
+                        setFormData((prev) => ({ ...prev, ImageFile: null }));
                       }}
                       className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800"
                     >
@@ -275,8 +279,12 @@ export default function EditAnnouncement({ params }) {
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-12 h-12 text-gray-400" />
-                      <p className="mt-2 text-sm text-gray-500">Click to upload or drag and drop</p>
-                      <p className="text-xs text-gray-500">Image will be cropped to 9:16 ratio</p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Image will be cropped to 9:16 ratio
+                      </p>
                     </div>
                   </label>
                 )}
@@ -304,7 +312,7 @@ export default function EditAnnouncement({ params }) {
                   name="Title"
                   value={formData.Title}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                   required
                 />
               </div>
@@ -317,7 +325,7 @@ export default function EditAnnouncement({ params }) {
                   name="SubTitle"
                   value={formData.SubTitle}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                 />
               </div>
             </div>
@@ -336,7 +344,7 @@ export default function EditAnnouncement({ params }) {
                   name="ShortDescription"
                   value={formData.ShortDescription}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                   required
                 />
               </div>
@@ -349,7 +357,7 @@ export default function EditAnnouncement({ params }) {
                   value={formData.Description}
                   onChange={handleInputChange}
                   rows={4}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 outline-0 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                   required
                 />
               </div>
@@ -375,7 +383,7 @@ export default function EditAnnouncement({ params }) {
                   setShowPollUnitDropdown(true);
                 }}
                 onClick={() => setShowPollUnitDropdown(true)}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-[#01DBC8]"
               />
               <Search
                 className="absolute right-3 top-2.5 text-gray-400"
@@ -413,7 +421,7 @@ export default function EditAnnouncement({ params }) {
               )}
             </div>
             {formData.PollUnitId && (
-              <div className="mt-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg flex justify-between items-center">
+              <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
                 <span>Selected Poll Unit ID: {formData.PollUnitId}</span>
                 <button
                   type="button"
@@ -421,7 +429,7 @@ export default function EditAnnouncement({ params }) {
                     setFormData((prev) => ({ ...prev, PollUnitId: "" }));
                     setSearchPollUnit("");
                   }}
-                  className="text-emerald-700 hover:text-emerald-800"
+                  className="text-[#0AAC9E] hover:text-emerald-800"
                 >
                   <X size={16} />
                 </button>
@@ -445,7 +453,7 @@ export default function EditAnnouncement({ params }) {
                   setShowTargetGroupDropdown(true);
                 }}
                 onClick={() => setShowTargetGroupDropdown(true)}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-[#01DBC8]"
               />
               <Search
                 className="absolute right-3 top-2.5 text-gray-400"
@@ -494,7 +502,7 @@ export default function EditAnnouncement({ params }) {
               )}
             </div>
             {formData.TargetGroupId && (
-              <div className="mt-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg flex justify-between items-center">
+              <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
                 <span>Selected Target Group ID: {formData.TargetGroupId}</span>
                 <button
                   type="button"
@@ -502,7 +510,7 @@ export default function EditAnnouncement({ params }) {
                     setFormData((prev) => ({ ...prev, TargetGroupId: "" }));
                     setSearchTargetGroup("");
                   }}
-                  className="text-emerald-700 hover:text-emerald-800"
+                  className="text-[#0AAC9E] hover:text-emerald-800"
                 >
                   <X size={16} />
                 </button>
@@ -522,7 +530,7 @@ export default function EditAnnouncement({ params }) {
                   name="Priority"
                   value={formData.Priority}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                   required
                 >
                   <option value="LOW">Low</option>
@@ -539,7 +547,7 @@ export default function EditAnnouncement({ params }) {
                   name="ScheduledDate"
                   value={formData.ScheduledDate}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                   required
                 />
               </div>
@@ -552,7 +560,7 @@ export default function EditAnnouncement({ params }) {
                   name="ExpiryDate"
                   value={formData.ExpiryDate}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
                   required
                 />
               </div>
@@ -571,7 +579,7 @@ export default function EditAnnouncement({ params }) {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 flex items-center gap-2"
+              className="px-4 py-2 bg-[#127D74] text-white rounded-md hover:bg-[#0AAC9E] flex items-center gap-2"
             >
               {saving ? (
                 <>
@@ -591,116 +599,116 @@ export default function EditAnnouncement({ params }) {
 
 // Modal Dialog Component
 const CropModal = ({ image, onCancel, onCrop }) => {
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  
-    const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-      setCroppedAreaPixels(croppedAreaPixels);
-    }, []);
-  
-    const createCroppedImage = async () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const img = new Image();
-        img.src = image;
-        
-        await new Promise((resolve) => {
-          img.onload = resolve;
-        });
-  
-        // Set fixed dimensions for the output
-        canvas.width = 900;
-        canvas.height = 1600;
-  
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(
-          img,
-          croppedAreaPixels.x,
-          croppedAreaPixels.y,
-          croppedAreaPixels.width,
-          croppedAreaPixels.height,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-  
-        // Convert to blob with quality reduction
-        canvas.toBlob(
-          (blob) => {
-            const file = new File([blob], 'cropped_image.jpg', {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            onCrop(file, URL.createObjectURL(blob));
-          },
-          'image/jpeg',
-          0.8 // 80% quality
-        );
-      } catch (error) {
-        console.error('Error creating cropped image:', error);
-        toast.error('Failed to crop image');
-      }
-    };
-  
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Crop Image (9:16 ratio)</h3>
-            <button
-              onClick={onCancel}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-  
-          <div className="relative h-[60vh] bg-gray-900 rounded-lg mb-4">
-            <Cropper
-              image={image}
-              crop={crop}
-              zoom={zoom}
-              aspect={9/16}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-              objectFit="contain"
-              showGrid={true}
-              cropShape="rect"
-              restrictPosition={true}
-            />
-          </div>
-  
-          <div className="flex items-center gap-4 mb-4">
-            <span className="text-sm text-gray-600">Zoom:</span>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.1}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
-  
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={createCroppedImage}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-            >
-              Apply Crop
-            </button>
-          </div>
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createCroppedImage = async () => {
+    try {
+      const canvas = document.createElement("canvas");
+      const img = new Image();
+      img.src = image;
+
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      // Set fixed dimensions for the output
+      canvas.width = 900;
+      canvas.height = 1600;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(
+        img,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      // Convert to blob with quality reduction
+      canvas.toBlob(
+        (blob) => {
+          const file = new File([blob], "cropped_image.jpg", {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          onCrop(file, URL.createObjectURL(blob));
+        },
+        "image/jpeg",
+        0.8 // 80% quality
+      );
+    } catch (error) {
+      console.error("Error creating cropped image:", error);
+      toast.error("Failed to crop image");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Crop Image (9:16 ratio)</h3>
+          <button
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="relative h-[60vh] bg-gray-900 rounded-lg mb-4">
+          <Cropper
+            image={image}
+            crop={crop}
+            zoom={zoom}
+            aspect={9 / 16}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            objectFit="contain"
+            showGrid={true}
+            cropShape="rect"
+            restrictPosition={true}
+          />
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <span className="text-sm text-gray-600">Zoom:</span>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.1}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={createCroppedImage}
+            className="px-4 py-2 bg-[#127D74] text-white rounded-lg hover:bg-[#0AAC9E]"
+          >
+            Apply Crop
+          </button>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};

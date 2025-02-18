@@ -11,15 +11,15 @@ export default function ControlsButtons({ count, text, link, buttonText }) {
       </div>
       <div className="actions">
         <button className="btn btn-secondary">
-          <Filter size={18} />
+          <Filter size={16} />
           <span>Filter</span>
         </button>
         <Link href={link} className="btn btn-primary">
-          <CirclePlus size={18} />
+          <CirclePlus size={16} />
           <span>{buttonText}</span>
         </Link>
         <button className="btn btn-secondary">
-          <Download size={18} />
+          <Download size={16} />
           <span>Export</span>
         </button>
       </div>

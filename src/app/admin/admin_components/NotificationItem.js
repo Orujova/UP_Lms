@@ -5,7 +5,7 @@ import { Bell } from "lucide-react";
 export default function NotificationItem({ notification, onMarkAsRead }) {
   return (
     <div
-      className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
+      className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${
         !notification.isRead ? "bg-[#ecfcfb]" : ""
       }`}
       onClick={() => onMarkAsRead(notification.id)}
@@ -19,11 +19,11 @@ export default function NotificationItem({ notification, onMarkAsRead }) {
           />
         </div>
         <div className="flex-grow">
-          <h4 className="text-sm font-semibold">{notification.title}</h4>
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+          <h4 className="text-xs font-semibold">{notification.title}</h4>
+          <p className="text-[0.65rem] text-gray-500 mt-1 line-clamp-2">
             {notification.content}
           </p>
-          <span className="text-xs text-gray-400 mt-2 block">
+          <span className="text-[0.55rem] text-gray-400 mt-2 block">
             {new Date(notification.creationDate).toLocaleString(undefined, {
               year: "numeric",
               month: "short",

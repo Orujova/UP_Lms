@@ -126,8 +126,8 @@ const NotificationsPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Bell className="w-6 h-6 text-[#01DBC8]" />
-            <h1 className="text-2xl font-semibold">Notifications</h1>
+            <Bell className="w-5 h-5 text-[#01DBC8]" />
+            <h1 className="text-lg font-semibold">Notifications</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -136,7 +136,7 @@ const NotificationsPage = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 focus:outline-none focus:border-[#01DBC8] transition-colors"
               >
                 <Filter className="w-4 h-4" />
-                <span className="text-sm">
+                <span className="text-xs">
                   {filter === "all"
                     ? "All notifications"
                     : filter === "unread"
@@ -153,7 +153,7 @@ const NotificationsPage = () => {
                       setFilter("all");
                       setIsFilterOpen(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50"
                   >
                     All notifications
                   </button>
@@ -162,7 +162,7 @@ const NotificationsPage = () => {
                       setFilter("unread");
                       setIsFilterOpen(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50"
                   >
                     Unread
                   </button>
@@ -171,7 +171,7 @@ const NotificationsPage = () => {
                       setFilter("read");
                       setIsFilterOpen(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50"
                   >
                     Read
                   </button>
@@ -180,7 +180,7 @@ const NotificationsPage = () => {
             </div>
             <button
               onClick={markAllAsRead}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-[#01DBC8] hover:bg-[#01DBC8]/5 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-xs text-[#01DBC8] hover:bg-[#01DBC8]/5 rounded-lg transition-colors"
             >
               <CheckCircle className="w-4 h-4" />
               Mark all as read
@@ -209,14 +209,14 @@ const NotificationsPage = () => {
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-gray-900 text-base">
                         {notification.title}
                       </h3>
-                      <p className="mt-1 text-gray-600">
+                      <p className="mt-1 text-gray-600 text-xs">
                         {notification.content}
                       </p>
                       <div className="mt-2 flex items-center gap-4">
-                        <span className="text-sm text-gray-400">
+                        <span className="text-[0.6rem] text-gray-300">
                           {new Date(notification.creationDate).toLocaleString()}
                         </span>
                       </div>
@@ -224,9 +224,9 @@ const NotificationsPage = () => {
                     {!notification.isRead && (
                       <button
                         onClick={() => markAsRead(notification.id)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm text-[#01DBC8] hover:bg-[#01DBC8]/5 rounded-full"
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-[#01DBC8] hover:bg-[#01DBC8]/5 rounded-full"
                       >
-                        <Check className="w-4 h-4" />
+                        <Check className="w-4 h-3" />
                         Mark as read
                       </button>
                     )}
@@ -238,8 +238,8 @@ const NotificationsPage = () => {
 
           {/* Pagination */}
           {!loading && notifications.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
-              <div className="text-sm text-gray-500">
+            <div className="flex items-center justify-between px-4 py-2 border-t bg-gray-50">
+              <div className="text-[0.65rem] text-gray-500">
                 Showing {notifications.length} of {totalPages * itemsPerPage}{" "}
                 notifications
               </div>
@@ -251,7 +251,7 @@ const NotificationsPage = () => {
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <span className="text-sm font-medium">
+                <span className="text-xs font-medium">
                   Page {page} of {totalPages}
                 </span>
                 <button

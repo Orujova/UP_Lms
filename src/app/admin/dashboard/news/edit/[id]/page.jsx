@@ -15,7 +15,10 @@ import { toast, Toaster } from "sonner";
 import { useRouter, usePathname } from "next/navigation";
 import "./edit.scss";
 
-const PageTextComponent = dynamic(() => import('@/components/pageTextComponent'), { ssr: false });
+const PageTextComponent = dynamic(
+  () => import("@/components/pageTextComponent"),
+  { ssr: false }
+);
 
 // Crop Modal Component
 const CropModal = ({ image, onCancel, onCrop }) => {
@@ -113,13 +116,13 @@ const CropModal = ({ image, onCancel, onCrop }) => {
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border text-sm border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             onClick={createCroppedImage}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            className="px-4 py-2 bg-[#0aac9e] text-white text-sm rounded-lg hover:bg-[#00c4b3]"
           >
             Apply Crop
           </button>
@@ -421,7 +424,7 @@ export default function Page() {
           <InputComponent
             text="Title"
             required
-            className="col6"
+            className=" w-full"
             type="text"
             placeholder="Enter news title"
             value={formData.title}
@@ -429,9 +432,10 @@ export default function Page() {
             name="title"
           />
           <InputComponent
-            text="subTitle"
+            text="Subtitle"
             required
-            className="col6"
+            // className="col6"
+            className=" w-full"
             type="text"
             placeholder="Enter subTitle"
             value={formData.subTitle}
@@ -439,7 +443,7 @@ export default function Page() {
             name="subTitle"
           />
           <SelectComponent
-            text="newsCategoryName"
+            text="Category"
             name="newsCategoryId"
             required
             value={formData.newsCategoryId}
@@ -449,10 +453,10 @@ export default function Page() {
 
           {/* Target Group Selection */}
           <div
-            className="bg-white rounded-lg p-6 border border-gray-200"
+            className="bg-white rounded-lg p-7 border border-gray-200"
             ref={targetGroupRef}
           >
-            <h2 className="text-lg font-medium mb-4">Target Group</h2>
+            <h2 className="text-xs font-medium mb-4">Target Group</h2>
             <div className="relative">
               <input
                 type="text"
@@ -463,11 +467,11 @@ export default function Page() {
                   setShowTargetGroupDropdown(true);
                 }}
                 onClick={() => setShowTargetGroupDropdown(true)}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-emerald-500"
+                className="w-full text-xs px-4 py-2 border rounded-md focus:outline-none focus:border-[#0aac9e]"
               />
               <Search
                 className="absolute right-3 top-2.5 text-gray-400"
-                size={20}
+                size={16}
               />
 
               {showTargetGroupDropdown && (
@@ -512,17 +516,19 @@ export default function Page() {
               )}
             </div>
             {formData.targetGroupId && (
-              <div className="mt-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg flex justify-between items-center">
-                <span>Selected Target Group ID: {formData.targetGroupId}</span>
+              <div className="mt-2 bg-[#f9fefe] text-[#0aac9e] px-3 py-2 rounded-lg flex justify-between items-center">
+                <span className="text-sm">
+                  Selected Target Group ID: {formData.targetGroupId}
+                </span>
                 <button
                   type="button"
                   onClick={() => {
                     setFormData((prev) => ({ ...prev, targetGroupId: "" }));
                     setSearchTargetGroup("");
                   }}
-                  className="text-emerald-700 hover:text-emerald-800"
+                  className="text-[#0aac9e] hover:text-[#127D74]"
                 >
-                  <X size={16} />
+                  <X size={14} />
                 </button>
               </div>
             )}

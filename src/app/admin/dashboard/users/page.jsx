@@ -45,7 +45,7 @@ export default function Page() {
   };
 
   return (
-    <div className="users-page">
+    <div className="min-h-screen bg-gray-50/50 pt-12">
       {/* Header Section */}
       <ControlsButtons
         count={adminApplicationUser.totalAppUserCount}

@@ -1,8 +1,8 @@
-// import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { Phone, Edit } from "lucide-react";
 import "./userComponent.scss";
-
+import noPP from "@/images/noPP.png";
 export default function UserComponent({
   id,
   img,
@@ -15,13 +15,13 @@ export default function UserComponent({
     <div className="user-row">
       <div className="user-info">
         <div className="avatar">
-          {/* <Image
-            src={img}
+          <Image
+            src={img ? img : noPP}
             alt={fullName}
             width={40}
             height={40}
             className="rounded-lg"
-          /> */}
+          />
         </div>
         <div className="details">
           <p className="name">{fullName}</p>
@@ -29,7 +29,7 @@ export default function UserComponent({
         </div>
       </div>
       <div className="contact">
-        <Phone size={16} />
+        <Phone size={14} />
         <span>{phone}</span>
       </div>
       <div className="department">
@@ -40,7 +40,7 @@ export default function UserComponent({
       </div>
       <div className="actions">
         <Link href={`/admin/dashboard/users/${id}`} className="edit-link">
-          <Edit size={16} />
+          <Edit size={14} />
         </Link>
       </div>
     </div>

@@ -1,11 +1,7 @@
 .users-page {
-  min-height: 100vh;
-  background: #f8f9fa;
-  padding: 24px;
-
   .content-section {
     margin: 24px 0;
-    min-height: 400px; // Prevent layout shift
+    // min-height: 400px; // Prevent layout shift
     position: relative;
 
     // Optional loading overlay
@@ -19,7 +15,7 @@
   }
 
   .pagination-section {
-    margin-top: 24px;
+    margin-top: 18px;
     display: flex;
     justify-content: center;
   }

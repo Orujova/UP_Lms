@@ -22,6 +22,7 @@ import {
   Briefcase,
   LineChart,
   Key,
+  Gem,
 } from "lucide-react";
 
 import logo from "@/images/logo.png";
@@ -42,21 +43,23 @@ const AdminSidebar = () => {
   };
 
   const NavLink = ({ href, icon: Icon, label, indent = false }) => {
-    const isActive = pathname === href;
+    // const isActive = pathname === href;
+    const isActive = pathname.startsWith(href);
+
     return (
       <Link
         href={href}
-        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-          indent ? "ml-4 pl-4 " : ""
+        className={`flex items-center space-x-3 px-4 py-1.5 rounded-lg transition-colors ${
+          indent ? "ml-4 pl-3 " : ""
         } ${
-          isActive ? " text-[#127D74]" : "text-[#808080] hover:bg-gray-100/80"
+          isActive ? " text-[#1B4E4A]" : "text-[#808080] hover:bg-gray-100/80"
         }`}
       >
         <Icon
-          size={20}
-          className={isActive ? "text-[#127D74]" : "text-gray-500"}
+          size={16}
+          className={isActive ? "text-[#1B4E4A]" : "text-gray-500"}
         />
-        <span className={`text-sm ${isActive ? "font-medium" : ""}`}>
+        <span className={`text-xs ${isActive ? "font-bold" : ""}`}>
           {label}
         </span>
       </Link>
@@ -66,19 +69,19 @@ const AdminSidebar = () => {
   const MenuDropdown = ({ title, icon: Icon, isOpen, onToggle, children }) => (
     <div className="relative">
       <div
-        className={`px-4 py-3 rounded-lg cursor-pointer flex items-center justify-between transition-all duration-200 ${
+        className={`px-4 py-2 rounded-lg cursor-pointer flex items-center justify-between transition-all duration-200 ${
           isOpen
-            ? "bg-[#01DBC8]/10 text-[#127D74]"
+            ? "bg-[#f9fefe] text-[#0AAC9E]"
             : "text-gray-700 hover:bg-gray-100/80"
         }`}
         onClick={onToggle}
       >
         <div className="flex items-center space-x-3">
           <Icon
-            size={20}
-            className={isOpen ? "text-[#127D74]" : "text-gray-500"}
+            size={18}
+            className={isOpen ? "text-[#0AAC9E]" : "text-gray-500"}
           />
-          <span className={`text-sm ${isOpen ? "font-medium" : ""}`}>
+          <span className={`text-xs ${isOpen ? "font-medium" : ""}`}>
             {title}
           </span>
         </div>
@@ -86,7 +89,7 @@ const AdminSidebar = () => {
           size={16}
           className={`transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
-          } ${isOpen ? "text-[#127D74]" : "text-gray-400"}`}
+          } ${isOpen ? "text-[#0AAC9E]" : "text-gray-400"}`}
         />
       </div>
       {isOpen && <div className="mt-1">{children}</div>}
@@ -94,9 +97,8 @@ const AdminSidebar = () => {
   );
 
   return (
-    <div className="w-80 bg-white h-screen border-r border-gray-200 flex flex-col sticky top-0 shadow-sm">
-      <div className="p-6 py-6">
-        {/* <div className="p-6 border-b border-gray-200/80 py-3"> */}
+    <div className="w-72 bg-white h-screen border-r border-gray-200 flex flex-col sticky top-0 shadow-sm">
+      <div className="p-6 py-4">
         <Link
           href="/admin/dashboard"
           className="flex items-center justify-center"
@@ -104,15 +106,15 @@ const AdminSidebar = () => {
           <Image
             src={logo}
             alt="Logo"
-            width={140}
-            height={90}
+            width={110}
+            height={80}
             className="rounded"
           />
         </Link>
       </div>
 
-      <div className="flex-1 sidebar-scroll overflow-y-auto px-3">
-        <div className="space-y-4">
+      <div className="flex-1 sidebar-scroll overflow-y-auto px-2">
+        <div className="space-y-3">
           {/* Dashboard */}
           <MenuDropdown
             title="Dashboard"
@@ -245,9 +247,9 @@ const AdminSidebar = () => {
                 indent
               />
               <NavLink
-                href="/admin/dashboard/role-management"
-                icon={Users}
-                label="Role Management"
+                href="/admin/dashboard/branding"
+                icon={Gem}
+                label="Branding"
                 indent
               />
               <NavLink

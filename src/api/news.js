@@ -1,28 +1,3 @@
-// import axios from 'axios';
-// import { getToken } from '@/authtoken/auth.js';
-
-// const API_URL = 'https://bravoadmin.uplms.org/api/';
-
-// export const fetchNews = async () => {
-//     try {
-//         const token = getToken(); // Tokeni auth.js dosyasından alın
-//         if (!token) {
-//             throw new Error('Token bulunamadı. Lütfen giriş yapınız.');
-//         }
-
-//         const response = await axios.get(`${API_URL}News`, {
-//             headers: {
-//                 'accept': 'application/json',
-//                 'Authorization': `Bearer ${token}` // Dinamik olarak alınan token kullanılır
-//             }
-//         });
-//         return response.data;
-//     } catch (error) {
-//         console.error('Error fetching news:', error);
-//         throw error;
-//     }
-// };
-
 import { getToken } from "@/authtoken/auth.js";
 
 export const fetchNews = async (params = {}) => {
@@ -39,7 +14,24 @@ export const fetchNews = async (params = {}) => {
     queryParams.append("NewsCategoryName", params.NewsCategoryName);
   if (params.StartDate) queryParams.append("StartDate", params.StartDate);
   if (params.EndDate) queryParams.append("EndDate", params.EndDate);
-  if (params.OrderBy) queryParams.append("OrderBy", params.OrderBy);
+
+  // Updated OrderBy parameter handling
+  if (params.OrderBy) {
+    // The backend expects these exact values, so we pass them directly
+    const validOrderValues = [
+      "titleasc",
+      "titledesc",
+      "totalviewasc",
+      "totalviewdesc",
+      "viewasc",
+      "viewdesc",
+      "dateasc",
+      "datedesc",
+    ];
+    if (validOrderValues.includes(params.OrderBy.toLowerCase())) {
+      queryParams.append("OrderBy", params.OrderBy.toLowerCase());
+    }
+  }
 
   if (params.ViewRange) {
     if (params.ViewRange.Start)

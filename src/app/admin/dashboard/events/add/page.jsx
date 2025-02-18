@@ -25,7 +25,7 @@ const EventForm = () => {
   const [loading, setLoading] = useState(false);
   const [showCropModal, setShowCropModal] = useState(false);
   const [tempImage, setTempImage] = useState(null);
-  // Target Group states
+
   const [targetGroups, setTargetGroups] = useState([]);
   const [loadingTargetGroups, setLoadingTargetGroups] = useState(true);
   const [searchTargetGroup, setSearchTargetGroup] = useState("");
@@ -140,16 +140,13 @@ const EventForm = () => {
     });
 
     try {
-      const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Event",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: form,
-        }
-      );
+      const response = await fetch("https://bravoadmin.uplms.org/api/Event", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -190,12 +187,12 @@ const EventForm = () => {
           onCrop={handleCropComplete}
         />
       )}
-      <div className="max-w-3xl mx-auto">
+      <div className="min-h-screen bg-gray-50/50 pt-10">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="bg-emerald-50 p-2 rounded-md">
-              <Calendar className="w-5 h-5 text-emerald-600" />
+            <div className="bg-[#f9f9f9] p-2 rounded-md">
+              <Calendar className="w-5 h-5 text-[#0AAC9E]" />
             </div>
             <h1 className="text-xl font-semibold text-gray-900">
               Create Event
@@ -223,8 +220,8 @@ const EventForm = () => {
                   </p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="">
+                <label className="block text-[0.8rem] font-medium text-[#202939] mb-1">
                   Event Date & Time
                 </label>
                 <input
@@ -232,7 +229,7 @@ const EventForm = () => {
                   name="eventDateTime"
                   value={formData.eventDateTime}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full px-3 py-1.5 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
                   required
                 />
                 {errors.EventDateTime && (
@@ -244,14 +241,14 @@ const EventForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[0.8rem] font-medium text-[#202939] mb-1">
                 Description
               </label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0  focus:border-[#01DBC8]"
                 rows="4"
               ></textarea>
               {errors.Description && (
@@ -264,9 +261,7 @@ const EventForm = () => {
             {/* Image Upload */}
             <div
               className={`border-2 border-dashed rounded-lg p-6 ${
-                dragActive
-                  ? "border-emerald-500 bg-emerald-50"
-                  : "border-gray-300"
+                dragActive ? "border-[#0AAC9E] bg-[#f9fefe]" : "border-gray-300"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -274,11 +269,11 @@ const EventForm = () => {
             >
               {!imagePreview ? (
                 <div className="flex flex-col items-center text-center">
-                  <div className="p-3 bg-emerald-100 rounded-full mb-3">
-                    <Upload className="w-6 h-6 text-emerald-600" />
+                  <div className="p-3 bg-[#f2fdfc] rounded-full mb-3">
+                    <Upload className="w-6 h-6 text-[#01DBC8]" />
                   </div>
                   <div className="text-sm">
-                    <label className="text-emerald-600 hover:text-emerald-700 cursor-pointer font-medium">
+                    <label className="text-[#01DBC8] hover:text-[#127D74] cursor-pointer font-medium">
                       Click to upload
                       <input
                         type="file"
@@ -316,10 +311,12 @@ const EventForm = () => {
 
             {/* Target Group Dropdown */}
             <div
-              className="bg-white rounded-lg p-6 border border-gray-200"
+              className="bg-white rounded-lg p-4 border border-gray-200"
               ref={targetGroupRef}
             >
-              <h2 className="text-lg font-medium mb-4">Target Group</h2>
+              <h2 className="text-[0.8rem] text-[#202939] font-medium mb-4">
+                Target Group
+              </h2>
               <div className="relative">
                 <input
                   type="text"
@@ -330,11 +327,11 @@ const EventForm = () => {
                     setShowTargetGroupDropdown(true);
                   }}
                   onClick={() => setShowTargetGroupDropdown(true)}
-                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-[#01DBC8]"
                 />
                 <Search
                   className="absolute right-3 top-2.5 text-gray-400"
-                  size={20}
+                  size={18}
                 />
 
                 {showTargetGroupDropdown && (
@@ -379,7 +376,7 @@ const EventForm = () => {
                 )}
               </div>
               {formData.TargetGroupId && (
-                <div className="mt-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg flex justify-between items-center">
+                <div className="mt-2 bg-[#f9fefe] text-[#127D74] px-3 py-2 rounded-lg flex justify-between items-center">
                   <span>
                     Selected Target Group ID: {formData.TargetGroupId}
                   </span>
@@ -389,7 +386,7 @@ const EventForm = () => {
                       setFormData((prev) => ({ ...prev, TargetGroupId: "" }));
                       setSearchTargetGroup("");
                     }}
-                    className="text-emerald-700 hover:text-emerald-800"
+                    className="text-[#127D74] hover:text-[#1B4E4A]"
                   >
                     <X size={16} />
                   </button>
@@ -399,14 +396,14 @@ const EventForm = () => {
 
             {/* Countdown */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[0.8rem] font-medium text-[#202939] mb-1">
                 Count Down Format
               </label>
               <select
                 name="countDown"
                 value={formData.countDown}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
               >
                 <option value="">Select format</option>
                 <option value="1">Days only</option>
@@ -426,13 +423,12 @@ const EventForm = () => {
                 type="button"
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 onClick={() => router.back()}
-
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
+                className="px-4 py-2 bg-[#127D74] text-white rounded-md hover:bg-[#2a8a82] transition-colors"
                 disabled={loading}
               >
                 {loading ? "Creating..." : "Create Event"}
@@ -548,7 +544,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
           </button>
           <button
             onClick={createCroppedImage}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            className="px-4 py-2 bg-[#127D74] text-white rounded-lg hover:bg-[#2a8a82]"
           >
             Apply Crop
           </button>
