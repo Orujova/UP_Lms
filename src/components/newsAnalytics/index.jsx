@@ -34,6 +34,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import StatCard from "../statCard";
 import Pagination from "../reportPagination";
 import NewsFilterBar from "../newsFilterBar";
+import DeviceUsageChart from "../deviceUsageChart";
+import CategoryDistributionChart from "../categoryDistributionChart";
 
 // Colors
 const COLORS = [
@@ -131,93 +133,6 @@ const ActivityFilterBar = ({ filters, onFilterChange, onExport }) => {
   );
 };
 
-// 3. Custom Visualizations
-const DeviceUsageChart = ({ data }) => {
-  if (!data) return null;
-
-  const deviceData = [
-    { name: "Mobile", value: data.mobileViews || 0 },
-    { name: "Desktop", value: data.desktopViews || 0 },
-    { name: "Tablet", value: data.tabletViews || 0 },
-  ];
-
-  const getIcon = (name) => {
-    switch (name) {
-      case "Mobile":
-        return <Smartphone className="w-6 h-6" />;
-      case "Desktop":
-        return <Laptop className="w-6 h-6" />;
-      case "Tablet":
-        return <Laptop className="w-6 h-6" />;
-      default:
-        return null;
-    }
-  };
-
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-    index,
-    name,
-  }) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? "start" : "end"}
-        dominantBaseline="central"
-      >
-        {`${name}: ${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-
-  return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart width={400} height={400}>
-          <Pie
-            data={deviceData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={renderCustomizedLabel}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {deviceData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend
-            formatter={(value) => (
-              <span className="flex items-center gap-2">
-                {getIcon(value)}
-                {value}
-              </span>
-            )}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
 const ActiveTimeChart = ({ hourlyData, weeklyData }) => {
   if (!hourlyData || !weeklyData) return null;
 
@@ -261,141 +176,6 @@ const ActiveTimeChart = ({ hourlyData, weeklyData }) => {
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
-  );
-};
-
-const CategoryDistributionChart = ({ data }) => {
-  if (!data || data.length === 0) return null;
-
-  // Format the data for better visualization
-  const formattedData = data.map((category) => ({
-    name: category.categoryName,
-    value: category.totalNewsCount,
-    totalView: category.totalView,
-    uniqueView: category.uniqueView,
-    interestLevel: category.interestLevel,
-  }));
-
-  const RADIAN = Math.PI / 180;
-  const renderActiveShape = (props) => {
-    const {
-      cx,
-      cy,
-      midAngle,
-      innerRadius,
-      outerRadius,
-      startAngle,
-      endAngle,
-      fill,
-      payload,
-      percent,
-      value,
-      name,
-    } = props;
-    const sin = Math.sin(-RADIAN * midAngle);
-    const cos = Math.cos(-RADIAN * midAngle);
-    const sx = cx + (outerRadius + 10) * cos;
-    const sy = cy + (outerRadius + 10) * sin;
-    const mx = cx + (outerRadius + 30) * cos;
-    const my = cy + (outerRadius + 30) * sin;
-    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-    const ey = my;
-    const textAnchor = cos >= 0 ? "start" : "end";
-
-    const interest =
-      payload.interestLevel === "High"
-        ? "#48BB78"
-        : payload.interestLevel === "Normal"
-        ? "#4299E1"
-        : "#F56565";
-
-    return (
-      <g>
-        <Sector
-          cx={cx}
-          cy={cy}
-          innerRadius={innerRadius}
-          outerRadius={outerRadius}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill={fill}
-        />
-        <Sector
-          cx={cx}
-          cy={cy}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          innerRadius={outerRadius + 6}
-          outerRadius={outerRadius + 10}
-          fill={interest}
-        />
-        <path
-          d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
-          stroke={fill}
-          fill="none"
-        />
-        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-        <text
-          x={ex + (cos >= 0 ? 1 : -1) * 12}
-          y={ey}
-          textAnchor={textAnchor}
-          fill="#333"
-        >
-          {name}
-        </text>
-        <text
-          x={ex + (cos >= 0 ? 1 : -1) * 12}
-          y={ey}
-          dy={18}
-          textAnchor={textAnchor}
-          fill="#999"
-        >
-          {`Views: ${payload.totalView}`}
-        </text>
-        <text
-          x={ex + (cos >= 0 ? 1 : -1) * 12}
-          y={ey}
-          dy={36}
-          textAnchor={textAnchor}
-          fill="#999"
-        >
-          {`(${(percent * 100).toFixed(2)}% of total)`}
-        </text>
-      </g>
-    );
-  };
-
-  const [activeIndex, setActiveIndex] = useState(0);
-  const onPieEnter = (_, index) => {
-    setActiveIndex(index);
-  };
-
-  return (
-    <div className="h-96">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            activeIndex={activeIndex}
-            activeShape={renderActiveShape}
-            data={formattedData}
-            cx="50%"
-            cy="50%"
-            innerRadius={70}
-            outerRadius={90}
-            dataKey="value"
-            onMouseEnter={onPieEnter}
-          >
-            {formattedData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
-            ))}
-          </Pie>
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
     </div>
   );
 };
@@ -464,7 +244,7 @@ const EngagementComparisonChart = ({ viewsData, likesData, savesData }) => {
 // 4. Main Component
 const NewsAnalytics = () => {
   // State Management
-  const [activeTab, setActiveTab] = useState("views"); // views, likes, saves, categories, activity
+  const [activeTab, setActiveTab] = useState("views");
   const [viewsData, setViewsData] = useState(null);
   const [likesData, setLikesData] = useState(null);
   const [savesData, setSavesData] = useState(null);
@@ -518,7 +298,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/News/getallnewsinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"), // Authorized request
+            Authorization: "Bearer " + localStorage.getItem("token"),
           },
         }
       );
@@ -988,14 +768,14 @@ const NewsAnalytics = () => {
         <StatCard
           icon={ThumbsUp}
           value={getUniqueLikes()}
-          label="Unique Likes"
+          label=" Likes"
           trend={5.7}
           color="#F4A259"
         />
         <StatCard
           icon={Bookmark}
           value={getUniqueSaves()}
-          label="Unique Saves"
+          label=" Saves"
           trend={2.1}
           color="#A362EF"
         />
@@ -1155,7 +935,7 @@ const NewsAnalytics = () => {
                           Total Views
                         </th>
                         <th className="text-left font-medium text-gray-500 pb-4">
-                          Unique Likes
+                          Likes
                         </th>
                         <th className="text-left font-medium text-gray-500 pb-4">
                           Target Group
@@ -1241,7 +1021,7 @@ const NewsAnalytics = () => {
                           Total Views
                         </th>
                         <th className="text-left font-medium text-gray-500 pb-4">
-                          Unique Saves
+                          Saves
                         </th>
                         <th className="text-left font-medium text-gray-500 pb-4">
                           Target Group
