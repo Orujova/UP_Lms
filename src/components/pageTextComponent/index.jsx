@@ -11,8 +11,8 @@ import Marker from "@editorjs/marker";
 import Title from "title-editorjs";
 import Table from "@editorjs/table";
 import DragDrop from "editorjs-drag-drop";
+import { CustomImageTool } from "./CustomImageTool";
 
-//style
 import "./pageTextComponent.scss";
 
 const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
@@ -25,6 +25,7 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
         holder: "editorjs",
         tools: {
           header: Header,
+          image: CustomImageTool,
           quote: {
             class: Quote,
             inlineToolbar: true,
@@ -50,19 +51,39 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
         },
         data: desc,
         onReady: () => {
-          if (editor) {
-            new DragDrop(editor); // Ensure editor is fully initialized before attaching DragDrop
-          }
+          // Initialize DragDrop after a short delay to ensure editor is ready
+          setTimeout(() => {
+            try {
+              new DragDrop(editor);
+            } catch (error) {
+              console.warn('DragDrop initialization failed:', error);
+            }
+          }, 100);
         },
         onChange: async () => {
-          const data = await editorInstance.current.save();
-          onChange(JSON.stringify(data)); // Convert to string and pass to parent
+          try {
+            const data = await editorInstance.current.save();
+            onChange(JSON.stringify(data));
+          } catch (error) {
+            console.error('Error saving editor data:', error);
+          }
         },
       });
 
       editorInstance.current = editor;
     }
-  }, [desc, onChange, readOnly]);
+
+    return () => {
+      if (editorInstance.current && editorInstance.current.destroy) {
+        try {
+          editorInstance.current.destroy();
+          editorInstance.current = null;
+        } catch (error) {
+          console.error('Error destroying editor:', error);
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -72,10 +93,12 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
       Array.isArray(desc.blocks)
     ) {
       editorInstance.current.isReady.then(() => {
-        editorInstance.current.render(desc);
+        try {
+          editorInstance.current.render(desc);
+        } catch (error) {
+          console.error('Error rendering editor content:', error);
+        }
       });
-    } else {
-      console.warn("Invalid desc format, render() was not called.");
     }
   }, [desc]);
 
