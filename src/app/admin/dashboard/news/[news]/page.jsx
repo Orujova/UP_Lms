@@ -11,9 +11,11 @@ import {
   ChevronLeft,
   Edit2,
   ThumbsUp,
-  MessageCircle,
-  Bookmark,
+  ChartBarStacked,
   ChevronRight,
+  User,
+  Users,
+  Bookmark,
 } from "lucide-react";
 
 const PageTextComponent = dynamic(
@@ -72,11 +74,30 @@ const ErrorDisplay = ({ error }) => (
   </div>
 );
 
+// Priority Badge component
+const PriorityBadge = ({ priority }) => {
+  const priorityColors = {
+    HIGH: "bg-red-100 text-red-600",
+    MEDIUM: "bg-yellow-100 text-yellow-600",
+    LOW: "bg-blue-100 text-blue-600",
+  };
+
+  return (
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-medium ${
+        priorityColors[priority] || "bg-gray-100 text-gray-600"
+      }`}
+    >
+      {priority}
+    </span>
+  );
+};
+
 export default function NewsPage() {
   const [newsData, setNewsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isBookmarked, setIsBookmarked] = useState(null);
+
   const pathname = usePathname();
   const newsId = pathname?.split("/").pop();
   const userId = getCookie("userId") || localStorage.getItem("userId");
@@ -142,7 +163,7 @@ export default function NewsPage() {
               ""
             )}`}
             alt="News cover"
-            className="w-full h-full "
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-[#127D74] to-[#1B4E4A] flex items-center justify-center">
@@ -161,7 +182,7 @@ export default function NewsPage() {
 
       {/* Content Section */}
       <main className="-mt-32 relative z-10 pb-12">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="max-w-5xl mx-auto px-4">
           <article className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="bg-white border-b border-gray-100">
               <div className="max-w-7xl mx-auto px-4 py-4">
@@ -189,34 +210,39 @@ export default function NewsPage() {
             <div className="p-7">
               {/* Title and Actions */}
               <div className="mb-7">
-                <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-5">
-                  {newsData.title}
-                </h1>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+                    {newsData.title}
+                  </h1>
+                  <PriorityBadge priority={newsData.priority} />
+                </div>
+
+                {/* Category and Main Metadata */}
+                <div className="mb-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="inline-flex items-center gap-2 text-sm text-gray-700 bg-gray-100 px-4 py-1 rounded-lg">
+                      <ChartBarStacked className="w-4 h-4" />
+                      {newsData.newsCategoryName || "Uncategorized"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between">
+                  <div className="flex flex-wrap items-center gap-6">
                     <span className="inline-flex items-center gap-2 text-xs text-gray-500">
                       <Eye className="w-4 h-4" />
-                      {newsData.view} views
+                      {newsData.view} views (Total: {newsData.totalView})
                     </span>
                     <span className="inline-flex items-center gap-2 text-xs text-gray-500">
                       <Clock className="w-4 h-4" />
                       {formatDate(newsData.createdDate)}
                     </span>
+                    <span className="inline-flex items-center gap-2 text-xs text-gray-500">
+                      <User className="w-4 h-4" />
+                      {newsData.createdBy}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setIsBookmarked(!isBookmarked)}
-                      className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-                    >
-                      <Bookmark
-                        className={`w-5 h-5 ${
-                          isBookmarked
-                            ? "fill-[#0AAC9E] text-[#0AAC9E]"
-                            : "text-gray-400"
-                        }`}
-                      />
-                    </button>
-
+                  <div className="flex items-center gap-3 mt-3 sm:mt-0">
                     <Link
                       href={`/admin/dashboard/news/edit/${newsData.id}`}
                       className="inline-flex items-center gap-2 text-xs bg-[#0AAC9E] text-white px-4 py-2 rounded-lg hover:bg-[#009688] transition-colors"
@@ -228,17 +254,41 @@ export default function NewsPage() {
                 </div>
               </div>
 
+              {/* Target Groups Section */}
+              {newsData.targetGroups && newsData.targetGroups.length > 0 && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg flex gap-3 items-center">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Target Groups
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {newsData.targetGroups.map((group, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-normal bg-[#E6F7F5] text-[#0AAC9E]"
+                      >
+                        {group}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Engagement Section */}
               <div className="border-t border-b border-gray-100 py-3 mb-8">
                 <div className="flex items-center gap-6">
-                  <button className="flex items-center gap-2 text-gray-500 hover:text-[#0AAC9E] transition-colors">
+                  <div className="flex items-center gap-2 text-gray-500">
                     <ThumbsUp className="w-5 h-4" />
-                    <span className="text-xs font-medium">123 Likes</span>
-                  </button>
-                  <button className="flex items-center gap-2 text-gray-500 hover:text-[#0AAC9E] transition-colors">
-                    <MessageCircle className="w-5 h-4" />
-                    <span className="text-xs font-medium">24 Comments</span>
-                  </button>
+                    <span className="text-xs font-medium">
+                      {newsData.likeCount} Likes
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <Bookmark className="w-5 h-4" />
+                    <span className="text-xs font-medium">
+                      {newsData.saveCount} Saves
+                    </span>
+                  </div>
                 </div>
               </div>
 

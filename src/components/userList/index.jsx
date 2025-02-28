@@ -59,6 +59,7 @@ export default function UserList({ adminApplicationUser }) {
             phone={user.phoneNumber}
             department={user.department.name}
             position={user.position.name}
+            isActive={!user.isDeleted} // Pass isActive prop based on isDeleted field
           />
         ))}
       </div>

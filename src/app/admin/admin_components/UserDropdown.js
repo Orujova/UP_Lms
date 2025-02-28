@@ -2,6 +2,8 @@
 import Image from "next/image";
 import { User, Settings, Mail, HelpCircle, LogOut } from "lucide-react";
 import noPP from "@/images/noPP.png";
+import Link from "next/link";
+
 export default function UserDropdown({ userData, onLogout, onClose }) {
   return (
     <div className="absolute right-0 mt-2 w-[18rem] bg-white rounded-lg shadow-lg border overflow-hidden">
@@ -30,17 +32,24 @@ export default function UserDropdown({ userData, onLogout, onClose }) {
         </div>
       </div>
       <div>
-        <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
+        <Link
+          href={"/admin/dashboard/profile"}
+          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3"
+        >
           <User className="w-4 h-4 text-gray-500" />
           Profile
-        </button>
+        </Link>
+
+        <Link
+          href={"/admin/dashboard/notification"}
+          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3"
+        >
+          <Mail className="w-4 h-4 text-gray-500" />
+          Messages
+        </Link>
         <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
           <Settings className="w-4 h-4 text-gray-500" />
           Settings
-        </button>
-        <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
-          <Mail className="w-4 h-4 text-gray-500" />
-          Messages
         </button>
         <button className="w-full px-4 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-3">
           <HelpCircle className="w-4 h-4 text-gray-500" />

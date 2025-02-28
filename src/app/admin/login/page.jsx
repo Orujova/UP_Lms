@@ -10,6 +10,7 @@ import { loginUser } from "@/redux/features/authSlice";
 
 import "./login.scss";
 import logo from "@/images/logo.png";
+import overlayImage from "@/images/overlay.png"; // Import overlay image
 
 export default function Page() {
   const [inputType, setInputType] = useState("password");
@@ -32,8 +33,10 @@ export default function Page() {
 
     try {
       const response = await dispatch(loginUser(formData)).unwrap();
+      console.log(response);
       if (response.isSuccess) {
         localStorage.setItem("userId", response.userId);
+        localStorage.setItem("phone-number", response.phoneNumber);
         router.push("/admin/otp");
 
         toast.success("Login successful!");
@@ -48,12 +51,17 @@ export default function Page() {
   }
 
   return (
-    <main className="bg-login1 w-fully h-fully bg-no-repeat">
-      <div className="w-full h-fully flex items-center justify-end box">
+    <main className="bg-login1 w-fully h-fully bg-no-repeat relative overflow-hidden">
+      {/* Overlay Image */}
+      {/* <div className="absolute inset-0 z-10">
+        <Image src={overlayImage} alt="Overlay" priority />
+      </div> */}
+
+      <div className="w-full h-fully flex items-center justify-end box relative z-20">
         <div className="w-40 ml-auto max-w-[420px]">
           <Image className="logo" src={logo} alt="logo" />
           <div className="flex flex-col items-start gap-10 w-full">
-            <h1 className="text-34 font-semibold">Login</h1>
+            <h1 className="text-2xl font-semibold">Login</h1>
             <form
               onSubmit={submitCredential}
               className="flex flex-col items-start gap-6 w-full"
@@ -140,9 +148,6 @@ export default function Page() {
                   </span>
                 </div>
                 <div className="flex justify-between w-full">
-                  {/* <span className="text-mainGray2 text-12 text-medium">
-                    This is a hint text to help user
-                  </span>{" "} */}
                   <Link
                     href="/admin/login/forget"
                     className="text-12 font-medium text-mainBlue"

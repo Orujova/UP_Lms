@@ -18,7 +18,7 @@ module.exports = {
         mainWhite1: "#D5D5D5",
       },
       backgroundImage: {
-        login1: "url('/login.svg')",
+        login1: "url('/login.png')",
       },
       width: {
         fully: "100%",

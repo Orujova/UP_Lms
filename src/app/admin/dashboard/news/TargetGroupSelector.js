@@ -1,26 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { Search, X } from "lucide-react";
 
 const TargetGroupSelector = ({ targetGroups, value, onChange, error }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const componentRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (componentRef.current && !componentRef.current.contains(event.target)) {
+      if (
+        componentRef.current &&
+        !componentRef.current.contains(event.target)
+      ) {
         setShowDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedGroup = targetGroups.find(group => group.id.toString() === value);
+  const selectedGroup = targetGroups.find(
+    (group) => group.id.toString() === value
+  );
 
   return (
-    <div className="bg-white rounded-lg p-4 border border-gray-200" ref={componentRef}>
+    <div
+      className="bg-white rounded-lg p-4 border border-gray-200"
+      ref={componentRef}
+    >
       <h3 className="text-sm font-medium mb-2 leading-5 text-gray-800/90">
         Target Group
       </h3>
@@ -74,26 +82,24 @@ const TargetGroupSelector = ({ targetGroups, value, onChange, error }) => {
           </div>
         )}
       </div>
-      
+
       {value && selectedGroup && (
-        <div className="mt-2 bg-[#f9fefe] text-[#127D74] px-3 py-2 rounded-lg flex justify-between items-center">
+        <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
           <span>Selected: {selectedGroup.name}</span>
           <button
             type="button"
             onClick={() => {
-              onChange('');
-              setSearchQuery('');
+              onChange("");
+              setSearchQuery("");
             }}
-            className="text-[#127D74] hover:text-emerald-800"
+            className="text-[#0AAC9E] hover:text-emerald-800"
           >
             <X size={16} />
           </button>
         </div>
       )}
-      
-      {error && (
-        <p className="text-red-500 text-sm mt-2">{error}</p>
-      )}
+
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   );
 };

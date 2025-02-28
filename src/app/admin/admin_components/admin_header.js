@@ -45,8 +45,8 @@ export default function AdminHeader() {
   }, [dispatch]);
 
   const handleLogout = () => {
-    removeToken();
     localStorage.removeItem("userId");
+    localStorage.removeItem("phone-number");
     toast.success("Logged out successfully.");
     router.push("/admin/login");
   };

@@ -17,15 +17,40 @@ import "./pageTextComponent.scss";
 
 const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
   const editorInstance = useRef(null);
+  const editorInitialized = useRef(false);
 
   useEffect(() => {
-    if (!editorInstance.current) {
+    // Clean up previous instance if it exists
+    if (editorInstance.current && editorInstance.current.destroy) {
+      try {
+        editorInstance.current.destroy();
+        editorInstance.current = null;
+        editorInitialized.current = false;
+      } catch (error) {
+        console.error("Error destroying editor:", error);
+      }
+    }
+
+    // Create a new instance if not already initialized
+    if (!editorInitialized.current) {
       const editor = new EditorJS({
         readOnly,
         holder: "editorjs",
         tools: {
-          header: Header,
-          image: CustomImageTool,
+          header: {
+            class: Header,
+            inlineToolbar: true,
+            config: {
+              levels: [2, 3, 4],
+              defaultLevel: 2,
+            },
+          },
+          image: {
+            class: CustomImageTool,
+            config: {
+              // Additional configurations if needed
+            },
+          },
           quote: {
             class: Quote,
             inlineToolbar: true,
@@ -44,33 +69,57 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
             },
           },
           delimiter: Delimiter,
-          title: Title,
-          list: List,
-          paragraph: Paragraph,
-          marker: Marker,
+          title: {
+            class: Title,
+            config: {
+              placeholder: "Enter a title...",
+              levels: [1, 2, 3],
+              defaultLevel: 1,
+            },
+          },
+          list: {
+            class: List,
+            inlineToolbar: true,
+            config: {
+              defaultStyle: "unordered",
+            },
+          },
+          paragraph: {
+            class: Paragraph,
+            inlineToolbar: true,
+          },
+          marker: {
+            class: Marker,
+            shortcut: "CMD+SHIFT+M",
+          },
         },
         data: desc,
         onReady: () => {
-          // Initialize DragDrop after a short delay to ensure editor is ready
-          setTimeout(() => {
-            try {
-              new DragDrop(editor);
-            } catch (error) {
-              console.warn('DragDrop initialization failed:', error);
-            }
-          }, 100);
+          // Initialize DragDrop only if not in readOnly mode
+          if (!readOnly) {
+            setTimeout(() => {
+              try {
+                new DragDrop(editor);
+              } catch (error) {
+                console.warn("DragDrop initialization failed:", error);
+              }
+            }, 100);
+          }
         },
         onChange: async () => {
+          if (readOnly) return; // Don't trigger onChange in readOnly mode
+
           try {
             const data = await editorInstance.current.save();
             onChange(JSON.stringify(data));
           } catch (error) {
-            console.error('Error saving editor data:', error);
+            console.error("Error saving editor data:", error);
           }
         },
       });
 
       editorInstance.current = editor;
+      editorInitialized.current = true;
     }
 
     return () => {
@@ -79,11 +128,11 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
           editorInstance.current.destroy();
           editorInstance.current = null;
         } catch (error) {
-          console.error('Error destroying editor:', error);
+          console.error("Error destroying editor:", error);
         }
       }
     };
-  }, []);
+  }, [readOnly]); // Add readOnly to dependency array
 
   useEffect(() => {
     if (
@@ -92,13 +141,25 @@ const PageTextComponent = ({ onChange, desc = null, readOnly = false }) => {
       desc.blocks &&
       Array.isArray(desc.blocks)
     ) {
-      editorInstance.current.isReady.then(() => {
-        try {
-          editorInstance.current.render(desc);
-        } catch (error) {
-          console.error('Error rendering editor content:', error);
-        }
-      });
+      editorInstance.current.isReady
+        .then(() => {
+          // Clear the editor first to prevent conflicts
+          return editorInstance.current.clear();
+        })
+        .then(() => {
+          // Add a small delay to ensure DOM is updated
+          return new Promise((resolve) => setTimeout(resolve, 50));
+        })
+        .then(() => {
+          try {
+            editorInstance.current.render(desc);
+          } catch (error) {
+            console.error("Error rendering editor content:", error);
+          }
+        })
+        .catch((error) => {
+          console.error("Editor initialization error:", error);
+        });
     }
   }, [desc]);
 
