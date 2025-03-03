@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,6 +19,9 @@ import {
 import noPP from "@/images/noPP.png";
 import soonAnimation from "../../animations/coming.json";
 import Lottie from "react-lottie-player";
+import { getToken, getUserId } from "@/authtoken/auth.js";
+
+const userId = getUserId();
 
 // Modal Component (unchanged)
 const Modal = ({ isOpen, onClose, title, children, footer }) => {
@@ -201,8 +205,6 @@ export default function UserComponent({
           position: "top-right",
         });
 
-        // If the user is deactivating their own account, log them out
-        const userId = localStorage.getItem("userId");
         if (isActive && userId === id.toString()) {
           setTimeout(() => {
             logoutUser();
@@ -468,10 +470,4 @@ export default function UserComponent({
       </Modal>
     </div>
   );
-}
-
-// Import this function from your auth file
-function getToken() {
-  // This is just a fallback if the import doesn't work
-  return localStorage.getItem("token") || "";
 }

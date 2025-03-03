@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import InputComponent from "@/components/inputComponent";
-import { getToken, getParsedToken } from "@/authtoken/auth";
+import { getToken, getParsedToken, getUserId } from "@/authtoken/auth";
 import { Calendar, Upload, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { useRouter } from "next/navigation";
+
+const token = getToken();
+const userId = getUserId();
 
 // Crop Modal Component
 const CropModal = ({ image, onCancel, onCrop }) => {
@@ -148,9 +151,6 @@ const EditEventForm = ({ params }) => {
   const [searchTargetGroup, setSearchTargetGroup] = useState("");
   const [showTargetGroupDropdown, setShowTargetGroupDropdown] = useState(false);
   const targetGroupRef = useRef(null);
-
-  const token = getToken();
-  const userId = localStorage.getItem("userId");
 
   // Fetch event data
   useEffect(() => {

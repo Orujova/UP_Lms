@@ -275,7 +275,8 @@
 
 // export default AdminSidebar;
 
-import React, { useState } from "react";
+"use client";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -301,6 +302,7 @@ import {
   Key,
   Gem,
   UserCog,
+  LogOut,
 } from "lucide-react";
 
 import logo from "@/images/logo.png";
@@ -309,21 +311,32 @@ import "./adminSidebar.scss";
 
 const AdminSidebar = () => {
   const pathname = usePathname();
-  // Instead of using an object, use a single state to track which menu is open
   const [openMenu, setOpenMenu] = useState("dashboard"); // Default open menu
+  const sidebarRef = useRef(null);
 
   const toggleMenu = (menu) => {
-    // If clicking the same menu that's already open, close it
     if (openMenu === menu) {
       setOpenMenu(null);
     } else {
-      // Otherwise, close the current one and open the clicked one
       setOpenMenu(menu);
     }
   };
 
+  // When a menu opens, scroll it into view if needed
+  useEffect(() => {
+    if (openMenu && sidebarRef.current) {
+      const openMenuElement = document.getElementById(`menu-${openMenu}`);
+      if (openMenuElement) {
+        // This ensures the opened dropdown is in view
+        openMenuElement.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
+    }
+  }, [openMenu]);
+
   const NavLink = ({ href, icon: Icon, label, indent = false }) => {
-    // const isActive = pathname === href;
     const isActive = pathname.startsWith(href);
 
     return (
@@ -348,9 +361,10 @@ const AdminSidebar = () => {
 
   const MenuDropdown = ({ id, title, icon: Icon, children }) => {
     const isOpen = openMenu === id;
+    const contentRef = useRef(null);
 
     return (
-      <div className="relative">
+      <div className="relative" id={`menu-${id}`}>
         <div
           className={`px-4 py-2 rounded-lg cursor-pointer flex items-center justify-between transition-all duration-200 ${
             isOpen
@@ -370,19 +384,26 @@ const AdminSidebar = () => {
           </div>
           <ChevronDown
             size={16}
-            className={`transition-transform duration-200 ${
+            className={`transition-transform duration-300 ${
               isOpen ? "rotate-180" : ""
             } ${isOpen ? "text-[#0AAC9E]" : "text-gray-400"}`}
           />
         </div>
-        {isOpen && <div className="mt-1">{children}</div>}
+        <div
+          ref={contentRef}
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isOpen ? "max-h-96 opacity-100 my-1 pb-1" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="py-1">{children}</div>
+        </div>
       </div>
     );
   };
 
   return (
     <div className="w-72 bg-white h-screen border-r border-gray-200 flex flex-col sticky top-0 shadow-sm">
-      <div className="p-6 py-4">
+      <div className="p-6 py-4 border-b border-gray-100">
         <Link
           href="/admin/dashboard"
           className="flex items-center justify-center"
@@ -397,8 +418,12 @@ const AdminSidebar = () => {
         </Link>
       </div>
 
-      <div className="flex-1 sidebar-scroll overflow-y-auto px-2">
-        <div className="space-y-3">
+      <div
+        ref={sidebarRef}
+        className="flex-1 sidebar-scroll overflow-y-auto px-2 py-4 flex flex-col justify-between"
+      >
+        {/* Main menu section */}
+        <div className="space-y-1">
           {/* Dashboard */}
           <MenuDropdown id="dashboard" title="Dashboard" icon={LayoutDashboard}>
             <div className="space-y-1">
@@ -481,7 +506,7 @@ const AdminSidebar = () => {
                 icon={CalendarDays}
                 label="Events"
                 indent
-              />{" "}
+              />
               <NavLink
                 href="/admin/dashboard/poll-unit"
                 icon={BarChart}
@@ -502,8 +527,10 @@ const AdminSidebar = () => {
               />
             </div>
           </MenuDropdown>
+        </div>
 
-          {/* Settings */}
+        {/* Settings section at bottom */}
+        <div className="mt-auto pt-4 border-t border-gray-100">
           <MenuDropdown id="settings" title="Settings" icon={Settings}>
             <div className="space-y-1">
               <NavLink

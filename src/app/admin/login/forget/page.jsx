@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getToken } from "@/authtoken/auth.js";
 import logo from "@/images/logo.png";
 import overlayImage from "@/images/overlay.png";
+import { getUserId } from "@/authtoken/auth";
 import {
   Lock,
   Phone,
@@ -93,7 +94,7 @@ export default function ImprovedForgotPassword() {
 
       if (response.ok) {
         const data = await response.json();
-        setUserId(data.userId || localStorage.getItem("userId"));
+        setUserId(data.userId || getUserId());
         toast.success("OTP verified successfully");
         setCurrentView("reset");
       } else {
@@ -126,7 +127,7 @@ export default function ImprovedForgotPassword() {
 
     try {
       const token = getToken();
-      const effectiveUserId = userId || localStorage.getItem("userId");
+      const effectiveUserId = userId || getUserId();
 
       const response = await fetch(
         `${API_URL}AdminApplicationUser/ResetPassword`,

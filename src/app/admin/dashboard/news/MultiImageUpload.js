@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Upload, X, GripVertical } from 'lucide-react';
-import CropModal from './CropModal';
+"use client";
+import React, { useState, useCallback } from "react";
+import { Upload, X, GripVertical } from "lucide-react";
+import CropModal from "./CropModal";
 
 const MAX_IMAGES = 10;
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -12,7 +13,7 @@ const MultiImageUpload = ({ images, onChange }) => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (images.length + files.length > MAX_IMAGES) {
       setError(`You can only upload up to ${MAX_IMAGES} images`);
       return;
@@ -20,13 +21,15 @@ const MultiImageUpload = ({ images, onChange }) => {
 
     const file = files[0];
     if (file) {
-      const validFormats = ['image/jpeg', 'image/png'];
+      const validFormats = ["image/jpeg", "image/png"];
       if (!validFormats.includes(file.type)) {
-        setError('Please select a valid image format (JPG, JPEG, PNG)');
+        setError("Please select a valid image format (JPG, JPEG, PNG)");
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        setError(`Image size should not exceed ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        setError(
+          `Image size should not exceed ${MAX_FILE_SIZE / (1024 * 1024)}MB`
+        );
         return;
       }
 
@@ -62,7 +65,7 @@ const MultiImageUpload = ({ images, onChange }) => {
 
   return (
     <div className="space-y-4">
-      <div className="border-dashed border-2 border-[#0AAC9E] flex justify-center items-center py-16 flex-col gap-4 bg-white rounded-lg">
+      <div className="border-dashed border-2 border-[#0AAC9E] flex justify-center items-center py-8 flex-col gap-4 bg-white rounded-lg">
         {images.length === 0 ? (
           <div className="text-center">
             <div className="w-14 h-14 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
@@ -92,11 +95,11 @@ const MultiImageUpload = ({ images, onChange }) => {
                   key={index}
                   className="relative group"
                   draggable
-                  onDragStart={(e) => e.dataTransfer.setData('index', index)}
+                  onDragStart={(e) => e.dataTransfer.setData("index", index)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
-                    const dragIndex = parseInt(e.dataTransfer.getData('index'));
+                    const dragIndex = parseInt(e.dataTransfer.getData("index"));
                     handleReorder(dragIndex, index);
                   }}
                 >
@@ -136,9 +139,7 @@ const MultiImageUpload = ({ images, onChange }) => {
         )}
       </div>
 
-      {error && (
-        <p className="text-red-500 text-sm mt-2">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
       {showCropModal && (
         <CropModal

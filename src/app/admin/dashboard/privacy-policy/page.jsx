@@ -18,7 +18,7 @@ import {
   ConfirmDialog,
   API_URL,
   useAppNavigation,
-} from "./components/page";
+} from "./components";
 import { FileCheck, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
 import SelectComponent from "@/components/selectComponent";
+import { getUserId } from "@/authtoken/auth";
 import {
   Bell,
   Users,
@@ -22,9 +23,9 @@ export default function Page() {
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState(null);
+  const storedUserId = getUserId();
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
     const Useridd = Number(storedUserId);
     if (storedUserId) {
       setUserId(Useridd);

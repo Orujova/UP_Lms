@@ -1,3 +1,4 @@
+"use client";
 import { useEffect } from "react";
 import { ArrowUpDown } from "lucide-react";
 import UserComponent from "../userComponent";
@@ -57,9 +58,9 @@ export default function UserList({ adminApplicationUser }) {
             fullName={`${user.firstName} ${user.lastName}`}
             id={user.id}
             phone={user.phoneNumber}
-            department={user.department.name}
-            position={user.position.name}
-            isActive={!user.isDeleted} // Pass isActive prop based on isDeleted field
+            department={user.department?.name || "Not specified"}
+            position={user.position?.name || "Not specified"}
+            isActive={!user.isDeleted}
           />
         ))}
       </div>

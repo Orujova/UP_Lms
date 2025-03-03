@@ -2,7 +2,12 @@
 import React from "react";
 import { Plus } from "lucide-react";
 
-const TabButtons = ({ activeTab, setActiveTab, handleAddNew, isEditing }) => {
+const PositionGroupTabButtons = ({
+  activeTab,
+  setActiveTab,
+  handleAddNew,
+  isEditing,
+}) => {
   return (
     <div className="flex border-b">
       <button
@@ -19,7 +24,7 @@ const TabButtons = ({ activeTab, setActiveTab, handleAddNew, isEditing }) => {
           }
         `}
       >
-        Position List
+        Position Group List
       </button>
       <button
         onClick={handleAddNew}
@@ -37,10 +42,10 @@ const TabButtons = ({ activeTab, setActiveTab, handleAddNew, isEditing }) => {
         `}
       >
         <Plus size={16} className="mr-2" />
-        {isEditing ? "Edit Position" : "New Position"}
+        {isEditing ? "Edit Position Group" : "New Position Group"}
       </button>
     </div>
   );
 };
 
-export default TabButtons;
+export default PositionGroupTabButtons;

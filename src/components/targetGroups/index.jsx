@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { setTargetPage } from '@/redux/course/courseSlice';
-import { createCourse } from '@/api/course';
+"use client";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { setTargetPage } from "@/redux/course/courseSlice";
+import { createCourse } from "@/api/course";
 
 // Import styles
-import './targetGroups.scss';
-import TargetComponentList from '../targetComponentList';
+import "./targetGroups.scss";
+import TargetComponentList from "../targetComponentList";
 
 export default function TargetGroups() {
   const dispatch = useDispatch();
@@ -17,19 +18,19 @@ export default function TargetGroups() {
 
   // Handle button clicks
   const handleBackClick = () => {
-    dispatch(setTargetPage('courseContent'));
+    dispatch(setTargetPage("courseContent"));
   };
 
   const validateCourseData = (data) => {
     // Basic validation
     if (!data.formData.Name?.trim()) {
-      throw new Error('Course name is required');
+      throw new Error("Course name is required");
     }
     if (!data.formData.Description?.trim()) {
-      throw new Error('Course description is required');
+      throw new Error("Course description is required");
     }
     if (!data.sections?.length) {
-      throw new Error('At least one section is required');
+      throw new Error("At least one section is required");
     }
 
     // Add more specific validations as needed
@@ -42,10 +43,10 @@ export default function TargetGroups() {
       setError(null);
 
       // Log initial state for debugging
-      console.group('Course Creation - Initial Data');
-      console.log('Form Data:', courseState.formData);
-      console.log('Succession Rates:', courseState.successionRates);
-      console.log('Sections:', courseState.sections);
+      console.group("Course Creation - Initial Data");
+      console.log("Form Data:", courseState.formData);
+      console.log("Succession Rates:", courseState.successionRates);
+      console.log("Sections:", courseState.sections);
       console.groupEnd();
 
       // Validate data before submission
@@ -55,72 +56,67 @@ export default function TargetGroups() {
       const result = await createCourse(courseState);
 
       // Log success
-      console.log('Course created successfully:', result);
+      console.log("Course created successfully:", result);
 
       // Show success message or redirect
       // You might want to add a success notification system here
-      alert('Course created successfully!');
+      alert("Course created successfully!");
 
       // Optionally redirect to courses list or clear the form
       // router.push('/courses'); // If using Next.js router
-
     } catch (error) {
-      console.error('Failed to create course:', error);
+      console.error("Failed to create course:", error);
 
       // Set error message for display
-      setError(error.response?.data?.message || error.message || 'Failed to create course');
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create course"
+      );
 
       // Show error to user
-      alert(error.message || 'Failed to create course. Please try again.');
+      alert(error.message || "Failed to create course. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const [targetButton, setTargetButton] = useState('Saved targets')
+  const [targetButton, setTargetButton] = useState("Saved targets");
 
   return (
     <div className="targetGroups">
       <h3>Select target group</h3>
 
-      <div className='targetButtons'>
-        <div className={`${targetButton === 'Saved targets' ? 'active' : null} targetButton`} onClick={() => { setTargetButton('Saved targets') }}>
+      <div className="targetButtons">
+        <div
+          className={`${
+            targetButton === "Saved targets" ? "active" : null
+          } targetButton`}
+          onClick={() => {
+            setTargetButton("Saved targets");
+          }}
+        >
           Saved targets
         </div>
-        <div className={`${targetButton === 'New target' ? 'active' : null} targetButton`} onClick={() => { setTargetButton('New target') }}>
+        <div
+          className={`${
+            targetButton === "New target" ? "active" : null
+          } targetButton`}
+          onClick={() => {
+            setTargetButton("New target");
+          }}
+        >
           New target
         </div>
       </div>
 
-      {targetButton === 'Saved targets' ?
-        <TargetComponentList />
-      :null}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      {targetButton === "Saved targets" ? <TargetComponentList /> : null}
 
       {/* Error display */}
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {/* Main content */}
-      <div className="content">
-        {/* Add your target groups content here */}
-      </div>
+      <div className="content">{/* Add your target groups content here */}</div>
 
       {/* Bottom Navigation Buttons */}
       <div className="navigation-buttons">
@@ -136,7 +132,7 @@ export default function TargetGroups() {
           onClick={handleSaveClick}
           disabled={isLoading}
         >
-          {isLoading ? 'Saving...' : 'Save'}
+          {isLoading ? "Saving..." : "Save"}
         </button>
       </div>
 

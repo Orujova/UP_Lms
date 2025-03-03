@@ -1,46 +1,50 @@
 "use client";
 import React from "react";
-import { Plus } from "lucide-react";
 
-const TabButtons = ({ activeTab, setActiveTab, handleAddNew, isEditing }) => {
+const MainTabButtons = ({
+  activeMainTab,
+  setActiveMainTab,
+  name1,
+  name2,
+  text1,
+  text2,
+}) => {
   return (
-    <div className="flex border-b">
+    <div className="flex border-b border-gray-200 mb-6">
       <button
-        onClick={() => setActiveTab("list")}
+        onClick={() => setActiveMainTab(text1)}
         className={`
           px-6 py-3 
           border-b-2 
           font-medium 
           transition-colors 
           ${
-            activeTab === "list"
-              ? `border-[#127D74] text-[#127D74]`
+            activeMainTab === text1
+              ? `border-[#0AAC9E] text-[#0AAC9E]`
               : "border-transparent text-gray-500 hover:text-gray-700"
           }
         `}
       >
-        Position List
+        {name1}
       </button>
       <button
-        onClick={handleAddNew}
+        onClick={() => setActiveMainTab(text2)}
         className={`
           px-6 py-3 
           border-b-2 
           font-medium 
-          flex items-center 
           transition-colors 
           ${
-            activeTab === "form"
-              ? `border-[#127D74] text-[#127D74]`
+            activeMainTab === text2
+              ? `border-[#0AAC9E] text-[#0AAC9E]`
               : "border-transparent text-gray-500 hover:text-gray-700"
           }
         `}
       >
-        <Plus size={16} className="mr-2" />
-        {isEditing ? "Edit Position" : "New Position"}
+        {name2}
       </button>
     </div>
   );
 };
 
-export default TabButtons;
+export default MainTabButtons;

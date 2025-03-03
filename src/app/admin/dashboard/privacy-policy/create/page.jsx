@@ -13,7 +13,7 @@ import {
   SuccessAlert,
   API_URL,
   useAppNavigation,
-} from "../components/page";
+} from "../components";
 import { Lock, Plus, Save, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 

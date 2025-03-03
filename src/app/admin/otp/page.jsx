@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
-
+import { getUserId, getPhoneNumber } from "@/authtoken/auth";
 //style
 import "./otp.scss";
 
@@ -22,7 +22,7 @@ export default function Page() {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
+    const storedUserId = getUserId();
     const Useridd = Number(storedUserId);
     if (storedUserId) {
       setUserId(Useridd);
@@ -30,7 +30,7 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const phoneNumber = localStorage.getItem("phone-number");
+    const phoneNumber = getPhoneNumber();
 
     if (phoneNumber) {
       const firstTwoDigits = phoneNumber.substring(0, 2);

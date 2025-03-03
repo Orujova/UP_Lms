@@ -13,7 +13,7 @@ import {
   ErrorAlert,
   API_URL,
   useAppNavigation,
-} from "../components/page";
+} from "../components";
 import {
   Lock,
   FileCheck,

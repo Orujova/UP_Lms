@@ -12,6 +12,24 @@ export const getToken = () => {
   return token;
 };
 
+export const getUserId = () => {
+  if (typeof window === "undefined") {
+    console.warn("Cannot access localStorage or cookies on the server.");
+    return null;
+  }
+
+  return localStorage.getItem("userId") || getCookie("userId");
+};
+
+export const getPhoneNumber = () => {
+  if (typeof window === "undefined") {
+    console.warn("Cannot access localStorage or cookies on the server.");
+    return null;
+  }
+
+  return localStorage.getItem("phone-number") || getCookie("phone-number");
+};
+
 export const getParsedToken = () => {
   const token = getToken();
   if (!token) {

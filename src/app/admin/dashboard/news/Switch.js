@@ -1,6 +1,14 @@
-import React from 'react';
+"use client";
+import React from "react";
 
-const Switch = ({ checked, onCheckedChange, icon: Icon, offIcon: OffIcon, label, description }) => {
+const Switch = ({
+  checked,
+  onCheckedChange,
+  icon: Icon,
+  offIcon: OffIcon,
+  label,
+  description,
+}) => {
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
       <div className="flex items-center justify-between">
@@ -9,17 +17,13 @@ const Switch = ({ checked, onCheckedChange, icon: Icon, offIcon: OffIcon, label,
             {label}
           </label>
           {description && (
-            <p className="text-xs font-normal text-gray-400">
-              {description}
-            </p>
+            <p className="text-xs font-normal text-gray-400">{description}</p>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {checked ? (
-            Icon && <Icon className="w-4 h-4 text-[#0AAC9E]" />
-          ) : (
-            OffIcon && <OffIcon className="w-4 h-4 text-gray-400" />
-          )}
+          {checked
+            ? Icon && <Icon className="w-4 h-4 text-[#0AAC9E]" />
+            : OffIcon && <OffIcon className="w-4 h-4 text-gray-400" />}
           <button
             type="button"
             role="switch"

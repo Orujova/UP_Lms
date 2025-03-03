@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { getToken, getCookie } from "@/authtoken/auth.js";
+import { getToken, getUserId } from "@/authtoken/auth.js";
 import {
   Clock,
   Eye,
@@ -100,7 +100,7 @@ export default function NewsPage() {
 
   const pathname = usePathname();
   const newsId = pathname?.split("/").pop();
-  const userId = getCookie("userId") || localStorage.getItem("userId");
+  const userId = getUserId();
 
   useEffect(() => {
     if (!newsId || !userId) return;

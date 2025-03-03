@@ -36,7 +36,8 @@ import Pagination from "../reportPagination";
 import NewsFilterBar from "../newsFilterBar";
 import DeviceUsageChart from "../deviceUsageChart";
 import CategoryDistributionChart from "../categoryDistributionChart";
-
+import { getToken } from "@/authtoken/auth.js";
+const token = getToken();
 // Colors
 const COLORS = [
   "#7EC8E3",
@@ -298,7 +299,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/News/getallnewsinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -340,7 +341,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/News/getallnewslikeinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -382,7 +383,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/News/getallnewssaveinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -425,7 +426,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/News/getallnewscategoryinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -467,7 +468,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/News/getnewsactivityanalysis/reporting?${queryParams}`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -492,7 +493,7 @@ const NewsAnalytics = () => {
         `https://bravoadmin.uplms.org/api/NewsCategory`,
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -522,7 +523,7 @@ const NewsAnalytics = () => {
         {
           method: "GET",
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -542,7 +543,7 @@ const NewsAnalytics = () => {
         {
           method: "GET",
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -562,7 +563,7 @@ const NewsAnalytics = () => {
         {
           method: "GET",
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -582,7 +583,7 @@ const NewsAnalytics = () => {
         {
           method: "GET",
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: `Bearer ${token}`,
           },
         }
       );

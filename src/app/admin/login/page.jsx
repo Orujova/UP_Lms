@@ -37,6 +37,10 @@ export default function Page() {
       if (response.isSuccess) {
         localStorage.setItem("userId", response.userId);
         localStorage.setItem("phone-number", response.phoneNumber);
+
+        document.cookie = `userId=${response.userId}; path=/;`;
+        document.cookie = `phone-number=${response.phoneNumber}; path=/;`;
+
         router.push("/admin/otp");
 
         toast.success("Login successful!");

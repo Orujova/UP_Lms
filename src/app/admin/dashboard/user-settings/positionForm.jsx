@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useRef, useEffect } from "react";
 import {
   User,
@@ -13,6 +14,7 @@ import {
   Loader2,
   AlertCircle,
   Upload,
+  Download,
 } from "lucide-react";
 import ExcelImportModal from "@/components/excelImportModal"; // Import the new component
 
@@ -131,6 +133,17 @@ const PositionForm = ({
     setActiveTab("list");
   };
 
+  // Handle template download
+  const handleDownloadTemplate = () => {
+    // Create a link to download the template file
+    const link = document.createElement("a");
+    link.href = "/templates/Positionimport.xlsx"; // Set the path to where your file is stored
+    link.download = "Positionimport.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Filter position groups based on search term
   const filteredPositionGroups = availablePositionGroups.filter((group) =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,16 +159,26 @@ const PositionForm = ({
               <h2 className="text-base font-medium">Position Information</h2>
             </div>
 
-            {/* Excel Import Button */}
+            {/* Excel Import and Template Download Buttons */}
             {!isEditing && (
-              <button
-                type="button"
-                onClick={() => setIsImportModalOpen(true)}
-                className="flex items-center px-3 py-2 text-sm text-[#127D74] bg-[#f2fdfc] rounded-md hover:bg-[#e0f7f5] transition-colors"
-              >
-                <Upload size={14} className="mr-1.5" />
-                Import from Excel
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                >
+                  <Download size={14} className="mr-1.5" />
+                  Download Template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center px-3 py-2 text-sm text-[#127D74] bg-[#f2fdfc] rounded-md hover:bg-[#e0f7f5] transition-colors"
+                >
+                  <Upload size={14} className="mr-1.5" />
+                  Import from Excel
+                </button>
+              </div>
             )}
           </div>
 

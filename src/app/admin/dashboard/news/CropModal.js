@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { X } from 'lucide-react';
-import Cropper from 'react-easy-crop';
+"use client";
+import React, { useState, useCallback } from "react";
+import { X } from "lucide-react";
+import Cropper from "react-easy-crop";
 
 const CropModal = ({ image, onCancel, onCrop }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -13,7 +14,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
 
   const createCroppedImage = async () => {
     try {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       const img = new Image();
       img.src = image;
 
@@ -25,7 +26,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
       canvas.width = 1600;
       canvas.height = 900;
 
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       ctx.drawImage(
         img,
         croppedAreaPixels.x,
@@ -40,17 +41,17 @@ const CropModal = ({ image, onCancel, onCrop }) => {
 
       canvas.toBlob(
         (blob) => {
-          const file = new File([blob], 'cropped_news_image.jpg', {
-            type: 'image/jpeg',
+          const file = new File([blob], "cropped_news_image.jpg", {
+            type: "image/jpeg",
             lastModified: Date.now(),
           });
           onCrop(file, URL.createObjectURL(blob));
         },
-        'image/jpeg',
+        "image/jpeg",
         0.8
       );
     } catch (error) {
-      console.error('Error creating cropped image:', error);
+      console.error("Error creating cropped image:", error);
     }
   };
 
@@ -59,7 +60,10 @@ const CropModal = ({ image, onCancel, onCrop }) => {
       <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-semibold">Crop Image (16:9 ratio)</h3>
-          <button onClick={onCancel} className="text-gray-500 hover:text-gray-700">
+          <button
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-700"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>

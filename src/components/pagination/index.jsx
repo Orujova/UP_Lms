@@ -1,4 +1,4 @@
-// Pagination.jsx
+"use client";
 import {
   ChevronLeft,
   ChevronRight,

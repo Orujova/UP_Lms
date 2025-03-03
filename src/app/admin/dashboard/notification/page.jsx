@@ -10,7 +10,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
-import { getToken } from "@/authtoken/auth.js";
+import { getToken, getUserId } from "@/authtoken/auth.js";
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -22,6 +22,7 @@ const NotificationsPage = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const itemsPerPage = 5;
   const token = getToken();
+  const userId = getUserId();
 
   useEffect(() => {
     fetchNotifications();
@@ -30,7 +31,6 @@ const NotificationsPage = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const userId = localStorage.getItem("userId");
       if (!userId) throw new Error("User ID not found");
 
       const response = await fetch(

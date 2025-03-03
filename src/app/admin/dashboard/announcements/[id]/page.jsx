@@ -20,7 +20,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import DeleteConfirmationModal from "@/components/deleteModal";
-import { getToken } from "@/authtoken/auth.js";
+import { getToken, getUserId } from "@/authtoken/auth.js";
+
+const token = getToken();
+const userId = getUserId();
 
 const StatusBadge = ({ scheduledDate, expiryDate }) => {
   const now = new Date();
@@ -99,8 +102,6 @@ export default function AnnouncementDetail({ params }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const router = useRouter();
   const { id } = params;
-  const token = getToken();
-  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
     fetchAnnouncementDetail();
@@ -116,7 +117,6 @@ export default function AnnouncementDetail({ params }) {
       setAnnouncement(data);
     } catch (error) {
       console.error("Error fetching announcement details:", error);
-      toast.error("Failed to load announcement details");
     } finally {
       setLoading(false);
     }
@@ -128,6 +128,7 @@ export default function AnnouncementDetail({ params }) {
         `https://bravoadmin.uplms.org/api/Announcement/${id}`,
         { method: "DELETE" }
       );
+
       if (response.ok) {
         toast.success("Announcement deleted successfully");
         router.push("/admin/dashboard/announcements/");

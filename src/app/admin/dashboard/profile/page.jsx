@@ -24,7 +24,7 @@ import {
   Search,
   ArrowLeft,
 } from "lucide-react";
-import { getToken } from "@/authtoken/auth.js";
+import { getToken, getUserId } from "@/authtoken/auth.js";
 import PasswordChangeModal from "./PasswordChangeModal ";
 import ImageUploadModal from "./ImageUploadModal ";
 import noPP from "@/images/noPP.png";
@@ -304,7 +304,7 @@ const AdminProfilePage = () => {
   const [residentialAreas, setResidentialAreas] = useState([]);
 
   const token = getToken();
-  const userId = localStorage.getItem("userId");
+  const userId = getUserId();
   const API_URL = "https://bravoadmin.uplms.org/api/";
 
   // Enhanced default cover photo

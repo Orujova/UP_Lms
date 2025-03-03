@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, Clock, Eye, ArrowLeft, Edit, User } from "lucide-react";
-import { getToken } from "@/authtoken/auth.js";
+import { getToken, getUserId } from "@/authtoken/auth.js";
 
 const EventDetails = ({ params }) => {
   const { id } = params;
@@ -16,7 +16,7 @@ const EventDetails = ({ params }) => {
   }, []);
 
   const token = getToken();
-  const userId = localStorage.getItem("userId");
+  const userId = getUserId();
 
   const fetchEventDetails = async () => {
     try {

@@ -15,7 +15,7 @@ import {
   SuccessAlert,
   API_URL,
   useAppNavigation,
-} from "../../components/page";
+} from "../../components";
 import { Lock, Edit, Save, ArrowLeft, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
