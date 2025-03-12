@@ -39,7 +39,7 @@ const QuestionModal = ({
                   faqCategoryId: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#01DBC8] focus:border-[#01DBC8]"
             >
               <option value="">Select a category</option>
               {categories.map((category) => (
@@ -63,7 +63,7 @@ const QuestionModal = ({
                   questionText: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#01DBC8] focus:border-[#01DBC8]"
               placeholder="Enter question text"
             />
           </div>
@@ -80,7 +80,7 @@ const QuestionModal = ({
                   answerText: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 min-h-[150px]"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#01DBC8] focus:border-[#01DBC8] min-h-[150px]"
               placeholder="Enter answer text"
             />
           </div>
@@ -98,7 +98,7 @@ const QuestionModal = ({
                   order: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#01DBC8] focus:border-[#01DBC8]"
               placeholder="Enter display order"
               min="0"
             />
@@ -116,7 +116,7 @@ const QuestionModal = ({
                       isActive: e.target.checked,
                     })
                   }
-                  className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-emerald-600 focus:ring-[#01DBC8] border-gray-300 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-700">Active</span>
               </label>
@@ -132,7 +132,7 @@ const QuestionModal = ({
             </button>
             <button
               onClick={isEditingQuestion ? updateQuestion : createQuestion}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-md hover:bg-[#099b8e]"
               disabled={
                 !questionFormData.questionText ||
                 !questionFormData.answerText ||

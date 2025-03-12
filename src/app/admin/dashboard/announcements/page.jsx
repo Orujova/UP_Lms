@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import DeleteConfirmationModal from "@/components/deleteModal";
+import LoadingSpinner from "@/components/loadingSpinner";
 const PAGE_SIZE = 12;
 
 export default function AnnouncementsList() {
@@ -113,14 +114,7 @@ export default function AnnouncementsList() {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-[#0AAC9E] border-b-[#0AAC9E] rounded-full animate-spin"></div>
-          <p className="mt-2 text-sm text-gray-600">Loading announcements...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   const GridView = () => (

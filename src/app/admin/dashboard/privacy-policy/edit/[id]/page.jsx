@@ -10,7 +10,6 @@ import {
   Button,
   FormInput,
   Checkbox,
-  LoadingSpinner,
   ErrorAlert,
   SuccessAlert,
   API_URL,
@@ -18,6 +17,7 @@ import {
 } from "../../components";
 import { Lock, Edit, Save, ArrowLeft, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 export default function EditPrivacyPolicy() {
   const params = useParams();

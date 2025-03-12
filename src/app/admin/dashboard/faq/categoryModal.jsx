@@ -39,7 +39,7 @@ const CategoryModal = ({
                   name: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#01DBC8] focus:border-[#01DBC8]"
               placeholder="Enter category name"
             />
           </div>
@@ -57,7 +57,7 @@ const CategoryModal = ({
                   order: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#01DBC8] focus:border-[#01DBC8]"
               placeholder="Enter display order"
               min="0"
             />
@@ -91,7 +91,7 @@ const CategoryModal = ({
             </button>
             <button
               onClick={isEditingCategory ? updateCategory : createCategory}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-md hover:bg-[#099b8e]"
               disabled={!categoryFormData.name}
             >
               {isEditingCategory ? "Update" : "Create"}

@@ -1,31 +1,42 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast, Toaster } from "sonner";
-import { Search, Upload, X, ArrowLeft } from "lucide-react";
-import Cropper from "react-easy-crop";
-import { getParsedToken } from "@/authtoken/auth.js";
+import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
+
+// Import modular components
+import BasicInfo from "@/components/announcement/BasicInfo";
+import Description from "@/components/announcement/Description";
+import ImageUpload from "@/components/announcement/ImageUpload";
+import PollUnitSelector from "@/components/announcement/PollUnitSelector";
+import TargetGroupSelector from "@/components/announcement/TargetGroupSelector";
+import Settings from "@/components/announcement/Settings";
+import FormActions from "@/components/announcement/FormActions";
+import LoadingSpinner from "@/components/loadingSpinner";
+
+// Import auth functions for API access
+import { getToken, getUserId } from "@/authtoken/auth.js";
 
 export default function EditAnnouncement({ params }) {
   const router = useRouter();
   const { id } = params;
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showCropModal, setShowCropModal] = useState(false);
-  const [tempImage, setTempImage] = useState(null);
+  const [error, setError] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Dropdown states
+  // Poll Unit state
   const [pollUnits, setPollUnits] = useState([]);
-  const [targetGroups, setTargetGroups] = useState([]);
   const [searchPollUnit, setSearchPollUnit] = useState("");
-  const [searchTargetGroup, setSearchTargetGroup] = useState("");
   const [showPollUnitDropdown, setShowPollUnitDropdown] = useState(false);
-  const [showTargetGroupDropdown, setShowTargetGroupDropdown] = useState(false);
 
-  const pollUnitRef = useRef(null);
-  const targetGroupRef = useRef(null);
+  // Target Group state
+  const [targetGroups, setTargetGroups] = useState([]);
+  const [searchTargetGroup, setSearchTargetGroup] = useState("");
+  const [showTargetGroupDropdown, setShowTargetGroupDropdown] = useState(false);
+  const [selectedTargetGroups, setSelectedTargetGroups] = useState([]);
 
   const [formData, setFormData] = useState({
     id: "",
@@ -36,45 +47,63 @@ export default function EditAnnouncement({ params }) {
     Priority: "NORMAL",
     ScheduledDate: "",
     ExpiryDate: "",
-    PollUnitId: null,
+    PollUnitId: "",
     TargetGroupId: "",
     ImageFile: null,
+    HasNotification: false,
   });
 
+  // Initialize component - fetch announcement and supporting data
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (pollUnitRef.current && !pollUnitRef.current.contains(event.target)) {
-        setShowPollUnitDropdown(false);
-      }
-      if (
-        targetGroupRef.current &&
-        !targetGroupRef.current.contains(event.target)
-      ) {
-        setShowTargetGroupDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
+    // Load all required data in parallel
     Promise.all([
       fetchAnnouncementData(),
       fetchPollUnits(),
       fetchTargetGroups(),
     ]).catch((error) => {
-      toast.error("Error loading data");
-      console.error("Error:", error);
+      console.error("Error loading initial data:", error);
+      setError("Failed to load required data. Please try again.");
+      setLoading(false);
     });
+
+    // Set a timeout to exit loading state if taking too long
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log("Forcing exit from loading state after timeout");
+        setLoading(false);
+      }
+    }, 10000);
+
+    return () => clearTimeout(loadingTimeout);
   }, [id]);
 
+  // Direct API call to fetch announcement data
   const fetchAnnouncementData = async () => {
     try {
+      setLoading(true);
+      const token = getToken();
+      const userId = getUserId() || 0;
+
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/${id}`
+        `https://bravoadmin.uplms.org/api/Announcement/${id}?userid=${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }
       );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error (${response.status}):`, errorText);
+        throw new Error(`Failed to fetch announcement: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      console.log("Announcement data received:", data);
+
+      // Update form data from the API response
       setFormData({
         id: data.id || 0,
         Title: data.title || "",
@@ -87,8 +116,19 @@ export default function EditAnnouncement({ params }) {
         PollUnitId:
           data.pollUnitId === 0 ? "" : data.pollUnitId?.toString() || "",
         TargetGroupId: data.targetGroupId?.toString() || "",
+        HasNotification: data.hasNotification || false,
       });
 
+      // Process target groups
+      if (data.targetGroupIds && data.targetGroups) {
+        const selectedGroups = data.targetGroupIds.map((id, index) => ({
+          id: id,
+          name: data.targetGroups[index],
+        }));
+        setSelectedTargetGroups(selectedGroups);
+      }
+
+      // Set image preview
       if (data.imageUrl) {
         setImagePreview(
           `https://bravoadmin.uplms.org/uploads/${data.imageUrl.replace(
@@ -98,8 +138,9 @@ export default function EditAnnouncement({ params }) {
         );
       }
     } catch (error) {
-      toast.error("Error fetching announcement");
-      console.error("Error:", error);
+      console.error("Error fetching announcement:", error);
+      setError(error.message || "Failed to load announcement data");
+      toast.error("Failed to load announcement data");
     } finally {
       setLoading(false);
     }
@@ -107,71 +148,163 @@ export default function EditAnnouncement({ params }) {
 
   const fetchPollUnits = async () => {
     try {
+      const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit?Page=1&ShowMore.Take=100"
+        "https://bravoadmin.uplms.org/api/PollUnit?Page=1&ShowMore.Take=100",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }
       );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch poll units: ${response.statusText}`);
+      }
+
       const data = await response.json();
       setPollUnits(data[0].pollUnits);
     } catch (error) {
       console.error("Error fetching poll units:", error);
+      toast.error("Failed to load poll units");
     }
   };
 
   const fetchTargetGroups = async () => {
     try {
+      const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100"
+        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }
       );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch target groups: ${response.statusText}`
+        );
+      }
+
       const data = await response.json();
       setTargetGroups(data[0].targetGroups);
     } catch (error) {
       console.error("Error fetching target groups:", error);
+      toast.error("Failed to load target groups");
     }
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setTempImage(reader.result);
-        setShowCropModal(true);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageChange = (file, preview) => {
+    setFormData((prev) => ({ ...prev, ImageFile: file }));
+    setImagePreview(preview);
   };
 
-  const handleCropComplete = (croppedFile, preview) => {
-    setFormData((prev) => ({ ...prev, ImageFile: croppedFile }));
-    setImagePreview(preview);
-    setShowCropModal(false);
-    setTempImage(null);
+  const handleImageRemove = () => {
+    setImagePreview(null);
+    setFormData((prev) => ({ ...prev, ImageFile: null }));
   };
+
+  const handleSelectPollUnit = (unit) => {
+    setFormData((prev) => ({ ...prev, PollUnitId: unit.id.toString() }));
+    setSearchPollUnit(unit.title);
+    setShowPollUnitDropdown(false);
+  };
+
+  const handleClearPollUnit = () => {
+    setFormData((prev) => ({ ...prev, PollUnitId: "" }));
+    setSearchPollUnit("");
+  };
+
+  const handleSelectTargetGroup = (group) => {
+    // Check if already selected
+    if (!selectedTargetGroups.some((item) => item.id === group.id)) {
+      const updatedGroups = [...selectedTargetGroups, group];
+      setSelectedTargetGroups(updatedGroups);
+
+      // Update the TargetGroupId in formData (using the first group's ID for compatibility)
+      setFormData((prev) => ({
+        ...prev,
+        TargetGroupId: updatedGroups[0].id.toString(),
+      }));
+    }
+    setSearchTargetGroup("");
+  };
+
+  const handleRemoveTargetGroup = (group) => {
+    const updatedGroups = selectedTargetGroups.filter(
+      (item) => item.id !== group.id
+    );
+    setSelectedTargetGroups(updatedGroups);
+
+    // Update the TargetGroupId in formData
+    setFormData((prev) => ({
+      ...prev,
+      TargetGroupId:
+        updatedGroups.length > 0 ? updatedGroups[0].id.toString() : "",
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
 
     try {
+      const token = getToken();
+      const userId = getUserId();
       const formDataToSend = new FormData();
 
-      formDataToSend.append("ShortDescription", formData.ShortDescription);
-      formDataToSend.append("ExpiryDate", formData.ExpiryDate); // Ensure the format matches the backend (MM-DD-YYYY)
+      // Add all form fields to FormData with exactly the right casing
+      // Use the exact field names from the API documentation
       formDataToSend.append("AnnouncementId", formData.id);
-      formDataToSend.append("Priority", formData.Priority);
-      formDataToSend.append("TargetGroupId", formData.TargetGroupId);
-      formDataToSend.append("PollUnitId", formData.PollUnitId);
-      formDataToSend.append("SubTitle", formData.SubTitle);
       formDataToSend.append("Title", formData.Title);
-      formDataToSend.append("ScheduledDate", formData.ScheduledDate); // Ensure the format matches the backend (MM-DD-YYYY)
+      formDataToSend.append("SubTitle", formData.SubTitle);
       formDataToSend.append("Description", formData.Description);
+      formDataToSend.append("ShortDescription", formData.ShortDescription);
+      formDataToSend.append("Priority", formData.Priority);
+
+      // Format dates properly (API expects YYYY-MM-DD)
+      formDataToSend.append("ScheduledDate", formData.ScheduledDate);
+      formDataToSend.append("ExpiryDate", formData.ExpiryDate);
+
+      // Add Poll Unit ID (ensure it's a proper integer)
+      if (formData.PollUnitId) {
+        formDataToSend.append("PollUnitId", parseInt(formData.PollUnitId, 10));
+      } else {
+        formDataToSend.append("PollUnitId", 0); // Send 0 for no poll unit
+      }
+
+      // Add Target Group IDs as an array
+      if (selectedTargetGroups.length > 0) {
+        selectedTargetGroups.forEach((group) => {
+          formDataToSend.append("TargetGroupIds", group.id);
+        });
+      } else if (formData.TargetGroupId) {
+        // Fallback to single TargetGroupId if needed
+        formDataToSend.append(
+          "TargetGroupIds",
+          parseInt(formData.TargetGroupId, 10)
+        );
+      }
+
+      // Add notification flag
+      formDataToSend.append("HasNotification", formData.HasNotification);
+
+      // Add UserId to FormData
+      if (userId) {
+        formDataToSend.append("UserId", userId);
+      }
 
       // Handle ImageFile
       if (formData.ImageFile) {
@@ -182,24 +315,47 @@ export default function EditAnnouncement({ params }) {
         );
       }
 
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+
+      // Make direct API call to update announcement
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement`,
+        "https://bravoadmin.uplms.org/api/Announcement",
         {
           method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formDataToSend,
         }
       );
 
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success("Announcement updated successfully");
-        router.push("/admin/dashboard/announcements");
-      } else {
-        throw new Error(data.message || "Failed to update announcement");
+      // Handle response
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(
+            errorData?.message || "Failed to update announcement"
+          );
+        } catch (jsonError) {
+          throw new Error(
+            `Server error: ${response.status} ${response.statusText}`
+          );
+        }
       }
+
+      const result = await response.json();
+      console.log("Update result:", result);
+
+      toast.success("Announcement updated successfully");
+      setTimeout(() => {
+        router.push("/admin/dashboard/announcements");
+      }, 1500);
     } catch (error) {
-      toast.error("Failed to update announcement");
+      toast.error("Failed to update announcement: " + error.message);
       console.error("Error updating announcement:", error);
     } finally {
       setSaving(false);
@@ -207,31 +363,47 @@ export default function EditAnnouncement({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t- #C0F6F1 border-b-#0AAC9E rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50/50 pt-10">
-      <Toaster position="top-right" />
-      {showCropModal && (
-        <CropModal
-          image={tempImage}
-          onCancel={() => {
-            setShowCropModal(false);
-            setTempImage(null);
-          }}
-          onCrop={handleCropComplete}
-        />
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 text-red-500">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Error loading data
+              </h3>
+              <div className="mt-1 text-sm text-red-700">{error}</div>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={fetchAnnouncementData}
+                className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-xs"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="min-h-screen bg-gray-50/50 ">
+      <div className="min-h-screen bg-gray-50/50">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex justify-between w-full">
@@ -248,467 +420,68 @@ export default function EditAnnouncement({ params }) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Image Upload */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-4">
-              Cover Image (9:16)
-            </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-              <div className="space-y-1 text-center">
-                {imagePreview ? (
-                  <div className="relative w-full max-w-sm mx-auto aspect-[9/16]">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImagePreview(null);
-                        setFormData((prev) => ({ ...prev, ImageFile: null }));
-                      }}
-                      className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor="image-upload"
-                    className="flex flex-col items-center cursor-pointer"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-12 h-12 text-gray-400" />
-                      <p className="mt-2 text-sm text-gray-500">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Image will be cropped to 9:16 ratio
-                      </p>
-                    </div>
-                  </label>
-                )}
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </div>
-            </div>
-          </div>
+          <ImageUpload
+            imagePreview={imagePreview}
+            onImageChange={handleImageChange}
+            onImageRemove={handleImageRemove}
+          />
 
           {/* Basic Information */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <h2 className="text-lg font-medium mb-4">Basic Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  name="Title"
-                  value={formData.Title}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Subtitle
-                </label>
-                <input
-                  type="text"
-                  name="SubTitle"
-                  value={formData.SubTitle}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                />
-              </div>
-            </div>
-          </div>
+          <BasicInfo
+            title={formData.Title}
+            subtitle={formData.SubTitle}
+            onInputChange={handleInputChange}
+          />
 
           {/* Description */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <h2 className="text-lg font-medium mb-4">Description</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Short Description
-                </label>
-                <input
-                  type="text"
-                  name="ShortDescription"
-                  value={formData.ShortDescription}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Full Description
-                </label>
-                <textarea
-                  name="Description"
-                  value={formData.Description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 outline-0 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                  required
-                />
-              </div>
-            </div>
-          </div>
+          <Description
+            shortDescription={formData.ShortDescription}
+            fullDescription={formData.Description}
+            onInputChange={handleInputChange}
+          />
 
-          {/* Poll Unit Dropdown */}
-          <div
-            className="bg-white rounded-lg p-6 border border-gray-200"
-            ref={pollUnitRef}
-          >
-            <h2 className="text-lg font-medium mb-4">
-              Poll Unit{" "}
-              <span className="text-sm text-gray-500">(Optional)</span>
-            </h2>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search poll units..."
-                value={searchPollUnit}
-                onChange={(e) => {
-                  setSearchPollUnit(e.target.value);
-                  setShowPollUnitDropdown(true);
-                }}
-                onClick={() => setShowPollUnitDropdown(true)}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-[#01DBC8]"
-              />
-              <Search
-                className="absolute right-3 top-2.5 text-gray-400"
-                size={20}
-              />
+          {/* Poll Unit Selector */}
+          <PollUnitSelector
+            pollUnits={pollUnits}
+            searchValue={searchPollUnit}
+            selectedPollUnitId={formData.PollUnitId}
+            showDropdown={showPollUnitDropdown}
+            onSearchChange={setSearchPollUnit}
+            onToggleDropdown={setShowPollUnitDropdown}
+            onSelect={handleSelectPollUnit}
+            onClear={handleClearPollUnit}
+          />
 
-              {showPollUnitDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                  {pollUnits
-                    .filter((unit) =>
-                      unit.title
-                        .toLowerCase()
-                        .includes(searchPollUnit.toLowerCase())
-                    )
-                    .map((unit) => (
-                      <div
-                        key={unit.id}
-                        className="px-4 py-2 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            PollUnitId: unit.id.toString(),
-                          }));
-                          setSearchPollUnit(unit.title);
-                          setShowPollUnitDropdown(false);
-                        }}
-                      >
-                        <div className="font-medium">{unit.title}</div>
-                        <div className="text-sm text-gray-500">
-                          {unit.description}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-            {formData.PollUnitId && (
-              <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
-                <span>Selected Poll Unit ID: {formData.PollUnitId}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({ ...prev, PollUnitId: "" }));
-                    setSearchPollUnit("");
-                  }}
-                  className="text-[#0AAC9E] hover:text-emerald-800"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Target Group Dropdown */}
-          <div
-            className="bg-white rounded-lg p-6 border border-gray-200"
-            ref={targetGroupRef}
-          >
-            <h2 className="text-lg font-medium mb-4">Target Group</h2>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search target groups..."
-                value={searchTargetGroup}
-                onChange={(e) => {
-                  setSearchTargetGroup(e.target.value);
-                  setShowTargetGroupDropdown(true);
-                }}
-                onClick={() => setShowTargetGroupDropdown(true)}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-[#01DBC8]"
-              />
-              <Search
-                className="absolute right-3 top-2.5 text-gray-400"
-                size={20}
-              />
-
-              {showTargetGroupDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                  {targetGroups
-                    .filter((group) =>
-                      group.name
-                        .toLowerCase()
-                        .includes(searchTargetGroup.toLowerCase())
-                    )
-                    .map((group) => (
-                      <div
-                        key={group.id}
-                        className="px-4 py-2 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            TargetGroupId: group.id.toString(),
-                          }));
-                          setSearchTargetGroup(group.name);
-                          setShowTargetGroupDropdown(false);
-                        }}
-                      >
-                        <div className="font-medium">{group.name}</div>
-                        <div className="text-xs text-gray-400 flex gap-2 mt-1">
-                          <span className="flex items-center gap-1">
-                            <span className="inline-block w-4 h-4 bg-gray-200 rounded-full text-center text-xs leading-4">
-                              U
-                            </span>
-                            {group.userCount} Users
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <span className="inline-block w-4 h-4 bg-gray-200 rounded-full text-center text-xs leading-4">
-                              F
-                            </span>
-                            {group.filterGroupCount} Filters
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-            {formData.TargetGroupId && (
-              <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
-                <span>Selected Target Group ID: {formData.TargetGroupId}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({ ...prev, TargetGroupId: "" }));
-                    setSearchTargetGroup("");
-                  }}
-                  className="text-[#0AAC9E] hover:text-emerald-800"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Target Group Selector */}
+          <TargetGroupSelector
+            targetGroups={targetGroups}
+            searchValue={searchTargetGroup}
+            selectedTargetGroups={selectedTargetGroups}
+            showDropdown={showTargetGroupDropdown}
+            onSearchChange={setSearchTargetGroup}
+            onToggleDropdown={setShowTargetGroupDropdown}
+            onSelect={handleSelectTargetGroup}
+            onRemove={handleRemoveTargetGroup}
+          />
 
           {/* Settings */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <h2 className="text-lg font-medium mb-4">Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Priority
-                </label>
-                <select
-                  name="Priority"
-                  value={formData.Priority}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                  required
-                >
-                  <option value="LOW">Low</option>
-                  <option value="NORMAL">Normal</option>
-                  <option value="HIGH">High</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Schedule Date
-                </label>
-                <input
-                  type="date"
-                  name="ScheduledDate"
-                  value={formData.ScheduledDate}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Expiry Date
-                </label>
-                <input
-                  type="date"
-                  name="ExpiryDate"
-                  value={formData.ExpiryDate}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-                  required
-                />
-              </div>
-            </div>
-          </div>
+          <Settings
+            priority={formData.Priority}
+            scheduledDate={formData.ScheduledDate}
+            expiryDate={formData.ExpiryDate}
+            hasNotification={formData.HasNotification}
+            onInputChange={handleInputChange}
+          />
 
-          {/* Actions */}
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => router.push("/admin/dashboard/announcements")}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 bg-[#127D74] text-white rounded-md hover:bg-[#0AAC9E] flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-white border-r-white border-b-white border-l-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </>
-              ) : (
-                <>Save Changes</>
-              )}
-            </button>
-          </div>
+          {/* Action Buttons */}
+          <FormActions
+            isSubmitting={saving}
+            onCancel={() => router.push("/admin/dashboard/announcements")}
+            submitButtonText="Save Changes"
+            loadingText="Saving..."
+          />
         </form>
       </div>
     </div>
   );
 }
-
-// Modal Dialog Component
-const CropModal = ({ image, onCancel, onCrop }) => {
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-
-  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  const createCroppedImage = async () => {
-    try {
-      const canvas = document.createElement("canvas");
-      const img = new Image();
-      img.src = image;
-
-      await new Promise((resolve) => {
-        img.onload = resolve;
-      });
-
-      // Set fixed dimensions for the output
-      canvas.width = 900;
-      canvas.height = 1600;
-
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(
-        img,
-        croppedAreaPixels.x,
-        croppedAreaPixels.y,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      // Convert to blob with quality reduction
-      canvas.toBlob(
-        (blob) => {
-          const file = new File([blob], "cropped_image.jpg", {
-            type: "image/jpeg",
-            lastModified: Date.now(),
-          });
-          onCrop(file, URL.createObjectURL(blob));
-        },
-        "image/jpeg",
-        0.8 // 80% quality
-      );
-    } catch (error) {
-      console.error("Error creating cropped image:", error);
-      toast.error("Failed to crop image");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Crop Image (9:16 ratio)</h3>
-          <button
-            onClick={onCancel}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="relative h-[60vh] bg-gray-900 rounded-lg mb-4">
-          <Cropper
-            image={image}
-            crop={crop}
-            zoom={zoom}
-            aspect={9 / 16}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-            objectFit="contain"
-            showGrid={true}
-            cropShape="rect"
-            restrictPosition={true}
-          />
-        </div>
-
-        <div className="flex items-center gap-4 mb-4">
-          <span className="text-sm text-gray-600">Zoom:</span>
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.1}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={createCroppedImage}
-            className="px-4 py-2 bg-[#127D74] text-white rounded-lg hover:bg-[#0AAC9E]"
-          >
-            Apply Crop
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};

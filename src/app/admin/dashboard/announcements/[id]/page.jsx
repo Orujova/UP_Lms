@@ -11,7 +11,6 @@ import {
   Timer,
   AlertCircle,
   ChartBar,
-  Loader2,
   Eye,
   MessageSquare,
   Share2,
@@ -21,6 +20,7 @@ import {
 import { toast } from "sonner";
 import DeleteConfirmationModal from "@/components/deleteModal";
 import { getToken, getUserId } from "@/authtoken/auth.js";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 const token = getToken();
 const userId = getUserId();
@@ -154,16 +154,7 @@ export default function AnnouncementDetail({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#0AAC9E] mx-auto mb-3" />
-          <p className="text-sm text-gray-600">
-            Loading announcement details...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!announcement) {

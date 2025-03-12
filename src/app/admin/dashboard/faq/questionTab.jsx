@@ -1,7 +1,7 @@
 // components/faq/QuestionTab.jsx
 import React, { useState } from "react";
 import { Plus, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import Pagination from "../user-settings/pagination";
+import Pagination from "@/components/ListPagination";
 
 const QuestionTab = ({
   questions,
@@ -33,7 +33,7 @@ const QuestionTab = ({
             resetQuestionForm();
             setShowQuestionModal(true);
           }}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700"
+          className="flex items-center gap-2 bg-[#0AAC9E] text-white px-4 py-2 rounded-md hover:bg-[#099b8e]"
           disabled={categories.length === 0}
         >
           <Plus size={16} />
@@ -61,19 +61,19 @@ const QuestionTab = ({
                   <div className="flex-1">
                     <div className="flex items-center">
                       <span
-                        className={`px-2 mr-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        className={`px-2 mr-2  inline-flex text-xs leading-5 font-medium rounded-full ${
                           question.isActive
-                            ? "bg-green-100 text-green-800"
+                            ? "bg-[#f9f9f9] text-[#0AAC9E]"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
                         {question.isActive ? "Active" : "Inactive"}
                       </span>
-                      <span className="text-sm text-emerald-600 mr-2">
-                        #{question.id} • {question.faqCategoryName}
+                      <span className="text-sm text-[#404040] mr-2">
+                        {question.faqCategoryName}
                       </span>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mt-1">
+                    <h3 className="text-base font-medium text-gray-900 mt-1">
                       {question.questionText}
                     </h3>
                   </div>
@@ -83,18 +83,18 @@ const QuestionTab = ({
                         e.stopPropagation();
                         handleEditQuestion(question);
                       }}
-                      className="text-indigo-600 hover:text-indigo-900 mr-3"
+                      className="text-gray-400 p-2  hover:text-[#0AAC9E] hover:bg-[#f2fdfc] mr-3"
                     >
-                      <Edit size={16} />
+                      <Edit size={14} />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteQuestion(question.id);
                       }}
-                      className="text-red-600 hover:text-red-900 mr-3"
+                      className="text-gray-400 p-2 hover:text-red-600 hover:bg-red-50 mr-3"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                     {expandedQuestion === question.id ? (
                       <ChevronUp size={16} className="text-gray-500" />

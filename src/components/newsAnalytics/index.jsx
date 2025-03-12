@@ -38,6 +38,7 @@ import DeviceUsageChart from "../deviceUsageChart";
 import CategoryDistributionChart from "../categoryDistributionChart";
 import { getToken } from "@/authtoken/auth.js";
 const token = getToken();
+import LoadingSpinner from "@/components/loadingSpinner";
 // Colors
 const COLORS = [
   "#7EC8E3",
@@ -66,12 +67,6 @@ const ChartCard = ({ title, children, className = "" }) => (
 const NoDataMessage = ({ message }) => (
   <div className="text-center py-8">
     <p className="text-gray-500">{message}</p>
-  </div>
-);
-
-const LoadingSpinner = () => (
-  <div className="flex justify-center py-4">
-    <div className="w-8 h-8 border-2 border-[#0AAC9E] border-t-transparent rounded-full animate-spin" />
   </div>
 );
 

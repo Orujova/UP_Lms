@@ -7,6 +7,7 @@ import { Calendar, Upload, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 const token = getToken();
 const userId = getUserId();
@@ -334,14 +335,7 @@ const EditEventForm = ({ params }) => {
   };
 
   if (initialLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-[#0AAC9E] border-b-[#0AAC9E] rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading event data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

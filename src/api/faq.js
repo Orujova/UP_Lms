@@ -26,7 +26,7 @@ export const faqService = {
       const data = await response.json();
       return {
         categories: data[0]?.faqCategories || [],
-        totalCount: data[0]?.totalCount || 0,
+        totalCount: data[0]?.totalFAQCategoryCount || 0,
       };
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -143,7 +143,7 @@ export const faqService = {
       const data = await response.json();
       return {
         questions: data[0]?.faqQuestions || [],
-        totalCount: data[0]?.totalCount || 0,
+        totalCount: data[0]?.totalFAQQuestionCount || 0,
       };
     } catch (error) {
       console.error("Error fetching questions:", error);

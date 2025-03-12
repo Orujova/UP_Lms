@@ -11,6 +11,7 @@ import LoadingSpinner from "@/components/loadingSpinner";
 import TabNavigation from "@/components/tabNavigation";
 import faqService from "@/api/faq";
 import DeleteConfirmationModal from "@/components/deleteModal";
+import { toast } from "sonner";
 
 export default function FAQAdminPage() {
   // States for FAQ categories and questions
@@ -363,7 +364,7 @@ export default function FAQAdminPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50/50 pt-14">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">
           FAQ Management

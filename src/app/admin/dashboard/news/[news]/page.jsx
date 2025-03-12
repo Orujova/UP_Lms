@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -16,7 +16,12 @@ import {
   User,
   Users,
   Bookmark,
+  Download,
+  ChevronDown,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
+import LoadingOverlay from "@/components/loadingSpinner";
 
 const PageTextComponent = dynamic(
   () => import("@/components/pageTextComponent"),
@@ -35,23 +40,6 @@ const formatDate = (dateString) => {
     })
     .replace(",", "");
 };
-
-const LoadingOverlay = () => (
-  <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-    <div className="relative flex flex-col items-center">
-      <div className="w-12 h-12 relative">
-        <div className="absolute inset-0 border-4 border-[#f9fefe] rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-[#0AAC9E] rounded-full animate-spin border-t-transparent"></div>
-      </div>
-      <div className="mt-4 space-y-1 text-center">
-        <h3 className="text-xs font-semibold text-gray-900">Loading...</h3>
-        <p className="text-gray-400 text-[10px]">
-          Please wait while we fetch your content...
-        </p>
-      </div>
-    </div>
-  </div>
-);
 
 const ErrorDisplay = ({ error }) => (
   <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
@@ -80,6 +68,9 @@ const PriorityBadge = ({ priority }) => {
     HIGH: "bg-red-100 text-red-600",
     MEDIUM: "bg-yellow-100 text-yellow-600",
     LOW: "bg-blue-100 text-blue-600",
+    medium: "bg-yellow-100 text-yellow-600", // Handle lowercase priority values
+    high: "bg-red-100 text-red-600",
+    low: "bg-blue-100 text-blue-600",
   };
 
   return (
@@ -88,8 +79,173 @@ const PriorityBadge = ({ priority }) => {
         priorityColors[priority] || "bg-gray-100 text-gray-600"
       }`}
     >
-      {priority}
+      {priority.toUpperCase()}
     </span>
+  );
+};
+
+// Image Slider Component
+const ImageSlider = ({ images }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
+  const [displayedImage, setDisplayedImage] = useState(images[0]);
+
+  const goToPrevious = () => {
+    if (transitioning) return;
+    setTransitioning(true);
+    const isFirstSlide = currentIndex === 0;
+    const newIndex = isFirstSlide ? images.length - 1 : currentIndex - 1;
+
+    // First change the state, then update the display after animation
+    setTimeout(() => {
+      setDisplayedImage(images[newIndex]);
+      setCurrentIndex(newIndex);
+      setTimeout(() => setTransitioning(false), 50);
+    }, 200);
+  };
+
+  const goToNext = () => {
+    if (transitioning) return;
+    setTransitioning(true);
+    const isLastSlide = currentIndex === images.length - 1;
+    const newIndex = isLastSlide ? 0 : currentIndex + 1;
+
+    // First change the state, then update the display after animation
+    setTimeout(() => {
+      setDisplayedImage(images[newIndex]);
+      setCurrentIndex(newIndex);
+      setTimeout(() => setTransitioning(false), 50);
+    }, 200);
+  };
+
+  const goToSlide = (slideIndex) => {
+    if (transitioning || slideIndex === currentIndex) return;
+    setTransitioning(true);
+
+    // First change the state, then update the display after animation
+    setTimeout(() => {
+      setDisplayedImage(images[slideIndex]);
+      setCurrentIndex(slideIndex);
+      setTimeout(() => setTransitioning(false), 50);
+    }, 200);
+  };
+
+  // If no images, return nothing
+  if (!images || images.length === 0) return null;
+
+  // If only one image, just show it without controls
+  if (images.length === 1) {
+    return (
+      <div className="relative w-full h-[65vh]">
+        <img
+          src={images[0]}
+          alt="News cover"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-[65vh] overflow-hidden">
+      <div
+        className={`absolute top-0 left-0 w-full h-full ${
+          transitioning ? "opacity-50 scale-95" : "opacity-100 scale-100"
+        } transition-all duration-300 ease-in-out`}
+      >
+        <img
+          src={displayedImage}
+          alt={`Slide ${currentIndex + 1}`}
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Left Arrow */}
+      <div className="absolute top-1/2 left-6 -translate-y-1/2 z-10">
+        <button
+          onClick={goToPrevious}
+          className="p-3 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors hover:scale-110 transform duration-200 shadow-md"
+          aria-label="Previous slide"
+          disabled={transitioning}
+        >
+          <ArrowLeft size={22} />
+        </button>
+      </div>
+
+      {/* Right Arrow */}
+      <div className="absolute top-1/2 right-6 -translate-y-1/2 z-10">
+        <button
+          onClick={goToNext}
+          className="p-3 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors hover:scale-110 transform duration-200 shadow-md"
+          aria-label="Next slide"
+          disabled={transitioning}
+        >
+          <ArrowRight size={22} />
+        </button>
+      </div>
+
+      {/* Thumbnails at bottom */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex space-x-3 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full">
+        {images.map((img, slideIndex) => (
+          <button
+            key={slideIndex}
+            onClick={() => goToSlide(slideIndex)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              currentIndex === slideIndex
+                ? "bg-white w-6"
+                : "bg-white/60 hover:bg-white/80"
+            }`}
+            aria-label={`Go to slide ${slideIndex + 1}`}
+            disabled={transitioning}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Attachment Card Component
+const AttachmentCard = ({ fileName, fileSize, fileUrl }) => {
+  const getFileIcon = (fileName) => {
+    const extension = fileName.split(".").pop().toLowerCase();
+
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension)) {
+      return "🖼️";
+    } else if (["doc", "docx"].includes(extension)) {
+      return "📄";
+    } else if (["xls", "xlsx"].includes(extension)) {
+      return "📊";
+    } else if (["ppt", "pptx"].includes(extension)) {
+      return "📑";
+    } else if (extension === "pdf") {
+      return "📕";
+    } else {
+      return "📎";
+    }
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center space-x-3">
+          <span className="text-xl">{getFileIcon(fileName)}</span>
+          <div>
+            <p className="text-sm font-medium text-gray-800 truncate max-w-xs">
+              {fileName}
+            </p>
+            <p className="text-xs text-gray-500">{fileSize}</p>
+          </div>
+        </div>
+        <a
+          href={fileUrl}
+          download
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="Download file"
+        >
+          <Download size={16} className="text-gray-600" />
+        </a>
+      </div>
+    </div>
   );
 };
 
@@ -97,6 +253,17 @@ export default function NewsPage() {
   const [newsData, setNewsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [attachmentsHeight, setAttachmentsHeight] = useState(0);
+  const attachmentsRef = useRef(null);
+
+  useEffect(() => {
+    if (attachmentsRef.current) {
+      setAttachmentsHeight(
+        showAttachments ? attachmentsRef.current.scrollHeight : 0
+      );
+    }
+  }, [showAttachments]);
 
   const pathname = usePathname();
   const newsId = pathname?.split("/").pop();
@@ -152,28 +319,42 @@ export default function NewsPage() {
     jsonObject = null;
   }
 
+  // Process image URLs to make them valid
+  const processedImages =
+    newsData.newsImages?.map(
+      (img) =>
+        `https://bravoadmin.uplms.org/uploads/${img.replace(
+          "https://100.42.179.27:7198/",
+          ""
+        )}`
+    ) || [];
+
+  // Process attachment URLs and info
+  const attachments =
+    newsData.newsAttachments?.map((attachment, index) => ({
+      url: `https://bravoadmin.uplms.org/uploads/${attachment.replace(
+        "https://100.42.179.27:7198/",
+        ""
+      )}`,
+      fileName: newsData.fileName[index] || `Attachment ${index + 1}`,
+      fileSize: newsData.fileSize[index] || "Unknown size",
+    })) || [];
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Hero Image Section */}
-      <div className="h-[65vh] relative">
-        {newsData.newsImages && newsData.newsImages.length > 0 ? (
-          <img
-            src={`https://bravoadmin.uplms.org/uploads/${newsData.newsImages[0].replace(
-              "https://100.42.179.27:7198/",
-              ""
-            )}`}
-            alt="News cover"
-            className="w-full h-full object-cover"
-          />
+      {/* Hero Image Section with Slider */}
+      <div className="relative">
+        {processedImages.length > 0 ? (
+          <ImageSlider images={processedImages} />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#127D74] to-[#1B4E4A] flex items-center justify-center">
+          <div className="w-full h-[65vh] bg-gradient-to-br from-[#127D74] to-[#1B4E4A] flex items-center justify-center">
             <p className="text-white text-xl font-medium">No image available</p>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
         {/* Floating Category Badge */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
           <span className="px-6 py-2 bg-white/90 backdrop-blur-sm text-[#0AAC9E] rounded-full text-sm font-medium shadow-lg">
             {newsData.subTitle}
           </span>
@@ -291,6 +472,49 @@ export default function NewsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Attachments Section - Collapsible with smooth animation */}
+              {attachments.length > 0 && (
+                <div className="mb-8">
+                  <button
+                    className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                    onClick={() => setShowAttachments(!showAttachments)}
+                    aria-expanded={showAttachments}
+                    aria-controls="attachments-panel"
+                  >
+                    <span className="font-medium flex items-center gap-2">
+                      <Download className="w-4 h-4" />
+                      Attachments ({attachments.length})
+                    </span>
+                    <div
+                      className={`transform transition-transform duration-300 ${
+                        showAttachments ? "rotate-180" : "rotate-0"
+                      }`}
+                    >
+                      <ChevronDown className="w-5 h-5" />
+                    </div>
+                  </button>
+
+                  <div
+                    id="attachments-panel"
+                    ref={attachmentsRef}
+                    className="overflow-hidden transition-all duration-300 ease-in-out"
+                    style={{ maxHeight: attachmentsHeight }}
+                    aria-hidden={!showAttachments}
+                  >
+                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {attachments.map((attachment, index) => (
+                        <AttachmentCard
+                          key={index}
+                          fileName={attachment.fileName}
+                          fileSize={attachment.fileSize}
+                          fileUrl={attachment.url}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Content */}
               <div className="prose prose-lg max-w-none">

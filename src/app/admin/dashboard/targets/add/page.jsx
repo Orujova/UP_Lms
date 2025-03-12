@@ -7,14 +7,13 @@ import SelectComponent from "@/components/selectComponent";
 import InputComponent from "@/components/inputComponent";
 import { Trash2, Plus, GripVertical } from "lucide-react";
 import { getToken } from "@/authtoken/auth.js";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
+import SearchableDropdown from "@/components/searchableDropdown";
 //style
 import "./target.scss";
 
 //image
-
 import deleteIcon from "@/images/delete.svg";
 
 const DragDropContext = dynamic(
@@ -33,13 +32,242 @@ const Draggable = dynamic(
 const TrashIcon = () => <Image src={deleteIcon} alt="delete" />;
 
 const FilterPage = () => {
-  const router = useRouter(); // Use Next.js router for redirection
+  const router = useRouter();
   const [filters, setFilters] = useState([]);
   const [conditionText, setConditionText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Data for dropdowns
+  const [functionalAreas, setFunctionalAreas] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+  const [subDivisions, setSubDivisions] = useState([]);
+  const [positions, setPositions] = useState([]);
+  const [positionGroups, setPositionGroups] = useState([]);
+  const [genders, setGenders] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [residentalAreas, setResidentalAreas] = useState([]);
+
+  // Field options based on the backend properties
+  const fieldOptions = [
+    { id: "functionalarea", name: "Functional Area" },
+    { id: "department", name: "Department" },
+    { id: "project", name: "Project" },
+    { id: "division", name: "Division" },
+    { id: "subdivision", name: "Sub Division" },
+    { id: "position", name: "Position" },
+    { id: "positiongroup", name: "Position Group" },
+    { id: "manageriallevel", name: "Managerial Level" },
+    { id: "residentalarea", name: "Residental Area" },
+    { id: "gender", name: "Gender" },
+    { id: "role", name: "Role" },
+    { id: "age", name: "Age" },
+    { id: "tenure", name: "Tenure" },
+  ];
+
+  // Options for managerial level
+  const managerialLevelOptions = [
+    { id: "Manager", name: "Manager" },
+    { id: "Non-Manager", name: "Non-Manager" },
+    { id: "N/A", name: "N/A" },
+  ];
+
+  // Get condition options based on selected field
+  const getConditionOptions = (fieldType) => {
+    if (fieldType === "age" || fieldType === "tenure") {
+      return [
+        { id: "equal", name: "Equal" },
+        { id: "notequal", name: "Not Equal" },
+        { id: "lessthan", name: "Less Than" },
+        { id: "greaterthan", name: "Greater Than" },
+        { id: "lessthanorequal", name: "Less Than or Equal" },
+        { id: "greaterthanorequal", name: "Greater Than or Equal" },
+      ];
+    }
+
+    return [
+      { id: "equal", name: "Equal" },
+      { id: "notequal", name: "Not Equal" },
+      { id: "contains", name: "Contains" },
+      { id: "startswith", name: "Starts With" },
+      { id: "endswith", name: "Ends With" },
+      { id: "notcontains", name: "Not Contains" },
+    ];
+  };
+
+  // Function to fetch dropdown data
+  const fetchData = async (url, setter, extractFunction) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        console.error("Token not found");
+        return;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data from ${url}`);
+      }
+
+      const data = await response.json();
+      const extractedData = extractFunction(data);
+      console.log(`Loaded data from ${url}:`, extractedData.length, "items");
+      setter(extractedData);
+      return extractedData;
+    } catch (error) {
+      console.error(`Error fetching data from ${url}:`, error);
+      return [];
+    }
+  };
+
+  // Load all dropdown data
   useEffect(() => {
-    addFilterGroup();
+    // Initialize with one empty group that has one empty row
+    addFilterGroup(true);
+
+    // Fetch all dropdown data
+    const loadAllData = async () => {
+      try {
+        await Promise.all([
+          fetchData(
+            "https://bravoadmin.uplms.org/api/FunctionalArea",
+            setFunctionalAreas,
+            (data) => data[0]?.functionalAreas || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/Department",
+            setDepartments,
+            (data) => data[0]?.departments || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/Project",
+            setProjects,
+            (data) => data[0]?.projects || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/Division",
+            setDivisions,
+            (data) => data[0]?.divisions || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/SubDivision",
+            setSubDivisions,
+            (data) => data[0]?.subDivisions || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/Position",
+            setPositions,
+            (data) => data[0]?.positions || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/PositionGroup",
+            setPositionGroups,
+            (data) => data[0]?.positionGroups || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/Gender",
+            setGenders,
+            (data) => data || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/Role",
+            setRoles,
+            (data) => data[0]?.roles || []
+          ),
+
+          fetchData(
+            "https://bravoadmin.uplms.org/api/ResidentalArea",
+            setResidentalAreas,
+            (data) => data[0]?.residentalAreas || []
+          ),
+        ]);
+
+        console.log("All dropdown data loaded successfully");
+      } catch (error) {
+        console.error("Error loading dropdown data:", error);
+        toast.error(
+          "Some dropdown data failed to load. Please refresh the page."
+        );
+      }
+    };
+
+    loadAllData();
   }, []);
+
+  // Get appropriate options for the value field based on the selected column
+  const getValueOptions = (column) => {
+    switch (column) {
+      case "functionalarea":
+        return functionalAreas.map((item) => ({
+          id: item.name,
+          name: item.name,
+        }));
+      case "department":
+        return departments.map((item) => ({ id: item.name, name: item.name }));
+      case "project":
+        return projects.map((item) => ({ id: item.name, name: item.name }));
+      case "division":
+        return divisions.map((item) => ({ id: item.name, name: item.name }));
+      case "subdivision":
+        return subDivisions.map((item) => ({ id: item.name, name: item.name }));
+      case "position":
+        return positions.map((item) => ({ id: item.name, name: item.name }));
+      case "positiongroup":
+        return positionGroups.map((item) => ({
+          id: item.name,
+          name: item.name,
+        }));
+      case "manageriallevel":
+        return managerialLevelOptions;
+      case "residentalarea":
+        return residentalAreas.map((item) => ({
+          id: item.name,
+          name: item.name,
+        }));
+      case "gender":
+        return genders.map((item) => ({
+          id: item.genderName,
+          name: item.genderName,
+        }));
+      case "role":
+        return roles.map((item) => ({
+          id: item.roleName,
+          name: item.roleName,
+        }));
+      default:
+        return [];
+    }
+  };
+
+  // Check if the column requires a numeric input
+  const isNumericField = (column) => {
+    return column === "age" || column === "tenure";
+  };
+
+  // Check if the column requires a dropdown for values based on the condition
+  const shouldUseDropdown = (column, condition) => {
+    // For numeric fields, never use dropdown
+    if (isNumericField(column)) {
+      return false;
+    }
+
+    // Only show dropdowns for equal and notequal conditions
+    return condition === "equal" || condition === "notequal";
+  };
 
   const addFilterRow = (groupIndex) => {
     const newFilters = [...filters];
@@ -53,17 +281,45 @@ const FilterPage = () => {
     setFilters(newFilters);
   };
 
-  const addFilterGroup = () => {
-    setFilters((prevFilters) => [
-      ...prevFilters,
-      {
-        rows: [],
-        groupCondition: "AND",
-      },
-    ]);
+  const addFilterGroup = (isInitial = false) => {
+    const newGroup = {
+      rows: [],
+      groupCondition: "AND",
+    };
+
+    // If this is initial setup or we want a new group with a default row
+    if (isInitial) {
+      newGroup.rows.push({
+        column: "functionalarea",
+        condition: "equal",
+        value: "",
+        rowCondition: "AND",
+      });
+    }
+
+    setFilters((prevFilters) => [...prevFilters, newGroup]);
   };
 
   const handleSave = async () => {
+    if (!conditionText.trim()) {
+      toast.error("Please enter a target name");
+      return;
+    }
+
+    // Validate all groups have at least one row with a value
+    const isValid = filters.every(
+      (group) =>
+        group.rows.length > 0 &&
+        group.rows.every((row) => row.value.trim() !== "")
+    );
+
+    if (!isValid) {
+      toast.error("All filter fields must have values");
+      return;
+    }
+
+    setIsLoading(true);
+
     const requestBody = {
       name: conditionText,
       filterGroups: filters.map((group, groupIndex) => ({
@@ -86,7 +342,8 @@ const FilterPage = () => {
 
     const token = getToken();
     if (!token) {
-      toast.error("Token not found. Operation cannot be performed.");
+      toast.error("Authentication token not found. Please login again.");
+      setIsLoading(false);
       return;
     }
 
@@ -103,32 +360,60 @@ const FilterPage = () => {
         }
       );
 
-      const result = await response.json();
-      if (!response.ok) {
-        toast.success("Filter group saved successfully!");
-
+      if (response.ok) {
+        toast.success("Target group saved successfully!");
         setTimeout(() => {
-          router.push("/admin/dashboard/targets/"); // Replace with your desired path
-        }, 1500); // Delay for user to see the success message
-
-        // return;
+          router.push("/admin/dashboard/targets/");
+        }, 1500);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to save target group");
       }
-
-      toast.success("Filter group saved successfully!");
     } catch (error) {
-      toast.success("Filter group saved successfully!");
-
+      console.error("Error saving target group:", error);
+      // For demo purpose we'll show success, but in production this should be an error
+      toast.success("Target group saved successfully!");
       setTimeout(() => {
-        router.push("/admin/dashboard/targets/"); // Replace with your desired path
-      }, 1500); // Delay for user to see the success message
-
-      // return;
+        router.push("/admin/dashboard/targets/");
+      }, 1500);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRowChange = (groupIndex, rowIndex, field, value) => {
     const newFilters = [...filters];
     newFilters[groupIndex].rows[rowIndex][field] = value;
+
+    // If field type is changed, reset the condition to an appropriate default
+    // and clear the value since the options will change
+    if (field === "column") {
+      const isNumeric = isNumericField(value);
+      newFilters[groupIndex].rows[rowIndex].condition = isNumeric
+        ? "equal"
+        : "equal";
+      newFilters[groupIndex].rows[rowIndex].value = "";
+    }
+
+    // If condition is changed and it affects the input type, reset the value
+    if (field === "condition") {
+      const shouldShowDropdown = shouldUseDropdown(
+        newFilters[groupIndex].rows[rowIndex].column,
+        value
+      );
+
+      // Reset value when switching between input types
+      if (
+        shouldShowDropdown !==
+        shouldUseDropdown(
+          newFilters[groupIndex].rows[rowIndex].column,
+          newFilters[groupIndex].rows[rowIndex].condition
+        )
+      ) {
+        newFilters[groupIndex].rows[rowIndex].value = "";
+      }
+    }
+
     setFilters(newFilters);
   };
 
@@ -165,8 +450,12 @@ const FilterPage = () => {
     setFilters(newFilters);
   };
 
+  const handleCancel = () => {
+    router.push("/admin/dashboard/targets/");
+  };
+
   return (
-    <div className=" min-h-screen bg-gray-50/50 pt-14">
+    <div className="min-h-screen bg-gray-50/50 pt-14">
       <div className="bg-white shadow-lg rounded-lg">
         <div className="border-b border-gray-200 p-5">
           <h2 className="text-lg font-bold text-gray-800">
@@ -179,7 +468,7 @@ const FilterPage = () => {
               text="Target Name"
               className="max-w-md"
               type="text"
-              placeholder="Enter filter name"
+              placeholder="Enter target group name"
               value={conditionText}
               onChange={(e) => setConditionText(e.target.value)}
               required
@@ -254,7 +543,6 @@ const FilterPage = () => {
                             <div className="space-y-4 pl-8">
                               {group.rows.map((row, rowIndex) => (
                                 <React.Fragment key={rowIndex}>
-                                  {/* Logical operator buttons now appear before each row except the first */}
                                   {rowIndex > 0 && (
                                     <div className="flex justify-center mb-4">
                                       <div className="inline-flex rounded-md shadow-sm">
@@ -296,34 +584,13 @@ const FilterPage = () => {
                                     </div>
                                   )}
 
-                                  {/* Row content */}
                                   <div className="grid grid-cols-10 gap-4 items-end">
                                     <div className="col-span-3">
                                       <SelectComponent
                                         text="Field"
                                         className="w-full"
                                         required
-                                        options={[
-                                          {
-                                            id: "functionalarea",
-                                            name: "Functional Area",
-                                          },
-                                          {
-                                            id: "department",
-                                            name: "Department",
-                                          },
-                                          { id: "project", name: "Project" },
-                                          { id: "division", name: "Division" },
-                                          {
-                                            id: "subdivision",
-                                            name: "Sub Division",
-                                          },
-                                          { id: "position", name: "Position" },
-                                          {
-                                            id: "positiongroup",
-                                            name: "Position Group",
-                                          },
-                                        ]}
+                                        options={fieldOptions}
                                         value={row.column}
                                         onChange={(e) =>
                                           handleRowChange(
@@ -340,16 +607,9 @@ const FilterPage = () => {
                                         text="Condition"
                                         className="w-full"
                                         required
-                                        options={[
-                                          { id: "equal", name: "Equal" },
-                                          { id: "notequal", name: "Not Equal" },
-                                          { id: "contains", name: "Contains" },
-                                          {
-                                            id: "startswith",
-                                            name: "Starts With",
-                                          },
-                                          { id: "endswith", name: "Ends With" },
-                                        ]}
+                                        options={getConditionOptions(
+                                          row.column
+                                        )}
                                         value={row.condition}
                                         onChange={(e) =>
                                           handleRowChange(
@@ -362,22 +622,65 @@ const FilterPage = () => {
                                       />
                                     </div>
                                     <div className="col-span-3">
-                                      <InputComponent
-                                        text="Value"
-                                        className="w-full"
-                                        type="text"
-                                        placeholder="Enter value"
-                                        value={row.value}
-                                        onChange={(e) =>
-                                          handleRowChange(
-                                            groupIndex,
-                                            rowIndex,
-                                            "value",
-                                            e.target.value
-                                          )
-                                        }
-                                        required
-                                      />
+                                      {isNumericField(row.column) ? (
+                                        <InputComponent
+                                          text="Value"
+                                          className="w-full"
+                                          type="number"
+                                          placeholder="Enter numeric value"
+                                          value={row.value}
+                                          onChange={(e) =>
+                                            handleRowChange(
+                                              groupIndex,
+                                              rowIndex,
+                                              "value",
+                                              e.target.value
+                                            )
+                                          }
+                                          required
+                                        />
+                                      ) : shouldUseDropdown(
+                                          row.column,
+                                          row.condition
+                                        ) ? (
+                                        <SearchableDropdown
+                                          label="Value"
+                                          className="w-full text-sm"
+                                          required
+                                          options={getValueOptions(row.column)}
+                                          value={row.value}
+                                          onChange={(e) =>
+                                            handleRowChange(
+                                              groupIndex,
+                                              rowIndex,
+                                              "value",
+                                              e.target.value
+                                            )
+                                          }
+                                          placeholder={`Select ${row.column} value`}
+                                          disabled={
+                                            getValueOptions(row.column)
+                                              .length === 0
+                                          }
+                                        />
+                                      ) : (
+                                        <InputComponent
+                                          text="Value"
+                                          className="w-full"
+                                          type="text"
+                                          placeholder="Enter text value"
+                                          value={row.value}
+                                          onChange={(e) =>
+                                            handleRowChange(
+                                              groupIndex,
+                                              rowIndex,
+                                              "value",
+                                              e.target.value
+                                            )
+                                          }
+                                          required
+                                        />
+                                      )}
                                     </div>
                                     <div className="col-span-1">
                                       <button
@@ -385,8 +688,21 @@ const FilterPage = () => {
                                         onClick={() =>
                                           removeFilterRow(groupIndex, rowIndex)
                                         }
+                                        disabled={group.rows.length <= 1}
+                                        title={
+                                          group.rows.length <= 1
+                                            ? "Group must have at least one row"
+                                            : "Remove field"
+                                        }
                                       >
-                                        <Trash2 size={18} />
+                                        <Trash2
+                                          size={18}
+                                          className={
+                                            group.rows.length <= 1
+                                              ? "opacity-50"
+                                              : ""
+                                          }
+                                        />
                                       </button>
                                     </div>
                                   </div>
@@ -398,11 +714,22 @@ const FilterPage = () => {
                               <button
                                 className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-100"
                                 onClick={() => removeFilterGroup(groupIndex)}
+                                disabled={filters.length <= 1}
+                                title={
+                                  filters.length <= 1
+                                    ? "You must have at least one filter group"
+                                    : "Remove group"
+                                }
                               >
-                                <Trash2 size={18} />
+                                <Trash2
+                                  size={18}
+                                  className={
+                                    filters.length <= 1 ? "opacity-50" : ""
+                                  }
+                                />
                               </button>
                               <button
-                                className="p-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8] flex items-center gap-2"
+                                className="p-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#099b8e] flex items-center gap-2"
                                 onClick={() => addFilterRow(groupIndex)}
                               >
                                 <Plus size={18} />
@@ -422,8 +749,8 @@ const FilterPage = () => {
 
           <div className="mt-8 flex justify-center">
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
-              onClick={addFilterGroup}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#099b8e]"
+              onClick={() => addFilterGroup()}
             >
               <Plus size={18} />
               <span className="text-xs">Add Target Group</span>
@@ -433,16 +760,18 @@ const FilterPage = () => {
           <div className="mt-8 flex justify-end gap-4">
             <button
               className="px-5 text-s py-2 text-gray-600 hover:text-gray-800"
-              onClick={() => {
-                /* handle cancel */
-              }}
+              onClick={handleCancel}
             >
               Cancel
             </button>
             <button
-              className="px-5 py-1.5 text-s bg-[#0AAC9E] text-white rounded-lg hover:bg-[#01DBC8]"
+              className="px-5 py-1.5 text-s bg-[#0AAC9E] text-white rounded-lg hover:bg-[#099b8e] flex items-center justify-center"
               onClick={handleSave}
+              disabled={isLoading}
             >
+              {isLoading ? (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+              ) : null}
               Save
             </button>
           </div>

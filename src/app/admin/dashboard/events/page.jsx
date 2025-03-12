@@ -15,6 +15,7 @@ import {
   ChevronDown,
   SquareArrowOutUpRight,
 } from "lucide-react";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 const PAGE_SIZE = 8;
 
@@ -88,14 +89,7 @@ export default function EventList() {
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-[#0AAC9E] border-b-[#0AAC9E] rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading event data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

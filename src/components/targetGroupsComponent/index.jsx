@@ -9,7 +9,10 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Edit,
+  Plus,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // User Card Component
 const UserCard = ({ user }) => (
@@ -121,6 +124,7 @@ const UsersGrid = ({ users = [] }) => {
 
 // Main Target Groups Component
 export default function TargetGroupsComponent({ data = [] }) {
+  const router = useRouter();
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [userDetails, setUserDetails] = useState({});
   const [loading, setLoading] = useState({});
@@ -178,6 +182,10 @@ export default function TargetGroupsComponent({ data = [] }) {
     }
   };
 
+  const handleEdit = (groupId) => {
+    router.push(`/admin/dashboard/targets/edit/${groupId}`);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       {/* Header */}
@@ -195,19 +203,15 @@ export default function TargetGroupsComponent({ data = [] }) {
                 className="w-full pl-10 pr-7 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-[#01DBC8]/20 focus:border-[#01DBC8]"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Filter className="w-4 h-4" />
-              <span className="text-xs">Filter</span>
-            </button>
           </div>
         </div>
       </div>
 
       {/* Table Header */}
       <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-xs font-medium text-gray-500">
-        <div className="col-span-6">Group Name</div>
+        <div className="col-span-5">Group Name</div>
         <div className="col-span-4">Members</div>
-        <div className="col-span-2 flex justify-end">Actions</div>
+        <div className="col-span-3 flex justify-end">Actions</div>
       </div>
 
       {/* Groups List */}
@@ -216,7 +220,7 @@ export default function TargetGroupsComponent({ data = [] }) {
           filteredData.map((group) => (
             <div key={group.id || group.name}>
               <div className="grid grid-cols-12 gap-4 px-6 py-3 hover:bg-gray-50 transition-colors">
-                <div className="col-span-6 font-medium text-gray-900 text-sm">
+                <div className="col-span-5 font-medium text-gray-900 text-sm">
                   {group.name || "Unnamed Group"}
                 </div>
                 <div className="col-span-4">
@@ -229,11 +233,19 @@ export default function TargetGroupsComponent({ data = [] }) {
                     </span>
                   </div>
                 </div>
-                <div className="col-span-2 flex justify-end">
+                <div className="col-span-3 flex justify-end gap-2">
+                  <button
+                    onClick={() => handleEdit(group.id)}
+                    className="p-2 rounded-md hover:bg-[#ecfcfb] text-[#0AAC9E] transition-colors"
+                    title="Edit Group"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleToggle(group.id)}
                     className={`p-2 rounded-md hover:bg-gray-100 transition-colors
                       ${expandedGroup === group.id ? "bg-gray-100" : ""}`}
+                    title="View Members"
                   >
                     <ChevronDown
                       className={`w-5 h-5 text-gray-500 transition-transform duration-200

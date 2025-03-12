@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, Clock, Eye, ArrowLeft, Edit, User } from "lucide-react";
 import { getToken, getUserId } from "@/authtoken/auth.js";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 const EventDetails = ({ params }) => {
   const { id } = params;
@@ -53,14 +54,7 @@ const EventDetails = ({ params }) => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-[#0AAC9E] border-b-[#0AAC9E] rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading event data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!event) {

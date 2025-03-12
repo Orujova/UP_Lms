@@ -78,7 +78,10 @@ const Pagination = ({
 
   return (
     <div className="flex items-center justify-between w-full px-6 py-3 bg-white border-t border-gray-200">
-      <div className="text-xs text-gray-500">{totalItems} items total</div>
+      <div className="text-xs text-gray-500">
+        {" "}
+        <span className="font-medium">{totalItems}</span> items total
+      </div>
       <div className="flex items-center space-x-1">
         <button
           onClick={() => onPageChange(currentPage - 1)}

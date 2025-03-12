@@ -12,6 +12,7 @@ import {
   Box
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 const PollUnitDetail = ({ params }) => {
   const { id } = params;
@@ -139,14 +140,7 @@ const PollUnitDetail = ({ params }) => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading poll unit details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner/>
   }
 
   if (!pollUnit) {

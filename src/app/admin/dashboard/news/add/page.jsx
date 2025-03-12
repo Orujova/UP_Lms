@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import InputComponent from "@/components/inputComponent";
-import SelectComponent from "@/components/selectComponent";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
 import { newsCategoryAsync } from "@/redux/newsCategory/newsCategory";
@@ -20,15 +18,32 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-// Import new components
+// Import components
+import InputComponent from "@/components/inputComponent";
+import SelectComponent from "@/components/selectComponent";
 import MultiImageUpload from "../MultiImageUpload";
 import MultiAttachmentUpload from "../MultiAttachmentUpload";
 import TargetGroupSelector from "../TargetGroupSelector";
 import Switch from "../Switch";
+import {
+  serializeEditorData,
+  handleDescriptionChange,
+} from "@/utils/newsUtils";
 
+// Dynamic import for EditorJS component
 const PageTextComponent = dynamic(
   () => import("@/components/pageTextComponent"),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border rounded p-4 min-h-[200px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-2 text-gray-600 text-sm">Loading editor...</p>
+        </div>
+      </div>
+    ),
+  }
 );
 
 // Custom Alert Component
@@ -57,7 +72,7 @@ export default function Page() {
     title: "",
     subtitle: "",
     newsCategoryId: "",
-    targetGroupId: "",
+    targetGroupIds: [], // Array for multiple target groups
     newsImages: [],
     attachments: [],
     hasNotification: false,
@@ -92,8 +107,9 @@ export default function Page() {
     }
   };
 
-  const handleDescriptionChange = (value) => {
-    setDescription(value);
+  const handleEditorChange = (value) => {
+    // Use the utility function to properly handle the EditorJS data
+    handleDescriptionChange(value, setDescription);
     if (formErrors.description) {
       setFormErrors((prev) => ({ ...prev, description: null }));
     }
@@ -106,9 +122,9 @@ export default function Page() {
     if (!formData.subtitle.trim()) errors.subtitle = "Subtitle is required";
     if (!formData.newsCategoryId)
       errors.newsCategoryId = "Category is required";
-    if (!formData.targetGroupId)
-      errors.targetGroupId = "Target group is required";
-    if (!description.trim()) errors.description = "Body content is required";
+    if (formData.targetGroupIds.length === 0)
+      errors.targetGroupIds = "At least one target group is required";
+    if (!description) errors.description = "Body content is required";
     if (formData.newsImages.length === 0)
       errors.images = "At least one image is required";
     return errors;
@@ -121,25 +137,40 @@ export default function Page() {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      toast.error("Please fill in all required fields");
       return;
     }
 
     setIsSubmitting(true);
 
-    const queryParams = new URLSearchParams({
-      Title: formData.title,
-      SubTitle: formData.subtitle,
-      Description: description,
-      Priority: formData.priority,
-      TargetGroup: "TargetGroup",
-      NewsCategoryId: formData.newsCategoryId,
-      TargetGroupId: formData.targetGroupId,
-      HasNotification: formData.hasNotification,
-      HasComment: formData.hasComment,
-      HasLike: formData.hasLike,
-    }).toString();
+    // Ensure description is properly serialized for API
+    const serializedDescription = description;
 
+    // Build query parameters object
+    const queryParamsObj = new URLSearchParams();
+
+    // Add basic parameters
+    queryParamsObj.append("Title", formData.title);
+    queryParamsObj.append("SubTitle", formData.subtitle);
+    queryParamsObj.append("Description", serializedDescription);
+    queryParamsObj.append("Priority", formData.priority);
+    queryParamsObj.append("NewsCategoryId", formData.newsCategoryId);
+    queryParamsObj.append("HasNotification", formData.hasNotification);
+    queryParamsObj.append("HasComment", formData.hasComment);
+    queryParamsObj.append("HasLike", formData.hasLike);
+
+    // Add each target group ID as a separate entry with the same parameter name
+    // This is the correct way to send array parameters in query strings
+    formData.targetGroupIds.forEach((id) => {
+      queryParamsObj.append("TargetGroupIds", id);
+    });
+
+    const queryParams = queryParamsObj.toString();
+
+    // Prepare FormData for files
     const formDataToSend = new FormData();
+
+    // Add images and attachments
     formData.newsImages.forEach((image) => {
       formDataToSend.append("NewsImages", image.file);
     });
@@ -168,8 +199,6 @@ export default function Page() {
           body: formDataToSend,
         }
       );
-
-      console.log(formDataToSend);
 
       const result = await response.json();
       if (response.ok && result.isSuccess) {
@@ -319,13 +348,15 @@ export default function Page() {
               description="Allow users to like this news"
             />
 
+            {/* Target Group Selector with multiple selection */}
             <TargetGroupSelector
               targetGroups={targetGroups}
-              value={formData.targetGroupId}
+              value={formData.targetGroupIds}
               onChange={(value) =>
-                setFormData((prev) => ({ ...prev, targetGroupId: value }))
+                setFormData((prev) => ({ ...prev, targetGroupIds: value }))
               }
-              error={formErrors.targetGroupId}
+              error={formErrors.targetGroupIds}
+              multiple={true}
             />
 
             <div className="descriptionEditor">
@@ -334,8 +365,8 @@ export default function Page() {
               </label>
               <div>
                 <PageTextComponent
-                  onChange={handleDescriptionChange}
-                  value={description}
+                  onChange={handleEditorChange}
+                  desc={null} // Start with empty editor
                 />
               </div>
               {formErrors.description && (
@@ -351,7 +382,7 @@ export default function Page() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#0AAC9E] text-white text-sm rounded-lg px-5 py-2 font-medium hover:bg-[#127D74] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-[#0AAC9E] text-white text-sm rounded-lg px-5 py-2 font-medium hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

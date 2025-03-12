@@ -29,6 +29,7 @@ import PasswordChangeModal from "./PasswordChangeModal ";
 import ImageUploadModal from "./ImageUploadModal ";
 import noPP from "@/images/noPP.png";
 import { toast } from "sonner";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 // Enhanced profile section card with hover effect
 const ProfileSection = ({ title, icon: Icon, children, className = "" }) => (
@@ -759,12 +760,7 @@ const AdminProfilePage = () => {
   };
 
   // Loading State - simplified loader
-  if (loading)
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-10 h-10 border-2 border-[#0AAC9E] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  if (loading) return <LoadingSpinner />;
 
   // Error State with minimalist UI
   if (error)

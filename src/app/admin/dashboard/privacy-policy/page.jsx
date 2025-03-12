@@ -10,7 +10,6 @@ import {
   Button,
   StatusBadge,
   PolicyCard,
-  LoadingSpinner,
   EmptyState,
   ErrorAlert,
   SuccessAlert,
@@ -19,6 +18,7 @@ import {
   API_URL,
   useAppNavigation,
 } from "./components";
+import LoadingSpinner from "@/components/loadingSpinner";
 import { FileCheck, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 

@@ -1,5 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react'; // Replace with appropriate icons if needed
-import './inputComponent.scss';
+import "./inputComponent.scss";
 
 export default function InputComponent({
   text,
@@ -30,8 +29,11 @@ export default function InputComponent({
         />
         {icon && <span className="inputIcon">{icon}</span>}
       </div>
-      {type === 'password' && (
-        <p>Must contain at least 1 upper case letter, 1 lower case letter, numbers, and symbols (!@#$)</p>
+      {type === "password" && (
+        <p>
+          Must contain at least 1 upper case letter, 1 lower case letter,
+          numbers, and symbols (!@#$)
+        </p>
       )}
     </div>
   );

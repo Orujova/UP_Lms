@@ -1,7 +1,7 @@
 // components/faq/CategoryTab.jsx
 import React from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
-import Pagination from "../user-settings/pagination";
+import Pagination from "@/components/ListPagination";
 
 const CategoryTab = ({
   categories,
@@ -21,7 +21,7 @@ const CategoryTab = ({
             resetCategoryForm();
             setShowCategoryModal(true);
           }}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700"
+          className="flex items-center gap-2 bg-[#0AAC9E] text-white px-4 py-2 rounded-md hover:bg-[#099b8e]"
         >
           <Plus size={16} />
           <span>Add Category</span>
@@ -73,25 +73,25 @@ const CategoryTab = ({
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           category.isActive
-                            ? "bg-green-100 text-green-800"
+                            ? "bg-[#f9f9f9] text-[#0AAC9E]"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
                         {category.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-medium">
                       <button
                         onClick={() => handleEditCategory(category)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        className="text-gray-400 p-2  hover:text-[#0AAC9E] hover:bg-[#f2fdfc] mr-3"
                       >
-                        <Edit size={16} />
+                        <Edit size={14} />
                       </button>
                       <button
                         onClick={() => deleteCategory(category.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-gray-400 p-2 hover:text-red-600 hover:bg-red-50"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </td>
                   </tr>

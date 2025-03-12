@@ -2,33 +2,41 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import InputComponent from "@/components/inputComponent";
-import SelectComponent from "@/components/selectComponent";
+import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
 import { newsCategoryAsync } from "@/redux/newsCategory/newsCategory";
 import { getToken, getParsedToken } from "@/authtoken/auth.js";
+import { toast, Toaster } from "sonner";
 import {
-  Upload,
   Bell,
   BellOff,
   MessageSquare,
   MessageSquareOff,
   Heart,
   HeartOff,
-  X,
   ArrowLeft,
 } from "lucide-react";
-import { toast, Toaster } from "sonner";
-import { useRouter, usePathname } from "next/navigation";
+
 import "./edit.scss";
 
 // Import components
+import InputComponent from "@/components/inputComponent";
+import SelectComponent from "@/components/selectComponent";
 import MultiImagesEdit from "../../MultiImagesEdit";
 import MultiAttachmentUploadEdit from "../../MultiAttachmentUploadEdit";
 import TargetGroupSelector from "../../TargetGroupSelector";
+import CategorySelector from "../../CategorySelector";
 import Switch from "../../Switch";
+import LoadingSpinner from "@/components/loadingSpinner";
 
+// Import utility functions
+import {
+  normalizeEditorData,
+  handleDescriptionChange,
+} from "@/utils/newsUtils";
+
+// Dynamic import for EditorJS component
 const PageTextComponent = dynamic(
   () => import("@/components/pageTextComponent"),
   {
@@ -50,13 +58,13 @@ export default function Page() {
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
-  // Form states
   const [formData, setFormData] = useState({
     title: "",
     subTitle: "",
     newsCategoryId: "",
-    targetGroupId: "",
+    targetGroupIds: [], // Changed from targetGroupId to targetGroupIds array
     newsImages: [],
     attachments: [],
     hasNotification: false,
@@ -65,36 +73,27 @@ export default function Page() {
     priority: "HIGH",
   });
 
-  // Track attachments and images to delete
   const [attachmentsToDelete, setAttachmentsToDelete] = useState([]);
   const [imagesToDelete, setImagesToDelete] = useState([]);
-
   const [description, setDescription] = useState("");
+  const [normalizedEditorData, setNormalizedEditorData] = useState(null);
   const [responseMessage, setResponseMessage] = useState("");
-
-  // States to hold the names of current category and target group
   const [currentCategoryName, setCurrentCategoryName] = useState("");
-  const [currentTargetGroupName, setCurrentTargetGroupName] = useState("");
-
-  // Store original data for reference
+  const [currentTargetGroupNames, setCurrentTargetGroupNames] = useState([]); // Changed to array
   const [originalData, setOriginalData] = useState(null);
 
-  // Get news ID from URL
   const newsId = pathname?.split("/").pop();
 
-  // Redux selectors
   const targetGroups =
     useSelector((state) => state.getAllTargetGroups.data?.[0]?.targetGroups) ||
     [];
   const newsCategory = useSelector((state) => state.newsCategory.data) || [];
 
-  // Fetch initial data
   useEffect(() => {
     dispatch(getAllTargetGroupsAsync());
     dispatch(newsCategoryAsync());
   }, [dispatch]);
 
-  // Update current category name when needed
   useEffect(() => {
     if (formData.newsCategoryId && newsCategory.length > 0) {
       const category = newsCategory.find(
@@ -110,29 +109,47 @@ export default function Page() {
     }
   }, [formData.newsCategoryId, newsCategory, originalData]);
 
-  // Update current target group name when needed
+  // Updated to handle multiple target groups
   useEffect(() => {
-    if (formData.targetGroupId && targetGroups.length > 0) {
-      const targetGroup = targetGroups.find(
-        (group) => group.id.toString() === formData.targetGroupId.toString()
+    if (formData.targetGroupIds.length > 0 && targetGroups.length > 0) {
+      const selectedGroups = targetGroups.filter((group) =>
+        formData.targetGroupIds.includes(group.id.toString())
       );
-      if (targetGroup) {
-        setCurrentTargetGroupName(targetGroup.name);
+
+      if (selectedGroups.length > 0) {
+        setCurrentTargetGroupNames(selectedGroups.map((group) => group.name));
       } else if (
         originalData?.targetGroups &&
         originalData.targetGroups.length > 0
       ) {
-        setCurrentTargetGroupName(originalData.targetGroups[0]);
+        setCurrentTargetGroupNames(originalData.targetGroups);
       }
     } else if (
       originalData?.targetGroups &&
       originalData.targetGroups.length > 0
     ) {
-      setCurrentTargetGroupName(originalData.targetGroups[0]);
+      setCurrentTargetGroupNames(originalData.targetGroups);
     }
-  }, [formData.targetGroupId, targetGroups, originalData]);
+  }, [formData.targetGroupIds, targetGroups, originalData]);
 
-  // Fetch news data by ID
+  // Process description data for editor
+  useEffect(() => {
+    if (description) {
+      try {
+        // Normalize the description data for the editor
+        const normalized = normalizeEditorData(description);
+        setNormalizedEditorData(normalized);
+      } catch (error) {
+        console.error("Error normalizing editor data:", error);
+        setNormalizedEditorData({
+          time: Date.now(),
+          blocks: [],
+          version: "2.30.5",
+        });
+      }
+    }
+  }, [description]);
+
   useEffect(() => {
     const fetchNewsById = async () => {
       if (!newsId) return;
@@ -159,86 +176,89 @@ export default function Page() {
         const data = await response.json();
         console.log("Fetched news data:", data);
 
-        // Store original data for reference
         setOriginalData(data);
 
-        // Find target group ID from the targetGroupIds array
-        const targetGroupId =
-          data.targetGroupIds && data.targetGroupIds.length > 0
-            ? data.targetGroupIds[0].toString()
-            : "";
-
-        // Get newsCategoryId from the API response (might not be explicitly provided)
-        let newsCategoryId = "";
-        // Find the category ID by looking up the category name in the newsCategory array
+        let categoryId = "";
         if (data.newsCategoryName && newsCategory.length > 0) {
           const matchingCategory = newsCategory.find(
-            (cat) => cat.name === data.newsCategoryName
+            (cat) =>
+              cat.name === data.newsCategoryName ||
+              cat.categoryName === data.newsCategoryName
           );
           if (matchingCategory) {
-            newsCategoryId = matchingCategory.id.toString();
+            categoryId = matchingCategory.id.toString();
           }
         }
 
-        // Prepare attachments from existing data
+        // Convert targetGroupIds to array of strings
+        const targetGroupIds =
+          data.targetGroupIds && data.targetGroupIds.length > 0
+            ? data.targetGroupIds.map((id) => id.toString())
+            : [];
+
+        const priority = data.priority ? data.priority.toUpperCase() : "HIGH";
+
+        // Process existing attachments
         const existingAttachments = [];
         if (
           data.newsAttachments &&
           data.newsAttachments.length > 0 &&
-          data.fileName &&
-          data.fileName.length > 0 &&
-          data.fileSize &&
-          data.fileSize.length > 0
+          data.attachmentIds &&
+          data.attachmentIds.length > 0
         ) {
           for (let i = 0; i < data.newsAttachments.length; i++) {
             existingAttachments.push({
-              id: i, // Use index as temporary id since we don't have real attachment IDs
+              id: data.attachmentIds[i],
               path: data.newsAttachments[i],
-              name: data.fileName[i] || `file-${i + 1}`,
-              size: data.fileSize[i] || "Unknown size",
+              name:
+                data.fileName && data.fileName[i]
+                  ? data.fileName[i]
+                  : `file-${i + 1}`,
+              size:
+                data.fileSize && data.fileSize[i]
+                  ? data.fileSize[i]
+                  : "Unknown size",
               isExisting: true,
             });
           }
         }
 
+        // Process existing images
+        const existingImages = data.newsImages
+          ? data.newsImages.map((image, index) => ({
+              id:
+                data.newsImageIds && data.newsImageIds[index]
+                  ? data.newsImageIds[index]
+                  : index,
+              file: null,
+              preview: image,
+              path: image,
+              isExisting: true,
+            }))
+          : [];
+
+        // Update form state
         setFormData({
           title: data.title || "",
           subTitle: data.subTitle || "",
-          newsCategoryId: newsCategoryId,
-          targetGroupId,
-          newsImages: data.newsImages
-            ? data.newsImages.map((image, index) => ({
-                id: index, // Use index as temporary ID
-                file: null, // We don't have access to the file object for existing images
-                preview: image, // Store image URL
-                path: image, // Store original path for reference
-                isExisting: true,
-              }))
-            : [],
+          newsCategoryId: categoryId,
+          targetGroupIds: targetGroupIds, // Now using array of IDs
+          newsImages: existingImages,
           attachments: existingAttachments,
           hasNotification: data.hasNotification || false,
           hasComment: data.newsHasComment || false,
           hasLike: data.newsHasLike || false,
-          priority: data.priority || "HIGH",
+          priority: priority,
         });
 
-        // Set category and target group names from original data
         setCurrentCategoryName(data.newsCategoryName || "");
         if (data.targetGroups && data.targetGroups.length > 0) {
-          setCurrentTargetGroupName(data.targetGroups[0]);
+          setCurrentTargetGroupNames(data.targetGroups);
         }
 
+        // Process description data - store raw data first, normalization happens in useEffect
         if (data.description) {
-          try {
-            const parsedDescription =
-              typeof data.description === "string"
-                ? JSON.parse(data.description)
-                : data.description;
-            setDescription(parsedDescription);
-          } catch (error) {
-            console.error("Error parsing description:", error);
-            setDescription("");
-          }
+          setDescription(data.description);
         }
       } catch (error) {
         console.error("Error fetching news:", error);
@@ -258,26 +278,33 @@ export default function Page() {
       [name]: value,
     }));
 
-    // Update the current name when selection changes
     if (name === "newsCategoryId") {
       const category = newsCategory.find((cat) => cat.id.toString() === value);
       if (category) {
         setCurrentCategoryName(category.name);
       }
     }
+
+    // Clear error when field is updated
+    if (formErrors[name]) {
+      setFormErrors((prev) => ({ ...prev, [name]: null }));
+    }
   };
 
-  const handleDescriptionChange = (value) => {
-    setDescription(value);
+  const handleEditorChange = (value) => {
+    // Use utility function to handle editor data
+    handleDescriptionChange(value, setDescription);
+    if (formErrors.description) {
+      setFormErrors((prev) => ({ ...prev, description: null }));
+    }
   };
 
+  // Updated to handle multiple target groups
   const handleTargetGroupChange = (value) => {
-    setFormData((prev) => ({ ...prev, targetGroupId: value }));
-    const targetGroup = targetGroups.find(
-      (group) => group.id.toString() === value
-    );
-    if (targetGroup) {
-      setCurrentTargetGroupName(targetGroup.name);
+    setFormData((prev) => ({ ...prev, targetGroupIds: value }));
+
+    if (formErrors.targetGroupIds) {
+      setFormErrors((prev) => ({ ...prev, targetGroupIds: null }));
     }
   };
 
@@ -297,10 +324,31 @@ export default function Page() {
     }
   };
 
-  // Replace the handleSubmit function with this fixed version
+  // Form validation
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.title.trim()) errors.title = "Title is required";
+    if (!formData.subTitle.trim()) errors.subTitle = "Subtitle is required";
+    if (!formData.newsCategoryId)
+      errors.newsCategoryId = "Category is required";
+    if (formData.targetGroupIds.length === 0)
+      errors.targetGroupIds = "At least one target group is required";
+    if (!description) errors.description = "Body content is required";
+
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    // Validate form
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
     setIsSubmitting(true);
     const token = getToken();
@@ -312,101 +360,61 @@ export default function Page() {
     }
 
     try {
-      // Validate required fields
-      if (
-        !formData.title ||
-        !formData.subTitle ||
-        !formData.newsCategoryId ||
-        !formData.targetGroupId
-      ) {
-        toast.error("Please fill in all required fields");
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log("Submitting news update...");
-
-      // Create FormData object for file uploads
+      // Generate form data
       const formDataToSend = new FormData();
 
-      // Add query parameters to the FormData
+      // Add basic form fields
       formDataToSend.append("Id", newsId);
       formDataToSend.append("Title", formData.title.trim());
       formDataToSend.append("SubTitle", formData.subTitle.trim());
-      formDataToSend.append("Description", JSON.stringify(description));
-
-      // Make sure priority is lowercase to match API expectations
+      formDataToSend.append("Description", description);
       formDataToSend.append("Priority", formData.priority.toLowerCase());
-
-      // Convert boolean values to strings "true" or "false"
       formDataToSend.append(
         "HasNotification",
         formData.hasNotification.toString()
       );
       formDataToSend.append("HasComment", formData.hasComment.toString());
       formDataToSend.append("HasLike", formData.hasLike.toString());
-
       formDataToSend.append("NewsCategoryId", formData.newsCategoryId);
-      formDataToSend.append("TargetGroupId", formData.targetGroupId);
 
-      // Add new images to the form data
+      // Add all target group IDs
+      formData.targetGroupIds.forEach((groupId) => {
+        formDataToSend.append("TargetGroupIds", groupId);
+      });
+
+      // Add new images
       formData.newsImages.forEach((image) => {
         if (image.file) {
           formDataToSend.append("NewsImages", image.file);
         }
       });
 
-      // Add new attachments to form data
+      // Add new attachments
       formData.attachments.forEach((attachment) => {
         if (attachment.file && !attachment.isExisting) {
           formDataToSend.append("Attachments", attachment.file);
         }
       });
 
-      // Handle images to delete properly
-      // Make sure we're sending actual database IDs, not our local temporary IDs
+      // Add items to delete
       imagesToDelete.forEach((imageId) => {
-        const imageToDelete = formData.newsImages.find(
-          (img) => img.id === imageId
-        );
-        if (imageToDelete && imageToDelete.isExisting) {
-          // Extract actual database ID from image path or use other identifier from originalData
-          const pathParts = imageToDelete.path.split("/");
-          const actualImageId = pathParts[pathParts.length - 1].split(".")[0];
-          if (actualImageId && !isNaN(parseInt(actualImageId))) {
-            formDataToSend.append("ImageIdsToDelete", actualImageId);
-          }
+        if (!isNaN(parseInt(imageId))) {
+          formDataToSend.append("ImageIdsToDelete", imageId);
         }
       });
 
-      // Handle attachments to delete properly
       attachmentsToDelete.forEach((attachmentId) => {
-        const attachmentToDelete = formData.attachments.find(
-          (att) => att.id === attachmentId
-        );
-        if (attachmentToDelete && attachmentToDelete.isExisting) {
-          // Extract actual database ID from attachment path or use other identifier from originalData
-          const pathParts = attachmentToDelete.path.split("/");
-          const actualAttachmentId =
-            pathParts[pathParts.length - 1].split(".")[0];
-          if (actualAttachmentId && !isNaN(parseInt(actualAttachmentId))) {
-            formDataToSend.append("AttachmentIdsToDelete", actualAttachmentId);
-          }
+        if (!isNaN(parseInt(attachmentId))) {
+          formDataToSend.append("AttachmentIdsToDelete", attachmentId);
         }
       });
 
-      // Console log the form data for debugging
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(`${key}: ${value}`);
-      }
-
-      // Make the API call with all parameters in the URL as query params
-      // This matches the curl example provided
+      // Create query parameters
       const queryParams = new URLSearchParams();
       queryParams.append("Id", newsId);
       queryParams.append("Title", formData.title.trim());
       queryParams.append("SubTitle", formData.subTitle.trim());
-      queryParams.append("Description", JSON.stringify(description));
+      queryParams.append("Description", description);
       queryParams.append("Priority", formData.priority.toLowerCase());
       queryParams.append(
         "HasNotification",
@@ -415,18 +423,25 @@ export default function Page() {
       queryParams.append("HasComment", formData.hasComment.toString());
       queryParams.append("HasLike", formData.hasLike.toString());
       queryParams.append("NewsCategoryId", formData.newsCategoryId);
-      queryParams.append("TargetGroupId", formData.targetGroupId);
 
-      // Add any ImageIdsToDelete and AttachmentIdsToDelete to query params
-      // (Note: This approach handles arrays in query params by repeating the key)
-      formDataToSend.getAll("ImageIdsToDelete").forEach((id) => {
-        queryParams.append("ImageIdsToDelete", id);
+      // Add all target groups to query params
+      formData.targetGroupIds.forEach((groupId) => {
+        queryParams.append("TargetGroupIds", groupId);
       });
 
-      formDataToSend.getAll("AttachmentIdsToDelete").forEach((id) => {
-        queryParams.append("AttachmentIdsToDelete", id);
+      imagesToDelete.forEach((imageId) => {
+        if (!isNaN(parseInt(imageId))) {
+          queryParams.append("ImageIdsToDelete", imageId);
+        }
       });
 
+      attachmentsToDelete.forEach((attachmentId) => {
+        if (!isNaN(parseInt(attachmentId))) {
+          queryParams.append("AttachmentIdsToDelete", attachmentId);
+        }
+      });
+
+      // Make API request
       const response = await fetch(
         `https://bravoadmin.uplms.org/api/News?${queryParams.toString()}`,
         {
@@ -457,7 +472,6 @@ export default function Page() {
       if (contentType && contentType.includes("application/json")) {
         result = await response.json();
       } else {
-        // Handle non-JSON response
         const text = await response.text();
         result = { isSuccess: response.ok, message: text };
       }
@@ -479,19 +493,12 @@ export default function Page() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading news data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
-
   return (
-    <div className="edit">
+    <div className="edit ">
       <Toaster position="top-right" />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-800">Edit News</h1>
         <button
@@ -502,7 +509,8 @@ export default function Page() {
           <span>Back to list</span>
         </button>
       </div>
-      <div className="banner">
+
+      <div className="banner ">
         <h3 className="text-sm font-medium mb-4 leading-5 text-gray-800/90">
           Images
         </h3>
@@ -513,8 +521,11 @@ export default function Page() {
           }
           onMarkForDeletion={handleMarkImageForDeletion}
         />
-      </div>{" "}
-      {/* Attachments Section */}
+        {formErrors.images && (
+          <p className="text-red-500 text-sm mt-2">{formErrors.images}</p>
+        )}
+      </div>
+
       <div className="mb-8">
         <h3 className="text-sm font-medium mb-4 leading-5 text-gray-800/90">
           Attachments
@@ -530,6 +541,7 @@ export default function Page() {
           onMarkForDeletion={handleMarkAttachmentForDeletion}
         />
       </div>
+
       <form className="newsEditForm mt-8" onSubmit={handleSubmit}>
         <div className="inputs">
           <InputComponent
@@ -552,33 +564,16 @@ export default function Page() {
             value={formData.subTitle}
             onChange={handleChange}
             name="subTitle"
+            error={formErrors.subTitle}
           />
 
-          <div>
-            <SelectComponent
-              text="Category"
-              name="newsCategoryId"
-              required
-              value={formData.newsCategoryId}
-              onChange={handleChange}
-              options={newsCategory}
-            />
-            {currentCategoryName && (
-              <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
-                <span>Selected: {currentCategoryName}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({ ...prev, newsCategoryId: "" }));
-                    setCurrentCategoryName("");
-                  }}
-                  className="text-[#0AAC9E] hover:text-emerald-800"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-          </div>
+          <CategorySelector
+            value={formData.newsCategoryId}
+            onChange={handleChange}
+            options={newsCategory}
+            hideLabel={false}
+            error={formErrors.newsCategoryId}
+          />
 
           <SelectComponent
             text="Priority"
@@ -627,43 +622,57 @@ export default function Page() {
             description="Allow users to like this news"
           />
 
-          {/* Target Group with current value display */}
           <div className="mb-4">
+            {/* Updated to use multiple mode */}
             <TargetGroupSelector
               targetGroups={targetGroups}
-              value={formData.targetGroupId}
+              value={formData.targetGroupIds}
               onChange={handleTargetGroupChange}
-              hideLabel={true}
+              hideLabel={false}
+              error={formErrors.targetGroupIds}
+              multiple={true}
             />
-            {currentTargetGroupName && !formData.targetGroupId && (
-              <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
-                <span>Selected: {currentTargetGroupName}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentTargetGroupName("");
-                  }}
-                  className="text-[#0AAC9E] hover:text-emerald-800"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="descriptionEditor">
-            <label>Body</label>
+            <label className="block text-sm font-medium mb-2 text-gray-800/90">
+              Body
+            </label>
             <div>
-              <PageTextComponent
-                desc={description}
-                onChange={handleDescriptionChange}
-              />
+              {/* Only render the editor when normalizedEditorData is available */}
+              {normalizedEditorData ? (
+                <PageTextComponent
+                  desc={normalizedEditorData}
+                  onChange={handleEditorChange}
+                />
+              ) : (
+                <div className="border rounded p-4 min-h-[200px] flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
+                    <p className="mt-2 text-gray-600 text-sm">
+                      Preparing editor...
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
+            {formErrors.description && (
+              <p className="text-red-500 text-sm mt-2">
+                {formErrors.description}
+              </p>
+            )}
           </div>
         </div>
         <div className="formButtons">
           <button type="submit" disabled={isSubmitting} className="button">
-            {isSubmitting ? "Saving..." : "Save Changes"}
+            {isSubmitting ? (
+              <>
+                <span className="animate-spin mr-2">⏳</span>
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </button>
           <button
             type="button"

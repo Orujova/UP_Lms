@@ -19,9 +19,10 @@ export class CustomImageTool {
     return true;
   }
 
-  constructor({ data, api, readOnly }) {
+  constructor({ data, api, readOnly, config }) {
     this.api = api;
     this.readOnly = readOnly || false;
+    this.config = config || {};
     this.data = {
       url: data.url || "",
       caption: data.caption || "",
@@ -60,6 +61,120 @@ export class CustomImageTool {
         label: "Add background",
       },
     ];
+
+    // Add custom styles if not already added
+    this._addCustomStyles();
+    this.isLoading = false;
+  }
+
+  _addCustomStyles() {
+    if (!document.querySelector("#image-tool-styles")) {
+      const styles = document.createElement("style");
+      styles.id = "image-tool-styles";
+      styles.textContent = `
+        .cdx-image-tool {
+          position: relative;
+          margin-bottom: 1rem;
+          clear: both;
+        }
+        .cdx-image-tool__image-wrapper {
+          position: relative;
+        }
+        .resize-wrapper {
+          position: relative;
+          padding-bottom: 10px;
+        }
+        .resize-wrapper::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 10px;
+          height: 10px;
+          cursor: se-resize;
+          background: linear-gradient(135deg, transparent 50%, #0AAC9E 50%);
+          border-radius: 0 0 2px 0;
+        }
+        .cdx-image-tool__caption {
+          margin-top: 10px;
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: #f8f9fa;
+          position: relative;
+          clear: both;
+        }
+        .cdx-image-tool__caption::before {
+          content: 'Caption';
+          position: absolute;
+          top: -8px;
+          left: 10px;
+          background: white;
+          padding: 0 4px;
+          font-size: 12px;
+          color: #64748b;
+        }
+        .cdx-image-tool__caption-input {
+          width: 100%;
+          border: none;
+          background: none;
+          outline: none;
+          padding: 4px 0;
+          font-size: 14px;
+          min-height: 24px;
+          resize: none;
+        }
+        .image-alignment-left {
+          float: left;
+          margin: 0 1rem 1rem 0;
+          max-width: 50%;
+        }
+        .image-alignment-right {
+          float: right;
+          margin: 0 0 1rem 1rem;
+          max-width: 50%;
+        }
+        .image-alignment-center {
+          float: none;
+          margin: 0 auto 1rem auto;
+          display: block;
+          max-width: 100%;
+        }
+        .cdx-image-tool.image-alignment-center .resize-wrapper {
+          margin: 0 auto;
+        }
+        .image-loading-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          min-height: 150px;
+          border: 1px dashed #d1d5db;
+          border-radius: 8px;
+          background-color: #f9fafb;
+          padding: 1rem;
+        }
+        .image-loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #e6e6e6;
+          border-top: 3px solid #0AAC9E;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 10px;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .image-loading-text {
+          font-size: 14px;
+          color: #4b5563;
+          margin-top: 8px;
+        }
+      `;
+      document.head.appendChild(styles);
+    }
   }
 
   renderSettings() {
@@ -145,6 +260,7 @@ export class CustomImageTool {
 
     ["left", "center", "right"].forEach((align) => {
       const button = document.createElement("button");
+      button.type = "button"; // Explicitly set button type
       button.classList.add(
         "flex",
         "flex-1",
@@ -185,8 +301,14 @@ export class CustomImageTool {
 
   render() {
     this.wrapper = document.createElement("div");
+    this.wrapper.classList.add("cdx-block", "image-tool-block");
 
-    if (this.data.url) {
+    if (this.isLoading) {
+      this._showLoadingIndicator();
+      return this.wrapper;
+    }
+
+    if (this.data && this.data.url) {
       this._createImage(this.data.url);
       return this.wrapper;
     }
@@ -209,6 +331,7 @@ export class CustomImageTool {
     }
 
     const selectImageButton = document.createElement("button");
+    selectImageButton.type = "button"; // Explicitly set button type
     selectImageButton.classList.add(
       "w-full",
       "p-4",
@@ -232,12 +355,36 @@ export class CustomImageTool {
       </div>
     `;
 
-    selectImageButton.addEventListener("click", () => {
+    selectImageButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       this._showImageSelector();
     });
 
     this.wrapper.appendChild(selectImageButton);
     return this.wrapper;
+  }
+
+  _showLoadingIndicator() {
+    // Clear the wrapper before adding the loading indicator
+    while (this.wrapper.firstChild) {
+      this.wrapper.removeChild(this.wrapper.firstChild);
+    }
+
+    const loadingContainer = document.createElement("div");
+    loadingContainer.classList.add("image-loading-container");
+
+    const spinner = document.createElement("div");
+    spinner.classList.add("image-loading-spinner");
+
+    const loadingText = document.createElement("div");
+    loadingText.classList.add("image-loading-text");
+    loadingText.textContent = "Loading image...";
+
+    loadingContainer.appendChild(spinner);
+    loadingContainer.appendChild(loadingText);
+
+    this.wrapper.appendChild(loadingContainer);
   }
 
   _toggleTune(tune) {
@@ -246,87 +393,14 @@ export class CustomImageTool {
   }
 
   _createImage(url) {
-    this.wrapper.innerHTML = "";
-
-    // Add custom styles if not already added
-    if (!document.querySelector("#image-tool-styles")) {
-      const styles = document.createElement("style");
-      styles.id = "image-tool-styles";
-      styles.textContent = `
-        .cdx-image-tool {
-          position: relative;
-          margin-bottom: 1rem;
-          clear: both;
-        }
-        .cdx-image-tool__image-wrapper {
-          position: relative;
-        }
-        .resize-wrapper {
-          position: relative;
-          padding-bottom: 10px;
-        }
-        .resize-wrapper::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          right: 0;
-          width: 10px;
-          height: 10px;
-          cursor: se-resize;
-          background: linear-gradient(135deg, transparent 50%, #0AAC9E 50%);
-          border-radius: 0 0 2px 0;
-        }
-        .cdx-image-tool__caption {
-          margin-top: 10px;
-          padding: 8px 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          background: #f8f9fa;
-          position: relative;
-          clear: both;
-        }
-        .cdx-image-tool__caption::before {
-          content: 'Caption';
-          position: absolute;
-          top: -8px;
-          left: 10px;
-          background: white;
-          padding: 0 4px;
-          font-size: 12px;
-          color: #64748b;
-        }
-        .cdx-image-tool__caption-input {
-          width: 100%;
-          border: none;
-          background: none;
-          outline: none;
-          padding: 4px 0;
-          font-size: 14px;
-          min-height: 24px;
-          resize: none;
-        }
-        .image-alignment-left {
-          float: left;
-          margin: 0 1rem 1rem 0;
-          max-width: 50%;
-        }
-        .image-alignment-right {
-          float: right;
-          margin: 0 0 1rem 1rem;
-          max-width: 50%;
-        }
-        .image-alignment-center {
-          float: none;
-          margin: 0 auto 1rem auto;
-          display: block;
-          max-width: 100%;
-        }
-        .cdx-image-tool.image-alignment-center .resize-wrapper {
-          margin: 0 auto;
-        }
-      `;
-      document.head.appendChild(styles);
+    // Clear the wrapper before adding new content
+    while (this.wrapper.firstChild) {
+      this.wrapper.removeChild(this.wrapper.firstChild);
     }
+
+    // Show loading indicator first
+    this.isLoading = true;
+    this._showLoadingIndicator();
 
     const container = document.createElement("div");
     container.classList.add("cdx-image-tool");
@@ -357,86 +431,157 @@ export class CustomImageTool {
     }
 
     const image = document.createElement("img");
-    image.src = url;
-    image.classList.add("w-full", "rounded");
 
-    if (this.data.withBorder)
-      imageWrapper.classList.add("border", "border-gray-300", "rounded");
-    if (this.data.withBackground)
-      imageWrapper.classList.add("bg-gray-100", "p-2");
-    if (this.data.stretched) image.classList.add("w-full");
+    // Set up image load and error handlers before setting src
+    image.onload = () => {
+      // Image loaded successfully, remove loading state
+      this.isLoading = false;
 
-    // Only add click event in non-readOnly mode
-    if (!this.readOnly) {
-      image.addEventListener("click", () => {
+      // Clear the wrapper again before adding actual content
+      while (this.wrapper.firstChild) {
+        this.wrapper.removeChild(this.wrapper.firstChild);
+      }
+
+      // Now add the image and related elements
+      if (this.data.withBorder)
+        imageWrapper.classList.add("border", "border-gray-300", "rounded");
+      if (this.data.withBackground)
+        imageWrapper.classList.add("bg-gray-100", "p-2");
+      if (this.data.stretched) image.classList.add("w-full");
+
+      // Only add click event in non-readOnly mode
+      if (!this.readOnly) {
+        image.addEventListener("click", () => {
+          this._showImageSelector();
+        });
+      }
+
+      // Handle resize only in non-readOnly mode
+      if (!this.readOnly) {
+        let initialWidth;
+        resizableWrapper.addEventListener("mousedown", (e) => {
+          initialWidth = resizableWrapper.offsetWidth;
+        });
+
+        resizableWrapper.addEventListener("mouseup", (e) => {
+          if (initialWidth !== resizableWrapper.offsetWidth) {
+            this.data.width = resizableWrapper.style.width;
+          }
+        });
+      }
+
+      // Caption section
+      const captionContainer = document.createElement("div");
+      captionContainer.classList.add("cdx-image-tool__caption");
+
+      if (this.readOnly && !this.data.caption) {
+        // Don't show caption in readOnly mode if empty
+        captionContainer.style.display = "none";
+      }
+
+      if (this.readOnly) {
+        // In readOnly mode, show caption as text
+        const captionText = document.createElement("div");
+        captionText.classList.add("py-1", "px-0");
+        captionText.textContent = this.data.caption || "";
+        captionContainer.appendChild(captionText);
+      } else {
+        // In edit mode, show caption as textarea
+        const caption = document.createElement("textarea");
+        caption.classList.add("cdx-image-tool__caption-input");
+        caption.placeholder = "Write a caption for this image...";
+        caption.value = this.data.caption || "";
+        caption.readOnly = this.readOnly;
+
+        caption.addEventListener("input", (event) => {
+          event.stopPropagation();
+          this.data.caption = event.target.value;
+          // Auto-resize textarea
+          caption.style.height = "auto";
+          caption.style.height = caption.scrollHeight + "px";
+        });
+
+        captionContainer.appendChild(caption);
+
+        // Initialize caption height
+        setTimeout(() => {
+          caption.style.height = "auto";
+          caption.style.height = caption.scrollHeight + "px";
+        }, 0);
+      }
+
+      // Assemble the components
+      resizableWrapper.appendChild(image);
+      imageWrapper.appendChild(resizableWrapper);
+      container.appendChild(imageWrapper);
+
+      // Only show caption if it exists or in edit mode
+      if (!this.readOnly || this.data.caption) {
+        container.appendChild(captionContainer);
+      }
+
+      this.wrapper.appendChild(container);
+
+      // Notify the editor about changes
+      // if (this.api && this.api.blocks) {
+      //   this.api.blocks.update();
+      // }
+    };
+
+    // Handle image load error
+    image.onerror = () => {
+      // Remove loading state
+      this.isLoading = false;
+
+      // Clear the wrapper before showing error
+      while (this.wrapper.firstChild) {
+        this.wrapper.removeChild(this.wrapper.firstChild);
+      }
+
+      // Show error message
+      const errorMessage = document.createElement("div");
+      errorMessage.classList.add(
+        "p-4",
+        "bg-red-50",
+        "border",
+        "border-red-200",
+        "text-red-500",
+        "rounded-lg",
+        "text-center"
+      );
+      errorMessage.textContent = "Failed to load image";
+
+      const retryButton = document.createElement("button");
+      retryButton.classList.add(
+        "mt-2",
+        "px-4",
+        "py-2",
+        "bg-red-100",
+        "hover:bg-red-200",
+        "text-red-700",
+        "rounded"
+      );
+      retryButton.textContent = "Select another image";
+      retryButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         this._showImageSelector();
       });
-    }
 
-    // Handle resize only in non-readOnly mode
-    if (!this.readOnly) {
-      let initialWidth;
-      resizableWrapper.addEventListener("mousedown", (e) => {
-        initialWidth = resizableWrapper.offsetWidth;
-      });
+      errorMessage.appendChild(document.createElement("br"));
+      errorMessage.appendChild(retryButton);
 
-      resizableWrapper.addEventListener("mouseup", (e) => {
-        if (initialWidth !== resizableWrapper.offsetWidth) {
-          this.data.width = resizableWrapper.style.width;
-        }
-      });
-    }
+      this.wrapper.appendChild(errorMessage);
 
-    // Caption section
-    const captionContainer = document.createElement("div");
-    captionContainer.classList.add("cdx-image-tool__caption");
+      // Notify the editor about changes
+      // if (this.api && this.api.blocks) {
+      //   this.api.blocks.update();
+      // }
+    };
 
-    if (this.readOnly && !this.data.caption) {
-      // Don't show caption in readOnly mode if empty
-      captionContainer.style.display = "none";
-    }
-
-    if (this.readOnly) {
-      // In readOnly mode, show caption as text
-      const captionText = document.createElement("div");
-      captionText.classList.add("py-1", "px-0");
-      captionText.textContent = this.data.caption || "";
-      captionContainer.appendChild(captionText);
-    } else {
-      // In edit mode, show caption as textarea
-      const caption = document.createElement("textarea");
-      caption.classList.add("cdx-image-tool__caption-input");
-      caption.placeholder = "Write a caption for this image...";
-      caption.value = this.data.caption || "";
-      caption.readOnly = this.readOnly;
-
-      caption.addEventListener("input", (event) => {
-        this.data.caption = event.target.value;
-        // Auto-resize textarea
-        caption.style.height = "auto";
-        caption.style.height = caption.scrollHeight + "px";
-      });
-
-      captionContainer.appendChild(caption);
-
-      // Initialize caption height
-      setTimeout(() => {
-        caption.style.height = "auto";
-        caption.style.height = caption.scrollHeight + "px";
-      }, 0);
-    }
-
-    // Assemble the components
-    resizableWrapper.appendChild(image);
-    imageWrapper.appendChild(resizableWrapper);
-    container.appendChild(imageWrapper);
-
-    // Only show caption if it exists or in edit mode
-    if (!this.readOnly || this.data.caption) {
-      container.appendChild(captionContainer);
-    }
-
-    this.wrapper.appendChild(container);
+    // Start loading the image
+    image.src = url;
+    image.classList.add("w-full", "rounded");
   }
 
   _showImageSelector() {
@@ -455,18 +600,42 @@ export class CustomImageTool {
     // Create root for React rendering
     const root = createRoot(modalContent);
 
+    // Function to close the modal
+    const closeModal = () => {
+      root.unmount();
+      if (document.body.contains(modalContainer)) {
+        document.body.removeChild(modalContainer);
+      }
+    };
+
     // Render ImageContainer component
     root.render(
       <ImageContainer
         onImageSelect={(image) => {
-          const imageUrl = image.newsImageUrls[0].replace(
-            "https://100.42.179.27:7198/imagecontainer/",
-            "https://bravoappuser.uplms.org/uploads/imagecontainer/"
-          );
-          this.data.url = imageUrl;
-          this._createImage(imageUrl);
-          root.unmount();
-          document.body.removeChild(modalContainer);
+          let imageUrl = "";
+          if (image && image.newsImageUrls && image.newsImageUrls.length > 0) {
+            imageUrl = image.newsImageUrls[0].replace(
+              "https://100.42.179.27:7198/imagecontainer/",
+              "https://bravoadmin.uplms.org/uploads/imagecontainer/"
+            );
+          } else if (typeof image === "string") {
+            imageUrl = image;
+          }
+
+          if (imageUrl) {
+            this.data.url = imageUrl;
+            this._createImage(imageUrl);
+          }
+
+          closeModal();
+
+          // Notify the editor about changes
+          // if (this.api && this.api.blocks) {
+          //   this.api.blocks.update();
+          // }
+        }}
+        onCancel={() => {
+          closeModal();
         }}
       />
     );
@@ -474,26 +643,17 @@ export class CustomImageTool {
     // Close modal when clicking outside
     modalContainer.addEventListener("click", (e) => {
       if (e.target === modalContainer) {
-        root.unmount();
-        document.body.removeChild(modalContainer);
+        closeModal();
       }
     });
   }
 
-  save() {
-    return {
-      url: this.data.url,
-      caption: this.data.caption,
-      withBorder: this.data.withBorder,
-      withBackground: this.data.withBackground,
-      stretched: this.data.stretched,
-      alignment: this.data.alignment,
-      width: this.data.width,
-    };
+  save(blockContent) {
+    return this.data;
   }
 
   validate(savedData) {
-    if (!savedData.url.trim()) {
+    if (!savedData.url || !savedData.url.trim()) {
       return false;
     }
     return true;
@@ -502,6 +662,78 @@ export class CustomImageTool {
   _updatePreview() {
     if (this.data.url) {
       this._createImage(this.data.url);
+
+      // Let the editor know the content has been updated
+      // if (this.api && this.api.blocks) {
+      //   this.api.blocks.update();
+      // }
     }
+  }
+
+  // Paste handling
+  onPaste(event) {
+    switch (event.type) {
+      case "tag": {
+        const img = event.detail.data;
+
+        if (img.src) {
+          this.data.url = img.src;
+          this._createImage(this.data.url);
+          return true;
+        }
+        break;
+      }
+      case "pattern": {
+        const { data: text } = event.detail;
+
+        // Check if pasted content is an image URL
+        const urlPattern =
+          /https?:\/\/\S+\.(gif|jpe?g|tiff?|png|webp|bmp)(\?\S+)?$/i;
+        const matched = text.match(urlPattern);
+
+        if (matched) {
+          this.data.url = matched[0];
+          this._createImage(this.data.url);
+          return true;
+        }
+        break;
+      }
+      case "file": {
+        const { file } = event.detail;
+
+        if (file && file.type.startsWith("image/")) {
+          const reader = new FileReader();
+
+          reader.onload = (loadEvent) => {
+            this.data.url = loadEvent.target.result;
+            this._createImage(this.data.url);
+          };
+
+          reader.readAsDataURL(file);
+          return true;
+        }
+        break;
+      }
+    }
+
+    return false;
+  }
+
+  // This static getter enables undo/redo functionality
+  static get enableLineBreaks() {
+    return false;
+  }
+
+  // For more accurate content sanitizing
+  static get sanitize() {
+    return {
+      url: true,
+      caption: true,
+      withBorder: false,
+      withBackground: false,
+      stretched: false,
+      alignment: false,
+      width: false,
+    };
   }
 }

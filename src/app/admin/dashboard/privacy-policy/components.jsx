@@ -157,13 +157,6 @@ export const SuccessAlert = ({ message, onDismiss }) => (
   </div>
 );
 
-export const LoadingSpinner = ({ message = "Loading..." }) => (
-  <div className="flex flex-col items-center justify-center py-12">
-    <div className="w-12 h-12 border-4 border-gray-200 border-t-[#0AAC9E] rounded-full animate-spin"></div>
-    <p className="mt-4 text-gray-500">{message}</p>
-  </div>
-);
-
 export const EmptyState = ({ message, icon, action }) => (
   <div className="flex flex-col items-center justify-center py-16 text-gray-500">
     {icon}

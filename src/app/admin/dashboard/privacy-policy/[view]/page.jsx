@@ -9,7 +9,6 @@ import {
   Card,
   Button,
   StatusBadge,
-  LoadingSpinner,
   ErrorAlert,
   API_URL,
   useAppNavigation,
@@ -23,6 +22,7 @@ import {
   Clock,
   Eye,
 } from "lucide-react";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 export default function ViewPrivacyPolicy() {
   const params = useParams();

@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { Search, Loader2, Pencil, Trash2, Plus } from "lucide-react";
-import Pagination from "./pagination";
+import Pagination from "@/components/ListPagination";
 
 const PositionList = ({
   positions,

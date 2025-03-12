@@ -13,6 +13,7 @@ import {
   FormInput,
   AlertCircle,
 } from "lucide-react";
+import LoadingSpinner from "@/components/loadingSpinner";
 
 const PollUnitsList = () => {
   const [pollUnits, setPollUnits] = useState([]);
@@ -56,14 +57,7 @@ const PollUnitsList = () => {
   });
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading poll units...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
