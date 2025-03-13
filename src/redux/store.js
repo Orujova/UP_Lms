@@ -20,6 +20,7 @@ import courseReducer from "./course/courseSlice";
 import notification from "./notification/notification";
 import user from "./user/userSlice";
 import annoucement from "./announcement/announcement";
+import event from "./event/event";
 
 const combinedReducers = combineReducers({
   news,
@@ -43,6 +44,7 @@ const combinedReducers = combineReducers({
   user,
   notification,
   annoucement,
+  event,
 });
 
 export const store = configureStore({

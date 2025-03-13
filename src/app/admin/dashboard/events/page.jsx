@@ -16,6 +16,7 @@ import {
   SquareArrowOutUpRight,
 } from "lucide-react";
 import LoadingSpinner from "@/components/loadingSpinner";
+import DeleteConfirmationModal from "@/components/deleteModal";
 
 const PAGE_SIZE = 8;
 
@@ -32,8 +33,11 @@ export default function EventList() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalViews, setTotalViews] = useState(0);
   const [sortOrder, setSortOrder] = useState("nameasc");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -49,6 +53,13 @@ export default function EventList() {
       const data = await response.json();
       setEvents(data[0].events);
       setTotalCount(data[0].totalEventCount);
+
+      // Calculate total views by summing all event views
+      const totalViewsCount = data[0].events.reduce(
+        (sum, event) => sum + (event.view || 0),
+        0
+      );
+      setTotalViews(totalViewsCount);
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {
@@ -56,25 +67,31 @@ export default function EventList() {
     }
   };
 
-  const deleteEvent = async (id) => {
-    if (!confirm("Are you sure you want to delete this event?")) {
-      return;
-    }
+  const openDeleteModal = (id) => {
+    setEventToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!eventToDelete) return;
 
     try {
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Event/${id}`,
+        `https://bravoadmin.uplms.org/api/Event/${eventToDelete}`,
         { method: "DELETE" }
       );
 
       if (response.ok) {
-        setEvents((prev) => prev.filter((events) => events.id !== id));
+        setEvents((prev) => prev.filter((event) => event.id !== eventToDelete));
         fetchEvents();
       } else {
         throw new Error("Failed to delete event.");
       }
     } catch (error) {
       console.error("Error deleting event:", error);
+    } finally {
+      setDeleteModalOpen(false);
+      setEventToDelete(null);
     }
   };
 
@@ -103,7 +120,7 @@ export default function EventList() {
               <div className="bg-[#f9f9f9] p-2.5 rounded-lg">
                 <Calendar className="w-4 h-4 text-[#0AAC9E]" />
               </div>
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3">
                 <span className="text-lg font-semibold text-gray-900">
                   {totalCount}
                 </span>
@@ -117,12 +134,9 @@ export default function EventList() {
               <div className="bg-[#f9f9f9] p-2.5 rounded-lg">
                 <Eye className="w-4 h-4 text-[#0AAC9E]" />
               </div>
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3">
                 <span className="text-lg font-semibold text-gray-900">
-                  {events.reduce(
-                    (sum, event) => sum + (event.countDown || 0),
-                    0
-                  )}
+                  {totalViews}
                 </span>
                 <p className="text-sm text-gray-500">Total Views</p>
               </div>
@@ -130,11 +144,11 @@ export default function EventList() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-3 md:p-5">
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex items-center  gap-3 md:gap-4">
               <div className="bg-[#f9f9f9] p-2.5 rounded-lg">
                 <Calendar className="w-4 h-4 text-[#0AAC9E]" />
               </div>
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3">
                 <span className="text-lg font-semibold text-gray-900">
                   {
                     events.filter(
@@ -251,7 +265,7 @@ export default function EventList() {
                         </span>
                         <span className="flex items-center gap-1.5 bg-[#f0fdfb] text-[#0AAC9E] px-2.5 py-1 rounded-full text-sm">
                           <Eye className="w-3.5 h-3.5" />
-                          {event.countDown || 0} views
+                          {event.view || 0} views
                         </span>
                       </div>
                     </div>
@@ -268,7 +282,7 @@ export default function EventList() {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => deleteEvent(event.id)}
+                        onClick={() => openDeleteModal(event.id)}
                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
                         title="Delete event"
                       >
@@ -325,6 +339,14 @@ export default function EventList() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        item="event"
+      />
     </div>
   );
 }

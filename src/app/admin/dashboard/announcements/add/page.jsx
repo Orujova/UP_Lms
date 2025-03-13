@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -15,8 +15,8 @@ import { ArrowLeft } from "lucide-react";
 import ImageUpload from "@/components/announcement/ImageUpload";
 import BasicInfo from "@/components/announcement/BasicInfo";
 import Description from "@/components/announcement/Description";
-import PollUnitSelector from "@/components/announcement/PollUnitSelector";
-import TargetGroupSelector from "@/components/announcement/TargetGroupSelector";
+import PollUnitSelector from "@/components/polUnits";
+import TargetGroupSelector from "@/components/targetSelect";
 import Settings from "@/components/announcement/Settings";
 import FormActions from "@/components/announcement/FormActions";
 
@@ -24,8 +24,9 @@ const NewAnnouncementPage = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const loadingTimeoutRef = useRef(null); // Ref for safety timeout
+
   // Redux state
-  // const loading = useSelector((state) => state.announcement?.loading);
   const error = useSelector((state) => state.announcement?.error);
   const createSuccess = useSelector(
     (state) => state.announcement?.createSuccess
@@ -64,6 +65,25 @@ const NewAnnouncementPage = () => {
 
   const [selectedTargetGroups, setSelectedTargetGroups] = useState([]);
 
+  // Safety function to ensure loading state is reset
+  const safelySetLoading = (isLoading) => {
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+
+    setLoading(isLoading);
+
+    // If setting to true, set a safety timeout to force it back to false
+    if (isLoading) {
+      loadingTimeoutRef.current = setTimeout(() => {
+        setLoading(false);
+        console.log("⚠️ Safety timeout triggered to reset loading state");
+      }, 10000); // 10-second safety timeout
+    }
+  };
+
   useEffect(() => {
     Promise.all([fetchPollUnits(), fetchTargetGroups()]).catch((error) => {
       toast.error("Error loading data");
@@ -79,12 +99,17 @@ const NewAnnouncementPage = () => {
 
     return () => {
       dispatch(resetCreateStatus());
+      // Clean up safety timeout on unmount
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
     };
   }, [dispatch]);
 
   useEffect(() => {
     if (createSuccess) {
       toast.success("Announcement created successfully");
+      safelySetLoading(false);
 
       setTimeout(() => {
         router.push("/admin/dashboard/announcements");
@@ -93,6 +118,7 @@ const NewAnnouncementPage = () => {
 
     if (error) {
       toast.error(error || "Failed to create announcement");
+      safelySetLoading(false);
     }
   }, [createSuccess, error, router]);
 
@@ -194,29 +220,34 @@ const NewAnnouncementPage = () => {
     handleTargetGroupSelect(group);
   };
 
-  // Handle form submission
+  // Handle form submission - completely revamped
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    safelySetLoading(true);
+    console.log("Starting form submission, loading state set to true");
 
     // Basic validation
     if (!formData.Title.trim()) {
       toast.error("Title is required");
+      safelySetLoading(false);
       return;
     }
 
     if (formData.TargetGroupIds.length === 0) {
       toast.error("Please select at least one target group");
+      safelySetLoading(false);
       return;
     }
 
     if (!formData.ScheduledDate) {
       toast.error("Schedule date is required");
+      safelySetLoading(false);
       return;
     }
 
     if (!formData.ExpiryDate) {
       toast.error("Expiry date is required");
+      safelySetLoading(false);
       return;
     }
 
@@ -260,27 +291,101 @@ const NewAnnouncementPage = () => {
         );
       }
 
-      setLoading(true);
-      toast.success("Announcement created successfully");
+      console.log("Form data prepared, dispatching action");
 
-      setTimeout(() => {
-        router.push("/admin/dashboard/announcements");
-      }, 1500);
-      dispatch(createAnnouncementAsync(formDataToSend));
+      // APPROACH 1: Use dispatch with explicit promise handling
+      const resultAction = await dispatch(
+        createAnnouncementAsync(formDataToSend)
+      );
+      console.log("Action dispatch completed, result:", resultAction);
+
+      if (createAnnouncementAsync.fulfilled.match(resultAction)) {
+        console.log("✅ Announcement created successfully via Redux");
+        toast.success("Announcement created successfully");
+
+        // Force navigation directly here as well as in useEffect
+        setTimeout(() => {
+          console.log("Navigating to announcements page");
+          router.push("/admin/dashboard/announcements");
+        }, 1500);
+      } else if (createAnnouncementAsync.rejected.match(resultAction)) {
+        console.error(
+          "❌ Failed to create announcement:",
+          resultAction.payload
+        );
+        toast.error(resultAction.payload || "Failed to create announcement");
+      }
+
+      // APPROACH 2: Bypass Redux completely and make direct API call as fallback
+      // This is a last resort if Redux is causing issues
+      if (!createAnnouncementAsync.fulfilled.match(resultAction)) {
+        console.log("Attempting direct API call as fallback...");
+        try {
+          const token = localStorage.getItem("token");
+          const response = await fetch(
+            "https://bravoadmin.uplms.org/api/Announcement",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: formDataToSend,
+            }
+          );
+
+          if (response.ok) {
+            console.log(
+              "✅ Announcement created successfully via direct API call"
+            );
+            toast.success("Announcement created successfully");
+            setTimeout(() => {
+              router.push("/admin/dashboard/announcements");
+            }, 1500);
+          } else {
+            const errorData = await response.json().catch(() => null);
+            console.error("❌ Direct API call failed:", errorData);
+            toast.error(errorData?.message || "Failed to create announcement");
+          }
+        } catch (directApiError) {
+          console.error("❌ Error in direct API call:", directApiError);
+          toast.error("Failed to create announcement");
+        }
+      }
+
+      // Always reset loading state after all attempts, regardless of success/failure
+      safelySetLoading(false);
     } catch (error) {
-      console.error("Error preparing announcement data:", error);
-      toast.error("Failed to create announcement");
+      console.error("❌ Unexpected error in form submission:", error);
+      toast.error("An unexpected error occurred");
+      safelySetLoading(false);
     } finally {
-      setLoading(false);
+      // Triple check that loading state is reset
+      console.log("Form submission completed, ensuring loading state is reset");
+      setTimeout(() => safelySetLoading(false), 100);
     }
   };
 
   // Handle cancel and go back to announcements page
   const handleCancel = () => {
+    safelySetLoading(false); // Reset loading state when cancelling
     setTimeout(() => {
       router.push("/admin/dashboard/announcements");
     }, 500);
   };
+
+  // Additional safety measure: force loading to false if navigation happens
+  useEffect(() => {
+    const handleRouteChange = () => {
+      safelySetLoading(false);
+    };
+
+    window.addEventListener("beforeunload", handleRouteChange);
+    return () => {
+      window.removeEventListener("beforeunload", handleRouteChange);
+    };
+  }, []);
+
+  console.log("Current loading state:", loading);
 
   return (
     <div className="min-h-screen bg-gray-50/50 pt-12">

@@ -10,7 +10,6 @@ const FormActions = ({
 }) => {
   return (
     <div className="flex justify-end gap-4">
-      {/* Cancel button */}
       <button
         type="button"
         onClick={onCancel}
@@ -20,7 +19,6 @@ const FormActions = ({
         Cancel
       </button>
 
-      {/* Submit button */}
       <button
         type="submit"
         disabled={isSubmitting}

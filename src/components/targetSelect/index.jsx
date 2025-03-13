@@ -37,10 +37,10 @@ const TargetGroupSelector = ({
 
   return (
     <div
-      className="bg-white rounded-lg p-5 border border-gray-200"
+      className="bg-white rounded-lg p-4 border border-gray-200"
       ref={dropdownRef}
     >
-      <h2 className="text-base font-medium mb-4 flex items-center justify-between">
+      <h2 className="text-sm font-medium mb-3 flex items-center justify-between">
         <span>
           Target Groups <span className="text-red-500">*</span>
         </span>
@@ -136,16 +136,16 @@ const TargetGroupSelector = ({
                       {selected && <Check className="text-white w-3 h-3" />}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium">{group.name}</div>
+                      <div className="font-normal text-sm">{group.name}</div>
                       <div className="text-xs text-gray-400 flex gap-3 mt-1">
                         <span className="flex items-center gap-1">
-                          <span className="inline-block w-5 h-5 bg-[#0AAC9E]/10 rounded-full text-center text-xs leading-5 text-[#0AAC9E]">
+                          <span className="inline-block w-4 h-4 bg-[#0AAC9E]/10 rounded-full text-center text-xs leading-5 text-[#0AAC9E]">
                             U
                           </span>
                           {group.userCount} Users
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="inline-block w-5 h-5 bg-[#0AAC9E]/10 rounded-full text-center text-xs leading-5 text-[#0AAC9E]">
+                          <span className="inline-block w-4 h-4 bg-[#0AAC9E]/10 rounded-full text-center text-xs leading-5 text-[#0AAC9E]">
                             F
                           </span>
                           {group.filterGroupCount} Filters

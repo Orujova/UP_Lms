@@ -16,7 +16,7 @@ import { getToken } from "@/authtoken/auth.js";
 import { toast, Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/loadingSpinner";
-import SearchableDropdown from "@/components/SearchableDropdown";
+import SearchableDropdown from "@/components/searchableDropdown";
 const EditTargetGroup = ({ params }) => {
   const targetGroupId = params?.id;
   const router = useRouter();

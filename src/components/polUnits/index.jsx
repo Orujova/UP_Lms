@@ -15,7 +15,6 @@ const PollUnitSelector = ({
 }) => {
   const dropdownRef = useRef(null);
 
-  // Handle outside click to close the dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -31,12 +30,10 @@ const PollUnitSelector = ({
 
   return (
     <div
-      className="bg-white rounded-lg p-5 border border-gray-200"
+      className="bg-white rounded-lg p-4 border border-gray-200"
       ref={dropdownRef}
     >
-      <h2 className="text-base font-medium mb-4">
-        Poll Unit <span className="text-sm text-gray-500">(Optional)</span>
-      </h2>
+      <h2 className="text-sm font-medium mb-3">Poll Unit</h2>
       <div className="relative">
         <div className="flex items-center border rounded-md transition-all duration-200 hover:border-[#01DBC8] focus-within:border-[#01DBC8] focus-within:ring-2 focus-within:ring-[#01DBC8]/20">
           <Search className="ml-3 text-gray-400 flex-shrink-0" size={16} />
