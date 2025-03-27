@@ -65,7 +65,7 @@ const PollUnitSelector = ({
               .map((unit) => (
                 <div
                   key={unit.id}
-                  className="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                  className="px-4 py-2 text-xs hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
                   onClick={() => onSelect(unit)}
                 >
                   <div className="font-medium">{unit.title}</div>
@@ -90,13 +90,15 @@ const PollUnitSelector = ({
       </div>
       {selectedPollUnitId && (
         <div className="mt-2 bg-[#f9fefe] text-[#127D74] px-3 py-2 rounded-lg flex justify-between items-center">
-          <span>Selected Poll Unit ID: {selectedPollUnitId}</span>
+          <span className="text-xs">
+            Selected Poll Unit ID: {selectedPollUnitId}
+          </span>
           <button
             type="button"
             onClick={onClear}
             className="text-[#127D74] hover:text-emerald-800"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
       )}

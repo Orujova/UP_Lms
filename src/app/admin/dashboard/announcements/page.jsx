@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Edit,
@@ -19,6 +19,8 @@ import {
   Tag,
   Eye,
   SquareArrowOutUpRight,
+  Loader2,
+  X,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -30,7 +32,9 @@ const PAGE_SIZE = 12;
 export default function AnnouncementsList() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [sortBy, setSortBy] = useState("nameasc");
@@ -40,25 +44,62 @@ export default function AnnouncementsList() {
   const [deleteAnnouncementId, setDeleteAnnouncementId] = useState(null);
   const router = useRouter();
 
+  // Ref to store timeout ID for cleanup
+  const timeoutRef = useRef(null);
+
+  // Handle search input change with debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Set new timeout for debounce
+    timeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setCurrentPage(1);
+    }, 600); // 600ms delay
+  };
+
+  // Clean up timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Separate loading states for initial and search loading
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        setLoading(true);
+        if (debouncedSearch !== searchInput) {
+          setSearchLoading(true);
+        } else if (!announcements.length) {
+          setLoading(true);
+        }
+
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/Announcement?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${search}&OrderBy=${sortBy}`
+          `https://bravoadmin.uplms.org/api/Announcement?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${debouncedSearch}&OrderBy=${sortBy}`
         );
         const data = await response.json();
         setAnnouncements(data[0].announcements);
         setTotalCount(data[0].totalAnnouncementCount);
       } catch (error) {
         console.error("Error fetching announcements:", error);
+        toast.error("Failed to load announcements");
       } finally {
         setLoading(false);
+        setSearchLoading(false);
       }
     };
 
     fetchAnnouncements();
-  }, [currentPage, search, sortBy]);
+  }, [currentPage, debouncedSearch, sortBy]);
 
   const deleteAnnouncement = async (id) => {
     try {
@@ -89,7 +130,6 @@ export default function AnnouncementsList() {
     }
   };
 
-  // Create a function to handle delete button clicks
   const handleDeleteClick = (id) => {
     setDeleteAnnouncementId(id);
     setIsDeleteModalOpen(true);
@@ -354,17 +394,29 @@ export default function AnnouncementsList() {
           <div className="p-5">
             <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                {searchLoading ? (
+                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                )}
                 <input
                   type="text"
                   placeholder="Search announcements..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full pl-10 pr-4 py-2 text-xs border-1 border-gray-200 rounded-xl focus:ring-1 focus:ring-[#01DBC8] "
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-2 text-xs border-1 border-gray-200 rounded-xl focus:ring-1 focus:ring-[#01DBC8]"
                 />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput("");
+                      setDebouncedSearch("");
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -420,28 +472,39 @@ export default function AnnouncementsList() {
           </div>
         </div>
 
-        {/* Content */}
-        {announcements.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No announcements found
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Try adjusting your search criteria or create a new announcement
-            </p>
-            <Link href="/admin/dashboard/announcements/add">
-              <button className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-xl hover:bg-[#127D74] transition-all">
-                <Plus className="w-5 h-5" />
-                Create First Announcement
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <div className="mb-8">
-            {viewMode === "grid" ? <GridView /> : <ListView />}
-          </div>
-        )}
+        {/* Content with loading overlay for search */}
+        <div className="relative mb-8">
+          {searchLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 text-[#0AAC9E] animate-spin mx-auto" />
+                <p className="mt-2 text-sm text-gray-600">Searching...</p>
+              </div>
+            </div>
+          )}
+
+          {announcements.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No announcements found
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Try adjusting your search criteria or create a new announcement
+              </p>
+              <Link href="/admin/dashboard/announcements/add">
+                <button className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-xl hover:bg-[#127D74] transition-all">
+                  <Plus className="w-5 h-5" />
+                  Create First Announcement
+                </button>
+              </Link>
+            </div>
+          ) : viewMode === "grid" ? (
+            <GridView />
+          ) : (
+            <ListView />
+          )}
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (

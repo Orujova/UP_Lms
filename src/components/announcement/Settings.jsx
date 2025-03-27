@@ -1,7 +1,5 @@
-"use client";
-
 import React from "react";
-import { Bell } from "lucide-react";
+import { Bell, BellOff } from "lucide-react";
 
 const Settings = ({
   priority,
@@ -12,26 +10,32 @@ const Settings = ({
 }) => {
   return (
     <div className="bg-white rounded-lg p-5 border border-gray-200">
-      <h2 className="text-base font-medium mb-4">Settings</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <h2 className="text-base font-medium mb-4 pb-2 border-b border-gray-100">
+        Publication Settings
+      </h2>
+
+      {/* Priority Selection */}
+      <div className="mb-5">
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+          Priority
+        </label>
+        <select
+          name="Priority"
+          value={priority}
+          onChange={onInputChange}
+          className="w-full border text-xs border-gray-300 rounded-md px-3 py-2 text-gray-700 bg-white focus:outline-none focus:border-[#01DBC8] focus:ring-[#01DBC8] transition"
+        >
+          <option value="LOW">Low</option>
+          <option value="NORMAL">Normal</option>
+          <option value="HIGH">High</option>
+        </select>
+      </div>
+
+      {/* Dates Section */}
+      <div className="space-y-5">
+        {/* Schedule Date */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Priority
-          </label>
-          <select
-            name="Priority"
-            value={priority}
-            onChange={onInputChange}
-            className="mt-1 block w-full text-sm rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
-            required
-          >
-            <option value="LOW">Low</option>
-            <option value="NORMAL">Normal</option>
-            <option value="HIGH">High</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block  font-medium text-xs text-gray-700 mb-1.5">
             Schedule Date <span className="text-red-500">*</span>
           </label>
           <input
@@ -39,12 +43,14 @@ const Settings = ({
             name="ScheduledDate"
             value={scheduledDate}
             onChange={onInputChange}
-            className="mt-1 block w-full text-sm rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
+            className="w-full border text-xs border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none  focus:border-[#01DBC8] focus:ring-[#01DBC8]  transition"
             required
           />
         </div>
+
+        {/* Expiry Date */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs font-medium text-gray-700 mb-1.5">
             Expiry Date <span className="text-red-500">*</span>
           </label>
           <input
@@ -52,60 +58,41 @@ const Settings = ({
             name="ExpiryDate"
             value={expiryDate}
             onChange={onInputChange}
-            className="mt-1 block w-full text-sm rounded-md border border-gray-300 px-3 py-2 focus:border-[#01DBC8] focus:ring-[#01DBC8]"
+            className="w-full border text-xs border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none  focus:border-[#01DBC8] focus:ring-[#01DBC8]  transition"
             required
           />
         </div>
       </div>
 
       {/* Notification Toggle */}
-      <div className="mt-6">
-        <button
-          type="button"
-          className="flex items-center space-x-3 cursor-pointer bg-gray-50 hover:bg-gray-100 px-4 py-3 rounded-lg w-full transition-colors duration-200 border border-gray-200"
-          onClick={() =>
-            onInputChange({
-              target: {
-                name: "HasNotification",
-                type: "checkbox",
-                checked: !hasNotification,
-              },
-            })
-          }
-        >
-          <div
-            className={`relative w-12 h-6 flex items-center rounded-full p-1 transition duration-300 ease-in-out ${
-              hasNotification ? "bg-[#0AAC9E]" : "bg-gray-300"
-            }`}
-          >
-            <div
-              className={`absolute bg-white w-5 h-5 rounded-full shadow-md transform transition duration-300 ease-in-out ${
-                hasNotification ? "right-1" : "left-1"
-              }`}
-            ></div>
-          </div>
-          <span className="flex items-center gap-2 flex-1 text-left">
-            <Bell
-              size={18}
-              className={hasNotification ? "text-[#0AAC9E]" : "text-gray-400"}
-            />
+      <div className="mt-6 pt-4 border-t border-gray-100">
+        <label className="flex items-center justify-between cursor-pointer">
+          <div className="flex items-center space-x-3">
+            {hasNotification ? (
+              <Bell size={16} className="text-[#0AAC9E]" />
+            ) : (
+              <BellOff size={16} className="text-gray-400" />
+            )}
             <span className="text-sm font-medium text-gray-700">
               Send push notification
             </span>
-          </span>
-          {hasNotification && (
-            <span className="px-2 py-1 rounded-md bg-[#E6FAF8] text-[#0AAC9E] text-xs font-semibold">
-              Enabled
-            </span>
-          )}
-          <input
-            type="checkbox"
-            className="hidden"
-            name="HasNotification"
-            checked={hasNotification}
-            onChange={onInputChange}
-          />
-        </button>
+          </div>
+
+          <div className="relative">
+            <input
+              type="checkbox"
+              name="HasNotification"
+              checked={hasNotification}
+              onChange={onInputChange}
+              className="sr-only peer"
+              id="notification-toggle"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0AAC9E]"></div>
+          </div>
+        </label>
+        <p className="mt-1 text-xs text-gray-500 ml-7">
+          Users will receive a notification when this announcement is published
+        </p>
       </div>
     </div>
   );

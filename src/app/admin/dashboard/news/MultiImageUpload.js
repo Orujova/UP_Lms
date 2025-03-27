@@ -65,11 +65,11 @@ const MultiImageUpload = ({ images, onChange }) => {
 
   return (
     <div className="space-y-4">
-      <div className="border-dashed border-2 border-[#0AAC9E] flex justify-center items-center py-8 flex-col gap-4 bg-white rounded-lg">
+      <div className="border-dashed border-2 border-[#0AAC9E] flex justify-center items-center py-4 flex-col gap-4 bg-white rounded-lg">
         {images.length === 0 ? (
           <div className="text-center">
-            <div className="w-14 h-14 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
-              <Upload className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
+              <Upload className="w-6 h-6 text-white" />
             </div>
             <div className="font-medium text-gray-700">
               <label className="text-[#0AAC9E] hover:text-[#127D74] cursor-pointer">
@@ -83,7 +83,7 @@ const MultiImageUpload = ({ images, onChange }) => {
               </label>
               or drag and drop
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs font-normal text-gray-500 mt-2">
               Images will be cropped to 16:9 ratio
             </p>
           </div>

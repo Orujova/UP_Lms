@@ -1,4 +1,3 @@
-// src/components/announcement/ImageUpload.jsx
 "use client";
 
 import React, { useState } from "react";
@@ -49,12 +48,14 @@ const ImageUpload = ({ imagePreview, onImageChange, onImageRemove }) => {
         <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
           <div className="space-y-1 text-center">
             {imagePreview ? (
-              <div className="relative w-full max-w-sm mx-auto aspect-[9/16]">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover rounded-lg"
-                />
+              <div className="relative w-full max-w-xs mx-auto">
+                <div className="h-64 flex items-center justify-center">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-full object-contain rounded-lg"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={onImageRemove}

@@ -21,6 +21,7 @@ import notification from "./notification/notification";
 import user from "./user/userSlice";
 import annoucement from "./announcement/announcement";
 import event from "./event/event";
+import vacancy from "./vacancy/vacancy";
 
 const combinedReducers = combineReducers({
   news,
@@ -45,6 +46,7 @@ const combinedReducers = combineReducers({
   notification,
   annoucement,
   event,
+  vacancy,
 });
 
 export const store = configureStore({

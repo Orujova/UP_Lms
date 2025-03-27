@@ -134,12 +134,14 @@ const CategorySelector = ({ value, onChange, options, error, hideLabel }) => {
               .map((group) => (
                 <div
                   key={group.id}
-                  className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
-                    group.id.toString() === value ? "bg-emerald-50" : ""
+                  className={`px-4 py-1 hover:bg-gray-50 cursor-pointer ${
+                    group.id.toString() === value ? "bg-[#f2fdfc]" : ""
                   }`}
                   onClick={() => handleSelect(group)}
                 >
-                  <div className="font-medium">{getDisplayName(group)}</div>
+                  <div className="font-medium text-sm">
+                    {getDisplayName(group)}
+                  </div>
                   <div className="text-xs text-gray-400 flex gap-2 mt-1">
                     <span className="flex items-center gap-1">
                       <span className="inline-block w-4 h-4 bg-gray-200 rounded-full text-center text-xs leading-4">
@@ -162,13 +164,15 @@ const CategorySelector = ({ value, onChange, options, error, hideLabel }) => {
 
       {(value || localSelected) && selectedGroup && (
         <div className="mt-2 bg-[#f9fefe] text-[#0AAC9E] px-3 py-2 rounded-lg flex justify-between items-center">
-          <span>Selected: {getDisplayName(selectedGroup)}</span>
+          <span className="text-xs">
+            Selected: {getDisplayName(selectedGroup)}
+          </span>
           <button
             type="button"
             onClick={handleClear}
             className="text-[#0AAC9E] hover:text-emerald-800"
           >
-            <X size={16} />
+            <X size={12} />
           </button>
         </div>
       )}
