@@ -34,7 +34,7 @@ export default function EventList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalViews, setTotalViews] = useState(0);
-  const [sortOrder, setSortOrder] = useState("nameasc");
+  const [sortOrder, setSortOrder] = useState("datedesc");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);

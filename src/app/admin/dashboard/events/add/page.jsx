@@ -15,12 +15,21 @@ import {
   AlertCircle,
   Edit2,
   Check,
+  MapPin,
+  Bell,
+  Clock,
+  Users,
+  FileText,
+  Image as ImageIcon,
+  Target,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import TargetGroupSelector from "@/components/targetSelect";
 import PollUnitSelector from "@/components/polUnits";
 import CropModal from "@/components/event/CropModal";
+import LocationSelector from "@/components/locationSelector";
 
 import {
   fetchTargetGroups,
@@ -58,6 +67,8 @@ const EventForm = () => {
     pollUnitId: "",
     hasNotification: false,
     requirements: [],
+    location: "", // Location field
+    locationCoordinates: null, // New field for coordinates
   });
 
   const [errors, setErrors] = useState({});
@@ -68,6 +79,7 @@ const EventForm = () => {
   const [newRequirement, setNewRequirement] = useState("");
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editValue, setEditValue] = useState("");
+  const [formProgress, setFormProgress] = useState(0);
 
   // Target Group state
   const [searchTargetGroup, setSearchTargetGroup] = useState("");
@@ -91,6 +103,24 @@ const EventForm = () => {
     dispatch(fetchTargetGroups());
     dispatch(fetchPollUnits());
   }, [dispatch]);
+
+  // Update form progress
+  useEffect(() => {
+    const calculateProgress = () => {
+      let progress = 0;
+      const totalFields = 5; // Count of important fields
+
+      if (formData.subject) progress += 1;
+      if (formData.eventDateTime) progress += 1;
+      if (formData.location) progress += 1;
+      if (formData.description) progress += 1;
+      if (formData.imageFile) progress += 1;
+
+      return Math.round((progress / totalFields) * 100);
+    };
+
+    setFormProgress(calculateProgress());
+  }, [formData]);
 
   // Handle form submission success
   useEffect(() => {
@@ -125,6 +155,8 @@ const EventForm = () => {
       pollUnitId: "",
       hasNotification: false,
       requirements: [],
+      location: "",
+      locationCoordinates: null,
     });
     setImagePreview(null);
     setSearchTargetGroup("");
@@ -140,6 +172,15 @@ const EventForm = () => {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+  };
+
+  // Handle location selection from the map component
+  const handleLocationSelect = (address, coordinates) => {
+    setFormData((prev) => ({
+      ...prev,
+      location: address,
+      locationCoordinates: coordinates,
+    }));
   };
 
   // Handle adding a new requirement
@@ -291,8 +332,16 @@ const EventForm = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form data being submitted:", formData);
-    dispatch(createEvent(formData));
+
+    // Prepare API data
+    const apiEventRequirements = formData.requirements.map((req) => req);
+
+    const apiData = {
+      ...formData,
+      eventRequirements: apiEventRequirements,
+    };
+
+    dispatch(createEvent(apiData));
   };
 
   const handleCancel = () => {
@@ -330,8 +379,7 @@ const EventForm = () => {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12">
-        {/* Header with back button */}
+      <div>
         <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="bg-[#f9f9f9] p-2 rounded-md">
@@ -354,24 +402,29 @@ const EventForm = () => {
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-12 gap-5"
         >
-          {/* Main content area - 8/12 width */}
-          <div className="md:col-span-8 space-y-5">
-            {/* Basic Info */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Event Details</h2>
-              <div className="space-y-3">
+          {/* Left Column - Main Form Content - 7/12 width */}
+          <div className="md:col-span-7 space-y-5">
+            {/* Basic Info Card */}
+            <div className="bg-white rounded-lg px-5 py-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-4 h-4 text-[#0AAC9E]" />
+                <h2 className="text-sm font-medium">Basic Information</h2>
+              </div>
+
+              <div className="space-y-4">
+                {/* Subject */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
-                    Subject
+                    Event Title
                   </label>
                   <input
                     type="text"
                     name="subject"
                     value={formData.subject}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#01DBC8]"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
                     required
-                    placeholder="Enter event subject"
+                    placeholder="Enter event title"
                   />
                   {errors.Subject && (
                     <p className="text-red-500 text-xs mt-1">
@@ -380,6 +433,37 @@ const EventForm = () => {
                   )}
                 </div>
 
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-medium text-[#202939] mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
+                    rows="4"
+                    placeholder="Describe the event..."
+                  ></textarea>
+                  {errors.Description && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.Description[0]}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Date, Time & Location Card */}
+            <div className="bg-white rounded-lg px-5 py-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-4 h-4 text-[#0AAC9E]" />
+                <h2 className="text-sm font-medium">Date, Time & Location</h2>
+              </div>
+
+              <div className="space-y-4">
+                {/* Date & Time */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
                     Event Date & Time
@@ -389,7 +473,7 @@ const EventForm = () => {
                     name="eventDateTime"
                     value={formData.eventDateTime}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#01DBC8]"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
                     required
                   />
                   {errors.EventDateTime && (
@@ -398,31 +482,210 @@ const EventForm = () => {
                     </p>
                   )}
                 </div>
+
+                {/* Location with Map Integration */}
+                <div>
+                  <label className="block text-xs font-medium text-[#202939] mb-1">
+                    Event Location
+                  </label>
+                  <LocationSelector
+                    onLocationSelect={handleLocationSelect}
+                    initialLocation={formData.location}
+                  />
+                  {errors.Location && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.Location[0]}
+                    </p>
+                  )}
+                </div>
+
+                {/* Count Down Format */}
+                <div>
+                  <label className="block text-xs font-medium text-[#202939] mb-1">
+                    Countdown Format
+                  </label>
+                  <select
+                    name="countDown"
+                    value={formData.countDown}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
+                  >
+                    <option value="">Select format</option>
+                    <option value="1">Days only</option>
+                    <option value="2">Days + Hours + Minutes</option>
+                    <option value="3">Days + Hours + Minutes + Seconds</option>
+                  </select>
+                  {errors.CountDown && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.CountDown[0]}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Description */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Description</h2>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#01DBC8]"
-                rows="4"
-                placeholder="Describe the event..."
-              ></textarea>
-              {errors.Description && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.Description[0]}
-                </p>
+            {/* Event Image Card */}
+            <div className="bg-white rounded-lg px-5 py-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <ImageIcon className="w-4 h-4 text-[#0AAC9E]" />
+                <h2 className="text-sm font-medium">Event Image</h2>
+              </div>
+
+              <div
+                className={`border-2 border-dashed rounded-lg p-4 ${
+                  dragActive
+                    ? "border-[#0AAC9E] bg-[#f9fefe]"
+                    : "border-gray-300"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {!imagePreview ? (
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-2 bg-[#f2fdfc] rounded-full mb-2">
+                      <Upload className="w-5 h-5 text-[#01DBC8]" />
+                    </div>
+                    <div className="text-xs">
+                      <label className="text-[#01DBC8] hover:text-[#127D74] cursor-pointer font-medium">
+                        Click to upload
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={handleFileChange}
+                          accept="image/jpeg,image/jpg"
+                        />
+                      </label>{" "}
+                      or drag and drop
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      JPG or JPEG (max. 10MB)
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="h-32 flex items-center justify-center">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="h-full object-contain  rounded-lg"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setFormData((prev) => ({ ...prev, imageFile: null }));
+                      }}
+                      className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Settings & Requirements - 5/12 width */}
+          <div className="md:col-span-5 space-y-5">
+            {/* Audience Targeting Card */}
+            <div className="bg-white rounded-lg p-5 border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-4 h-4 text-[#0AAC9E]" />
+                <h2 className="text-sm font-medium">Audience Targeting</h2>
+              </div>
+
+              {/* Target Group Selector */}
+              <div className="mb-4">
+                <TargetGroupSelector
+                  targetGroups={targetGroups || []}
+                  searchValue={searchTargetGroup}
+                  selectedTargetGroups={selectedTargetGroups}
+                  showDropdown={showTargetGroupDropdown}
+                  onSearchChange={handleTargetGroupSearchChange}
+                  onToggleDropdown={handleTargetGroupToggleDropdown}
+                  onSelect={handleTargetGroupSelect}
+                  onRemove={handleTargetGroupRemove}
+                />
+              </div>
+
+              {/* Poll Unit Selector */}
+              <div>
+                <PollUnitSelector
+                  pollUnits={pollUnits || []}
+                  searchValue={searchPollUnit}
+                  selectedPollUnitId={formData.pollUnitId}
+                  showDropdown={showPollUnitDropdown}
+                  onSearchChange={handlePollUnitSearchChange}
+                  onToggleDropdown={handlePollUnitToggleDropdown}
+                  onSelect={handlePollUnitSelect}
+                  onClear={handlePollUnitClear}
+                />
+              </div>
+            </div>
+
+            {/* Notification Settings Card */}
+            <div className="bg-white rounded-lg p-5 border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Bell className="w-4 h-4 text-[#0AAC9E]" />
+                <h2 className="text-sm font-medium">Notification Settings</h2>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                  <input
+                    type="checkbox"
+                    id="hasNotification"
+                    name="hasNotification"
+                    checked={formData.hasNotification}
+                    onChange={handlePushNotificationClick}
+                    className="sr-only peer"
+                  />
+                  <div
+                    onClick={handlePushNotificationClick}
+                    className="block h-5 bg-gray-200 rounded-full w-10 peer-checked:bg-[#01DBC8] cursor-pointer"
+                  ></div>
+                  <div
+                    onClick={handlePushNotificationClick}
+                    className="absolute left-1 top-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:left-5 cursor-pointer"
+                  ></div>
+                </div>
+                <label
+                  htmlFor="hasNotification"
+                  className="text-xs text-gray-700 cursor-pointer"
+                >
+                  Send push notification to participants
+                </label>
+              </div>
+
+              {formData.hasNotification && (
+                <div className="mt-2 bg-[#f9fefe] p-3 rounded-md border border-[#e0f7f5] text-xs">
+                  <div className="flex gap-2">
+                    <Info
+                      size={14}
+                      className="text-[#0AAC9E] flex-shrink-0 mt-0.5"
+                    />
+                    <p className="text-gray-600">
+                      Participants will receive notifications:
+                      <ul className="list-disc pl-4 mt-1 space-y-1">
+                        <li>When the event is created</li>
+                        <li>24 hours before the event</li>
+                        <li>1 hour before the event starts</li>
+                      </ul>
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Event Requirements */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
+            {/* Requirements Card */}
+            <div className="bg-white rounded-lg p-5 border border-gray-200">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-medium">Requirements</h2>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#0AAC9E]" />
+                  <h2 className="text-sm font-medium">Event Requirements</h2>
+                </div>
                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                   {formData.requirements.length} items
                 </span>
@@ -437,7 +700,7 @@ const EventForm = () => {
                     onChange={(e) => setNewRequirement(e.target.value)}
                     onKeyPress={handleRequirementKeyPress}
                     placeholder="Add a requirement for participants"
-                    className="w-full pl-3 pr-10 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#01DBC8]"
+                    className="w-full pl-3 pr-10 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
                   />
                   {newRequirement && (
                     <button
@@ -456,14 +719,14 @@ const EventForm = () => {
                   className="px-3 py-2 bg-[#0AAC9E] text-white rounded-md hover:bg-[#099b8e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   <Plus size={14} />
-                  <span className="text-xs">Add</span>
+                  <span className="text-xs font-medium">Add</span>
                 </button>
               </div>
 
               {/* Requirements list */}
               {formData.requirements.length > 0 ? (
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <ul className="divide-y divide-gray-200">
+                  <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
                     {formData.requirements.map((requirement, index) => (
                       <li
                         key={index}
@@ -476,7 +739,7 @@ const EventForm = () => {
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
                               onKeyDown={handleEditKeyPress}
-                              className="flex-1 px-3 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#01DBC8]"
+                              className="flex-1 px-3 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
                               autoFocus
                             />
                             <button
@@ -531,209 +794,41 @@ const EventForm = () => {
                     No requirements added yet
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    Add requirements that participants should know about
+                    Add requirements that participants should fulfill
                   </p>
                 </div>
               )}
             </div>
-
-            {/* Image Upload */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Event Image</h2>
-              <div
-                className={`border-2 border-dashed rounded-lg p-4 ${
-                  dragActive
-                    ? "border-[#0AAC9E] bg-[#f9fefe]"
-                    : "border-gray-300"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {!imagePreview ? (
-                  <div className="flex flex-col items-center text-center">
-                    <div className="p-2 bg-[#f2fdfc] rounded-full mb-2">
-                      <Upload className="w-5 h-5 text-[#01DBC8]" />
-                    </div>
-                    <div className="text-xs">
-                      <label className="text-[#01DBC8] hover:text-[#127D74] cursor-pointer font-medium">
-                        Click to upload
-                        <input
-                          type="file"
-                          className="hidden"
-                          onChange={handleFileChange}
-                          accept="image/jpeg,image/jpg"
-                        />
-                      </label>{" "}
-                      or drag and drop
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      JPG or JPEG (max. 10MB)
-                    </p>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div className="h-56 flex items-center justify-center">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="h-full object-contain rounded-lg"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImagePreview(null);
-                        setFormData((prev) => ({ ...prev, imageFile: null }));
-                      }}
-                      className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar - 4/12 width */}
-          <div className="md:col-span-4 space-y-5">
-            {/* Target Group Selector */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Target Groups</h2>
-              <div className="relative">
-                {targetGroupsLoading && (
-                  <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10 rounded-lg">
-                    <div className="flex flex-col items-center">
-                      <div className="animate-spin h-6 w-6 border-3 border-[#01DBC8] border-t-transparent rounded-full"></div>
-                      <div className="mt-2 text-xs text-gray-600">
-                        Loading...
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <TargetGroupSelector
-                  targetGroups={targetGroups || []}
-                  searchValue={searchTargetGroup}
-                  selectedTargetGroups={selectedTargetGroups}
-                  showDropdown={showTargetGroupDropdown}
-                  onSearchChange={handleTargetGroupSearchChange}
-                  onToggleDropdown={handleTargetGroupToggleDropdown}
-                  onSelect={handleTargetGroupSelect}
-                  onRemove={handleTargetGroupRemove}
-                />
-              </div>
-            </div>
-
-            {/* Poll Unit Selector */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Poll Unit</h2>
-              <div className="relative">
-                {pollUnitsLoading && (
-                  <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10 rounded-lg">
-                    <div className="flex flex-col items-center">
-                      <div className="animate-spin h-6 w-6 border-3 border-[#01DBC8] border-t-transparent rounded-full"></div>
-                      <div className="mt-2 text-xs text-gray-600">
-                        Loading...
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <PollUnitSelector
-                  pollUnits={pollUnits || []}
-                  searchValue={searchPollUnit}
-                  selectedPollUnitId={formData.pollUnitId}
-                  showDropdown={showPollUnitDropdown}
-                  onSearchChange={handlePollUnitSearchChange}
-                  onToggleDropdown={handlePollUnitToggleDropdown}
-                  onSelect={handlePollUnitSelect}
-                  onClear={handlePollUnitClear}
-                />
-              </div>
-            </div>
-
-            {/* Count Down */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Countdown Format</h2>
-              <select
-                name="countDown"
-                value={formData.countDown}
-                onChange={handleChange}
-                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#01DBC8]"
-              >
-                <option value="">Select format</option>
-                <option value="1">Days only</option>
-                <option value="2">Days + Hours + Minutes</option>
-                <option value="3">Days + Hours + Minutes + Seconds</option>
-              </select>
-              {errors.CountDown && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.CountDown[0]}
-                </p>
-              )}
-            </div>
-
-            {/* Fixed Notification Toggle */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h2 className="text-sm font-medium mb-3">Notifications</h2>
-              <div className="flex items-center space-x-2">
-                <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input
-                    type="checkbox"
-                    id="hasNotification"
-                    name="hasNotification"
-                    checked={formData.hasNotification}
-                    onChange={handlePushNotificationClick}
-                    className="sr-only peer"
-                  />
-                  <div
-                    onClick={handlePushNotificationClick}
-                    className="block h-5 bg-gray-200 rounded-full w-10 peer-checked:bg-[#01DBC8] cursor-pointer"
-                  ></div>
-                  <div
-                    onClick={handlePushNotificationClick}
-                    className="absolute left-1 top-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:left-5 cursor-pointer"
-                  ></div>
+            <div className="md:col-span-12 p-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-3">
+              <div className="flex flex-col sm:flex-row justify-between items-center">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="order-2 sm:order-1 px-4 py-3 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition flex items-center justify-center gap-1"
+                  >
+                    <X size={14} />
+                    <span>Cancel</span>
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || formProgress < 60}
+                    className="order-1 sm:order-2 px-6 py-3 text-xs font-medium text-white bg-[#0AAC9E] rounded-md hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 w-full sm:w-auto"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="animate-spin">⏳</span>
+                        <span>Creating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={14} />
+                        <span>Create Event</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-                <label
-                  htmlFor="hasNotification"
-                  className="text-xs font-medium text-gray-700 cursor-pointer"
-                  onClick={handlePushNotificationClick}
-                >
-                  Send push notification
-                </label>
               </div>
-            </div>
-          </div>
-
-          {/* Action buttons - full width at the bottom */}
-          <div className="md:col-span-12 p-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-3">
-            <div className="flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="order-2 sm:order-1 px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition flex items-center justify-center gap-1"
-              >
-                <X size={14} />
-                <span>Cancel</span>
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="order-1 sm:order-2 px-6 py-2 text-xs font-medium text-white bg-[#0AAC9E] rounded-md hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
-              >
-                {loading ? (
-                  <>
-                    <span className="animate-spin">⏳</span>
-                    <span>Creating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save size={14} />
-                    <span>Create Event</span>
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </form>

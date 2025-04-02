@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
-import SelectComponent from "@/components/selectComponent";
 import { getUserId } from "@/authtoken/auth";
+import TargetGroupSelector from "@/components/targetSelect";
 import {
   Bell,
   Users,
@@ -12,18 +12,23 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Page() {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     title: "",
     body: "",
-    targetGroupId: "1",
   });
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState(null);
   const storedUserId = getUserId();
+
+  // Target group selection states
+  const [searchValue, setSearchValue] = useState("");
+  const [selectedTargetGroups, setSelectedTargetGroups] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     const Useridd = Number(storedUserId);
@@ -31,6 +36,7 @@ export default function Page() {
       setUserId(Useridd);
     }
   }, []);
+
   const targetGroups =
     useSelector((state) => state.getAllTargetGroups.data?.[0]?.targetGroups) ||
     [];
@@ -43,8 +49,41 @@ export default function Page() {
     }));
   };
 
+  // Target group selection handlers
+  const handleSearchChange = (value) => {
+    setSearchValue(value);
+  };
+
+  const handleToggleDropdown = (value) => {
+    setShowDropdown(value);
+  };
+
+  const handleSelectTargetGroup = (group) => {
+    if (!selectedTargetGroups.some((selected) => selected.id === group.id)) {
+      setSelectedTargetGroups([...selectedTargetGroups, group]);
+    } else {
+      handleRemoveTargetGroup(group);
+    }
+  };
+
+  const handleRemoveTargetGroup = (group) => {
+    setSelectedTargetGroups(
+      selectedTargetGroups.filter((item) => item.id !== group.id)
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate target group selection
+    if (selectedTargetGroups.length === 0) {
+      setStatus({
+        type: "error",
+        message: "Please select at least one target group.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setStatus({ type: "", message: "" });
 
@@ -60,7 +99,12 @@ export default function Page() {
           body: JSON.stringify({
             title: formData.title,
             body: formData.body,
-            targetGroupId: parseInt(formData.targetGroupId),
+            targetGroupIds: selectedTargetGroups.map((group) => group.id),
+            notificationUserMap: {
+              additionalProp1: "",
+              additionalProp2: "",
+              additionalProp3: "",
+            },
           }),
         }
       );
@@ -70,11 +114,12 @@ export default function Page() {
           type: "success",
           message: "Notification sent successfully!",
         });
+        toast.success("Notification sent successfully!");
         setFormData({
           title: "",
           body: "",
-          targetGroupId: "1",
         });
+        setSelectedTargetGroups([]);
       } else {
         throw new Error("Failed to send notification");
       }
@@ -94,8 +139,8 @@ export default function Page() {
 
   return (
     <div className="bg-gray-50 py-8">
-      <div className=" mx-auto px-4">
-        {/* Headermax-w-4xl */}
+      <div className="mx-auto px-4">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-lg font-bold text-gray-900">
             Send Push Notification
@@ -125,7 +170,7 @@ export default function Page() {
                   placeholder="Enter notification title"
                   maxLength={50}
                   required
-                  className="block w-full text-sm pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg  outline-0 focus:border-[#01DBC8]   transition-colors"
+                  className="block w-full text-sm pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg outline-0 focus:border-[#01DBC8] transition-colors"
                 />
                 <div className="mt-1 text-xs text-gray-500 flex justify-end">
                   {formData.title.length}/50 characters
@@ -147,7 +192,7 @@ export default function Page() {
                   maxLength={150}
                   required
                   rows={4}
-                  className="block w-full p-3 border border-gray-200 rounded-lg outline-0 focus:border-[#01DBC8]   transition-colors resize-none outline-none"
+                  className="block w-full p-3 border border-gray-200 rounded-lg outline-0 focus:border-[#01DBC8] transition-colors resize-none outline-none"
                 />
                 <div className="mt-1 text-xs text-gray-500 flex justify-end">
                   {formData.body.length}/150 characters
@@ -161,18 +206,18 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Target Group Field */}
+            {/* Target Group Selector */}
             <div className="space-y-2">
-              <div className="relative">
-                <SelectComponent
-                  text="Target Group"
-                  name="targetGroupId"
-                  required
-                  value={formData.targetGroupId}
-                  onChange={handleChange}
-                  options={targetGroups}
-                />
-              </div>
+              <TargetGroupSelector
+                targetGroups={targetGroups}
+                searchValue={searchValue}
+                selectedTargetGroups={selectedTargetGroups}
+                showDropdown={showDropdown}
+                onSearchChange={handleSearchChange}
+                onToggleDropdown={handleToggleDropdown}
+                onSelect={handleSelectTargetGroup}
+                onRemove={handleRemoveTargetGroup}
+              />
             </div>
 
             {/* Status Message */}
@@ -198,7 +243,7 @@ export default function Page() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={` text-center px-4 py-2 text-white font-medium rounded-lg flex items-center justify-center gap-2
+                className={`text-center px-4 py-2 text-white font-medium rounded-lg flex items-center justify-center gap-2
                 ${
                   isLoading
                     ? "bg-gray-400 cursor-not-allowed"
@@ -208,7 +253,6 @@ export default function Page() {
                 {isLoading ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-
                     <span className="text-sm">Sending...</span>
                   </>
                 ) : (

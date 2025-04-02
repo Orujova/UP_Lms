@@ -18,7 +18,6 @@ import Description from "@/components/announcement/Description";
 import PollUnitSelector from "@/components/polUnits";
 import TargetGroupSelector from "@/components/targetSelect";
 import Settings from "@/components/announcement/Settings";
-import FormActions from "@/components/announcement/FormActions";
 
 const NewAnnouncementPage = () => {
   const router = useRouter();
@@ -453,17 +452,18 @@ const NewAnnouncementPage = () => {
               onSelect={handlePollUnitSelect}
               onClear={handleClearPollUnit}
             />
-
-            <TargetGroupSelector
-              targetGroups={targetGroups}
-              searchValue={searchTargetGroup}
-              selectedTargetGroups={selectedTargetGroups}
-              showDropdown={showTargetGroupDropdown}
-              onSearchChange={setSearchTargetGroup}
-              onToggleDropdown={setShowTargetGroupDropdown}
-              onSelect={handleTargetGroupSelect}
-              onRemove={handleTargetGroupRemove}
-            />
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <TargetGroupSelector
+                targetGroups={targetGroups}
+                searchValue={searchTargetGroup}
+                selectedTargetGroups={selectedTargetGroups}
+                showDropdown={showTargetGroupDropdown}
+                onSearchChange={setSearchTargetGroup}
+                onToggleDropdown={setShowTargetGroupDropdown}
+                onSelect={handleTargetGroupSelect}
+                onRemove={handleTargetGroupRemove}
+              />
+            </div>
 
             {/* Action buttons in a card */}
             <div className="bg-white rounded-lg p-5 border border-gray-200">
