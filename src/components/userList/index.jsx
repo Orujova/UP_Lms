@@ -1,8 +1,7 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import UserComponent from "../userComponent";
-import "./userList.scss";
 
 const BASE_IMAGE_URL = "https://bravoadmin.uplms.org/uploads/";
 
@@ -15,15 +14,16 @@ const formatImageUrl = (imageUrl) => {
 };
 
 export default function UserList({ adminApplicationUser }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+
   useEffect(() => {
-    const tableHeader = document.querySelector(".table-header");
-    const tableBody = document.querySelector(".table-body");
+    const tableBody = document.querySelector("#tableBody");
 
     const handleScroll = () => {
       if (tableBody?.scrollTop > 0) {
-        tableHeader?.classList.add("scrolled");
+        setIsScrolled(true);
       } else {
-        tableHeader?.classList.remove("scrolled");
+        setIsScrolled(false);
       }
     };
 
@@ -39,19 +39,35 @@ export default function UserList({ adminApplicationUser }) {
     { key: "action", label: "Action", sortable: false },
   ];
 
+  // Get the total number of users for positioning dropdown
+  const totalUsers = adminApplicationUser.appUsers?.length || 0;
+
   return (
-    <div className="user-list">
-      <div className="table-header">
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden relative flex flex-col h-full">
+      <div
+        className={`sticky top-0 z-8 grid grid-cols-[2fr_1fr_1fr_2fr_80px] gap-4 py-4 px-6 bg-white border-b border-gray-200 transition-shadow ${
+          isScrolled ? "shadow-md" : ""
+        }`}
+      >
         {columns.map((column) => (
-          <div key={column.key} className={`column ${column.key}`}>
+          <div
+            key={column.key}
+            className="flex items-center gap-2 text-gray-600 font-semibold text-xs select-none"
+          >
             <span>{column.label}</span>
-            {column.sortable && <ArrowUpDown className="sort-icon" size={16} />}
+            {column.sortable && (
+              <ArrowUpDown className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer transition-all hover:scale-110" />
+            )}
           </div>
         ))}
       </div>
 
-      <div className="table-body">
-        {adminApplicationUser.appUsers?.map((user) => (
+      <div
+        id="tableBody"
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ paddingBottom: "16px" }}
+      >
+        {adminApplicationUser.appUsers?.map((user, index) => (
           <UserComponent
             key={user.id}
             img={formatImageUrl(user.imageUrl)}
@@ -61,8 +77,11 @@ export default function UserList({ adminApplicationUser }) {
             department={user.department?.name || "Not specified"}
             position={user.position?.name || "Not specified"}
             isActive={!user.isDeleted}
+            index={index}
+            totalItems={totalUsers}
           />
         ))}
+        {/* Remove the gradient fade at bottom for better visibility */}
       </div>
     </div>
   );

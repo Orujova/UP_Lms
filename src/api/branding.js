@@ -1,116 +1,147 @@
-// api/branding.js
+import axios from "axios";
+import { toast } from "sonner";
 
 const API_URL = "https://bravoadmin.uplms.org/api/BrendingSetting";
 
 const brandingService = {
   /**
-   * Fetch all branding settings
-   * @param {string} type - Type of branding settings to fetch (appUser, announcement, etc.)
+   * Fetch all branding settings with advanced filtering and pagination
+   * @param {Object} options - Query parameters for filtering and pagination
    * @returns {Promise<Array>} Array of branding settings
    */
-  fetchBrandingSettings: async (type = "appUser") => {
+  fetchBrandingSettings: async (options = {}) => {
     try {
-      // Build query parameters based on type
-      let queryParams = "";
+      const params = new URLSearchParams();
 
-      switch (type) {
-        case "appUser":
-          queryParams = "?IsAppUser=true";
-          break;
-        case "announcement":
-          queryParams = "?IsAnnouncement=true";
-          break;
-        case "event":
-          queryParams = "?IsEvent=true";
-          break;
-        case "news":
-          queryParams = "?IsNews=true";
-          break;
-        case "course":
-          queryParams = "?IsCourse=true";
-          break;
-        case "otpLogin":
-          queryParams = "?IsOTPAndLogin=true";
-          break;
-        default:
-          queryParams = "";
-      }
+      // Pagination parameters
+      if (options.page) params.append("Page", options.page);
+      if (options.take) params.append("ShowMore.Take", options.take);
 
-      const response = await fetch(`${API_URL}${queryParams}`);
+      // Filter parameters
+      const filterMap = {
+        isAppUser: "IsAppUser",
+        isAnnouncement: "IsAnnouncement",
+        isEvent: "IsEvent",
+        isNews: "IsNews",
+        isCourse: "IsCourse",
+        isCluster: "IsCluster",
+        isCompany: "IsCompany",
+        isCustomer: "IsCustomer",
+        isOTPAndLogin: "IsOTPAndLogin",
+      };
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      Object.entries(filterMap).forEach(([key, param]) => {
+        if (options[key] !== undefined) {
+          params.append(param, options[key]);
+        }
+      });
 
-      return await response.json();
+      const response = await axios.get(API_URL, { params });
+      return response.data;
     } catch (error) {
       console.error("Error fetching branding settings:", error);
+      toast.error("Failed to fetch branding settings");
       throw error;
     }
   },
 
   /**
    * Fetch a single branding setting by ID
-   * @param {number} id - ID of the branding setting to fetch
-   * @returns {Promise<Object>} Branding setting object
+   * @param {number} id - ID of the branding setting
+   * @returns {Promise<Object>} Branding setting details
    */
   fetchBrandingSettingById: async (id) => {
     try {
-      const response = await fetch(`${API_URL}/id?id=${id}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
+      const response = await axios.get(`${API_URL}/id`, {
+        params: { id },
+      });
+      return response.data;
     } catch (error) {
       console.error("Error fetching branding setting:", error);
+      toast.error("Failed to fetch branding setting");
       throw error;
     }
   },
 
   /**
    * Create a new branding setting
-   * @param {FormData} formData - Form data containing branding setting information
-   * @returns {Promise<Object>} Response from the server
+   * @param {FormData} formData - Branding setting data
+   * @returns {Promise<Object>} Created branding setting
    */
   createBrandingSetting: async (formData) => {
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        body: formData,
+      // Ensure all potential flags are set
+      const flagsToSet = [
+        "IsAppUser",
+        "IsAnnouncement",
+        "IsEvent",
+        "IsNews",
+        "IsCourse",
+        "IsCluster",
+        "IsCompany",
+        "IsCustomer",
+        "IsOTPAndLogin",
+      ];
+
+      flagsToSet.forEach((flag) => {
+        if (!formData.has(flag)) {
+          formData.append(flag, "false");
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const response = await axios.post(API_URL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      return await response.json();
+      toast.success("Branding setting created successfully");
+      return response.data;
     } catch (error) {
       console.error("Error creating branding setting:", error);
+      toast.error("Failed to create branding setting");
       throw error;
     }
   },
 
   /**
    * Update an existing branding setting
-   * @param {FormData} formData - Form data containing branding setting information
-   * @returns {Promise<Object>} Response from the server
+   * @param {FormData} formData - Updated branding setting data
+   * @returns {Promise<Object>} Updated branding setting
    */
   updateBrandingSetting: async (formData) => {
     try {
-      const response = await fetch(API_URL, {
-        method: "PUT",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Ensure ID is present for update
+      if (!formData.has("Id")) {
+        throw new Error("ID is required for updating a branding setting");
       }
 
-      return await response.json();
+      // Ensure all potential flags are set
+      const flagsToSet = [
+        "IsAppUser",
+        "IsAnnouncement",
+        "IsEvent",
+        "IsNews",
+        "IsCourse",
+        "IsCluster",
+        "IsCompany",
+        "IsCustomer",
+        "IsOTPAndLogin",
+      ];
+
+      flagsToSet.forEach((flag) => {
+        if (!formData.has(flag)) {
+          formData.append(flag, "false");
+        }
+      });
+
+      const response = await axios.put(API_URL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.success("Branding setting updated successfully");
+      return response.data;
     } catch (error) {
       console.error("Error updating branding setting:", error);
+      toast.error("Failed to update branding setting");
       throw error;
     }
   },
@@ -118,27 +149,70 @@ const brandingService = {
   /**
    * Delete a branding setting
    * @param {number} id - ID of the branding setting to delete
-   * @returns {Promise<Object>} Response from the server
+   * @returns {Promise<Object>} Delete response
    */
   deleteBrandingSetting: async (id) => {
     try {
-      const response = await fetch(API_URL, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id }),
+      const response = await axios.delete(API_URL, {
+        data: { id },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
+      toast.success("Branding setting deleted successfully");
+      return response.data;
     } catch (error) {
       console.error("Error deleting branding setting:", error);
+      toast.error("Failed to delete branding setting");
       throw error;
     }
+  },
+
+  /**
+   * Cancel or reset branding settings
+   * @returns {Promise<Object>} Cancel/reset response
+   */
+  cancelReset: async () => {
+    try {
+      const response = await axios.post(`${API_URL}/CancelReset`);
+
+      toast.success("Branding settings reset successfully");
+      return response.data;
+    } catch (error) {
+      console.error("Error canceling/resetting branding settings:", error);
+      toast.error("Failed to reset branding settings");
+      throw error;
+    }
+  },
+
+  /**
+   * Utility method to fix image URLs
+   * @param {string} url - Input URL
+   * @returns {string|null} Corrected URL
+   */
+  fixImageUrl: (url) => {
+    if (!url) return null;
+
+    // Handle direct string URLs
+    if (typeof url === "string" && url.includes("100.42.179.27:7198")) {
+      return `https://bravoadmin.uplms.org/uploads/${url.replace(
+        "https://100.42.179.27:7198/",
+        ""
+      )}`;
+    }
+
+    // If it's already in the correct format
+    if (
+      typeof url === "string" &&
+      url.startsWith("https://bravoadmin.uplms.org/uploads/")
+    ) {
+      return url;
+    }
+
+    // For relative URLs, prepend the admin URL
+    if (typeof url === "string" && url.startsWith("brending/")) {
+      return `https://bravoadmin.uplms.org/uploads/${url}`;
+    }
+
+    return url;
   },
 };
 

@@ -559,7 +559,7 @@ const EditTargetGroup = ({ params }) => {
               : row.rowCondition === "OR"
               ? 2
               : 1,
-            parentId: 0, // We'll let the API handle parentId
+            parentId: null,
           };
         }),
       })),
@@ -596,14 +596,11 @@ const EditTargetGroup = ({ params }) => {
 
       const requestData = prepareDataForApi();
 
-      const url = targetGroupId
-        ? "https://bravoadmin.uplms.org/api/TargetGroup/UpdateTargetGroup"
-        : "https://bravoadmin.uplms.org/api/TargetGroup/CreateTargetGroup";
-
-      const method = targetGroupId ? "PUT" : "POST";
+      const url =
+        "https://bravoadmin.uplms.org/api/TargetGroup/UpdateTargetGroup";
 
       const response = await fetch(url, {
-        method: method,
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -611,33 +608,21 @@ const EditTargetGroup = ({ params }) => {
         body: JSON.stringify(requestData),
       });
 
+      console.log(JSON.stringify(requestData));
+
       if (response.ok) {
-        toast.success(
-          targetGroupId
-            ? "Target group updated successfully!"
-            : "Target group created successfully!"
-        );
+        toast.success("Target group updated successfully!");
         setTimeout(() => {
           router.push("/admin/dashboard/targets/");
         }, 1500);
       } else {
         const errorData = await response.json();
-        toast.error(
-          errorData.message ||
-            `Failed to ${targetGroupId ? "update" : "create"} target group`
-        );
+        toast.error(errorData.message || `Failed to  "update"  target group`);
       }
     } catch (error) {
-      console.error(
-        `Failed to ${targetGroupId ? "update" : "create"} target group:`,
-        error
-      );
+      console.error(`Failed to  "update"  target group:`, error);
       // For demo purpose we'll show success, but in production this should be an error
-      toast.success(
-        targetGroupId
-          ? "Target group updated successfully!"
-          : "Target group created successfully!"
-      );
+      toast.success("Target group updated successfully!");
       setTimeout(() => {
         router.push("/admin/dashboard/targets/");
       }, 1500);

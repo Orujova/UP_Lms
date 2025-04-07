@@ -13,10 +13,12 @@ import {
   Calendar,
   Users,
   BarChart3,
+  FileDown,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import LoadingSpinner from "@/components/loadingSpinner";
 import DeleteConfirmationModal from "@/components/deleteModal";
+import { getToken } from "@/authtoken/auth.js";
 
 const PollUnitDetail = ({ params }) => {
   const { id } = params;
@@ -26,6 +28,7 @@ const PollUnitDetail = ({ params }) => {
   const [showResults, setShowResults] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -76,6 +79,63 @@ const PollUnitDetail = ({ params }) => {
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  const exportPollUnit = async () => {
+    try {
+      setExporting(true);
+
+      const token = getToken();
+
+      // Prepare the API endpoint with query parameters
+      const endpoint = `https://bravoadmin.uplms.org/api/PollUnit/export-poll-units?PollUnitId=${id}`;
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/octet-stream",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to export poll unit data");
+      }
+
+      // Get the filename from the Content-Disposition header or use a default name
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "poll-unit-export.xlsx";
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Convert the response to a blob
+      const blob = await response.blob();
+
+      // Create a download link and trigger the download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Poll unit data exported successfully");
+    } catch (error) {
+      console.error("Error exporting poll unit data:", error);
+      toast.error("Failed to export poll unit data");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -198,14 +258,33 @@ const PollUnitDetail = ({ params }) => {
               <ArrowLeft className="w-4 h-4" />
               <span className="text-sm font-medium">Back to Poll Units</span>
             </button>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              disabled={deleting}
-              className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 className="w-4 h-4 mr-1.5" />
-              Delete
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={exportPollUnit}
+                disabled={exporting}
+                className="inline-flex items-center px-4 py-2 bg-[#0AAC9E] text-white text-sm rounded-lg hover:bg-[#09998c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exporting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-t-transparent border-solid border-white rounded-full animate-spin mr-1.5"></div>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4 mr-1.5" />
+                    Export
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                disabled={deleting}
+                className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                Delete
+              </button>
+            </div>
           </div>
 
           <div className="mt-4">

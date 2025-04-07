@@ -74,7 +74,7 @@ const SearchableDropdown = ({
       <div className="relative">
         <div
           onClick={toggleDropdown}
-          className={`flex items-center justify-between w-full px-3 py-2 text-sm border ${
+          className={`flex items-center justify-between w-full px-3 py-2 text-xs border ${
             error ? "border-red-300" : "border-gray-200"
           } rounded-lg cursor-pointer hover:border-gray-300 transition-colors ${
             isOpen ? "border-[#01DBC8] ring-1 ring-[#01DBC8]/20" : ""
@@ -122,7 +122,7 @@ const SearchableDropdown = ({
 
         {isOpen && (
           <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
-            <div className="sticky top-0 bg-gray-50 px-3 py-2 border-b">
+            <div className="sticky top-0 bg-gray-50 px-3 py-1.5 border-b">
               <span className="text-xs text-gray-500 font-medium">
                 {filteredOptions.length}{" "}
                 {filteredOptions.length === 1 ? "option" : "options"} found
@@ -163,7 +163,7 @@ const SearchableDropdown = ({
                         </svg>
                       )}
                     </div>
-                    <div className="text-sm">{option[displayKey]}</div>
+                    <div className="text-xs">{option[displayKey]}</div>
                   </div>
                 </div>
               ))

@@ -18,7 +18,6 @@ import {
   FileText,
   Users,
   Globe,
-  Hash,
   Box,
   Save,
   Search,
@@ -30,205 +29,11 @@ import ImageUploadModal from "./ImageUploadModal ";
 import noPP from "@/images/noPP.png";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/loadingSpinner";
+import Placeholder from "@/components/profile/Placeholder";
+import ProfileSection from "@/components/profile/ProfileSection";
+import ProfileInfoRow from "@/components/profile/ProfileInfoRow";
 
-// Enhanced profile section card with hover effect
-const ProfileSection = ({ title, icon: Icon, children, className = "" }) => (
-  <div
-    className={`bg-white rounded-xl shadow-md p-6 transition-all duration-300 hover:shadow-lg ${className}`}
-  >
-    <div className="flex items-center mb-5">
-      {Icon && (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ecfcfb] text-[#0AAC9E] mr-3">
-          <Icon className="w-5 h-5" />
-        </div>
-      )}
-      <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-    </div>
-    <div className="space-y-1">{children}</div>
-  </div>
-);
-
-// Enhanced profile info row with better spacing and transitions
-const ProfileInfoRow = ({
-  icon: Icon,
-  label,
-  value,
-  fieldName,
-  editMode,
-  onEdit,
-  type = "text",
-  options = [],
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-  const [searchText, setSearchText] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    setEditValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const handleSave = () => {
-    onEdit(fieldName, editValue);
-    setIsEditing(false);
-    setShowDropdown(false);
-  };
-
-  if (editMode && isEditing) {
-    return (
-      <div className="flex items-center py-3 transition-colors bg-gray-50 rounded-lg p-3 my-2">
-        <Icon className="w-4 h-4 mr-3 text-gray-950 flex-shrink-0" />
-
-        {type === "select" ? (
-          <div className="flex-grow mr-3 relative" ref={dropdownRef}>
-            <div
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="w-full px-3 py-2 border rounded-lg flex justify-between items-center cursor-pointer hover:border-[#01DBC8] bg-white transition-colors"
-            >
-              <span className="truncate">
-                {options && Array.isArray(options) && options.length > 0
-                  ? options.find((opt) => opt.id === parseInt(editValue))
-                      ?.name || "Select an option"
-                  : "Select an option"}
-              </span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`h-4 w-4 transition-transform ${
-                  showDropdown ? "transform rotate-180" : ""
-                }`}
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-
-            {showDropdown && options && Array.isArray(options) && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                <div className="p-2 sticky top-0 bg-white border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border rounded-md"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                </div>
-                <div>
-                  {options
-                    .filter((option) =>
-                      option.name
-                        ?.toLowerCase()
-                        .includes(searchText.toLowerCase())
-                    )
-                    .map((option) => (
-                      <div
-                        key={option.id}
-                        className={`px-3 py-2 text-xs font-medium cursor-pointer hover:bg-[#f2fdfc] transition-colors ${
-                          parseInt(editValue) === option.id
-                            ? "bg-[#f2fdfc] text-[#0AAC9E] font-medium"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setEditValue(option.id.toString());
-                          setShowDropdown(false);
-                        }}
-                      >
-                        {option.name}
-                      </div>
-                    ))}
-                  {options.filter((option) =>
-                    option.name
-                      ?.toLowerCase()
-                      .includes(searchText.toLowerCase())
-                  ).length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-500 italic text-center">
-                      No results found
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <input
-            type={type}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="flex-grow mr-3 px-3 py-2 border outline-0 rounded-lg focus:ring-0 focus:border-[#01DBC8]  text-sm"
-            autoFocus
-          />
-        )}
-
-        <div className="flex space-x-2">
-          <button
-            onClick={handleSave}
-            className="p-1.5 bg-[#ecfcfb]  text-[#0AAC9E] rounded-md hover:bg-[#e0fbf8] transition-colors"
-            title="Save"
-          >
-            <CheckCircle className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => {
-              setIsEditing(false);
-              setShowDropdown(false);
-            }}
-            className="p-1.5 bg-red-50 text-red-500 rounded-md hover:bg-red-100 transition-colors"
-            title="Cancel"
-          >
-            <XCircle className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center py-3 border-b border-gray-100 last:border-b-0 transition-colors hover:bg-gray-50 rounded-md px-3">
-      <Icon className="w-4 h-4 text-gray-500 mr-3" />
-      <div className="flex-grow">
-        <span className="text-xs text-gray-500 block">{label}</span>
-        <span className="font-medium text-gray-800 text-sm">
-          {value || "N/A"}
-        </span>
-      </div>
-
-      {editMode && (
-        <button
-          onClick={() => setIsEditing(true)}
-          className="p-1.5 text-gray-400 hover:text-[#0AAC9E] hover:bg-[#f2fdfc] rounded-md transition-colors"
-          title="Edit"
-        >
-          <Edit className="w-4 h-4" />
-        </button>
-      )}
-    </div>
-  );
-};
-
-// Enhanced profile avatar with better shadows and hover effects
+// ProfileAvatar component - Enhanced with better shadows and hover effects
 const ProfileAvatar = ({ imageUrl, size = "large", onClick, editMode }) => {
   const sizeClasses = {
     small: "w-16 h-16",
@@ -255,10 +60,11 @@ const ProfileAvatar = ({ imageUrl, size = "large", onClick, editMode }) => {
           />
         )}
       </div>
-      {editMode && onClick && (
+      {onClick && (
         <button
           onClick={onClick}
           className="absolute bottom-0 right-0 bg-[#54c5bb] text-white rounded-full p-2 hover:bg-[#3bbdb1] shadow-md transition-colors"
+          title="Update Photo"
         >
           <Camera className="w-4 h-4" />
         </button>
@@ -267,7 +73,7 @@ const ProfileAvatar = ({ imageUrl, size = "large", onClick, editMode }) => {
   );
 };
 
-// Enhanced status badge with animation
+// StatusBadge component - Enhanced with animation
 const StatusBadge = ({ isActive }) => (
   <span
     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors
@@ -291,8 +97,8 @@ const AdminProfilePage = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
-
-  const [activeSection, setActiveSection] = useState("all"); // For mobile view: "all", "account", "professional", "additional"
+  const [activeTab, setActiveTab] = useState("User details");
+  const [activeSection, setActiveSection] = useState("all");
 
   // Options for dropdown lists
   const [functionalAreas, setFunctionalAreas] = useState([]);
@@ -523,6 +329,7 @@ const AdminProfilePage = () => {
 
     fetchOptions();
   }, [token, API_URL]);
+
   // Handle field updates
   const handleFieldUpdate = (fieldName, value) => {
     // Create a deep copy of userData to prevent issues with nested objects
@@ -598,10 +405,9 @@ const AdminProfilePage = () => {
       positionId: userData.positionId || userData.position?.id,
       residentalAreaId:
         userData.residentalAreaId || userData.residentalArea?.id,
-      roleIds: userData.roleIds || [],
-      imageUrl: userData.imageUrl,
+      residentalArea: userData.residentalArea.name,
+      // imageUrl: userData.imageUrl,
       coverPhotoUrl: userData.coverPhotoUrl,
-      isActive: userData.isActive,
     };
   };
 
@@ -619,6 +425,7 @@ const AdminProfilePage = () => {
         },
         body: JSON.stringify(updateData),
       });
+      console.log(JSON.stringify(updateData));
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -643,59 +450,31 @@ const AdminProfilePage = () => {
       }
 
       setEditMode(false);
-      toast("success", "Profile updated successfully");
+      toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Profile update error:", error);
+      toast("error", "Failed to update profile");
     } finally {
       setSaveLoading(false);
     }
   };
 
-  // Change Password Handler
-  const handleChangePassword = async (currentPassword, newPassword) => {
-    try {
-      const response = await fetch(
-        `${API_URL}AdminApplicationUser/ChangePassword`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId: userData.id,
-            currentPassword,
-            newPassword,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to change password");
-      }
-
-      toast("success", "Password changed successfully");
-      return true;
-    } catch (error) {
-      console.error("Password change error:", error);
-
-      throw error;
-    }
-  };
-
-  // Update Profile Image Handler
+  // Update Profile Image Handler - Final fixed version
   const handleUpdateProfileImage = async (file) => {
     try {
+      // Create FormData object
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("id", userData.id);
 
+      // The API expects 'ImageFile' as the key for the image (case sensitive)
+      formData.append("ImageFile", file);
+
+      // Include the user ID as a query parameter
       const response = await fetch(
-        `${API_URL}AdminApplicationUser/UpdateUserImage`,
+        `${API_URL}AdminApplicationUser/UpdateUserImage?Id=${userData.id}`,
         {
           method: "PUT",
           headers: {
+            // Only include Authorization header
             Authorization: `Bearer ${token}`,
           },
           body: formData,
@@ -703,58 +482,66 @@ const AdminProfilePage = () => {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update profile image");
+        const errorResponse = await response.text();
+        console.error("Server error response:", errorResponse);
+        throw new Error("Failed to update profile image");
       }
 
-      // Update user data with new image URL
-      const updatedUser = await response.json();
-      setUserData((prev) => ({ ...prev, imageUrl: updatedUser.imageUrl }));
+      // Check if there's actual content before trying to parse JSON
+      const responseText = await response.text();
+      if (responseText.trim() === "") {
+        // Handle empty response - just update the UI with what we know
+        setUserData((prev) => ({
+          ...prev,
+          // If we don't get an updated URL back, keep the existing one
+          // you might want to add some logic to refresh from the server instead
+        }));
+      } else {
+        // If there is content, parse it as JSON
+        try {
+          const updatedUser = JSON.parse(responseText);
+          setUserData((prev) => ({
+            ...prev,
+            imageUrl: updatedUser.imageUrl,
+          }));
+        } catch (e) {
+          console.error("Error parsing response JSON:", e);
+          // Continue anyway since the upload probably succeeded
+        }
+      }
 
-      toast("success", "Profile image updated successfully");
+      // Show success message regardless
+      toast.success("Profile image updated successfully");
+
+      // Refresh the user data from the server to get the updated image URL
+      try {
+        const updatedResponse = await fetch(
+          `${API_URL}AdminApplicationUser/${userData.id}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (updatedResponse.ok) {
+          const refreshedData = await updatedResponse.json();
+          setUserData(refreshedData);
+        }
+      } catch (refreshError) {
+        console.warn(
+          "Could not refresh user data after image upload",
+          refreshError
+        );
+        // Non-critical error, so don't throw
+      }
+
       return true;
     } catch (error) {
       console.error("Profile image update error:", error);
-
-      throw error;
-    }
-  };
-
-  // Update Cover Photo Handler
-  const handleUpdateCoverPhoto = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("id", userData.id);
-
-      const response = await fetch(
-        `${API_URL}AdminApplicationUser/UpdateCoverPhoto`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update cover photo");
-      }
-
-      // Update user data with new cover photo URL
-      const updatedUser = await response.json();
-      setUserData((prev) => ({
-        ...prev,
-        coverPhotoUrl: updatedUser.coverPhotoUrl,
-      }));
-
-      toast("success", "Cover photo updated successfully");
-      return true;
-    } catch (error) {
-      console.error("Cover photo update error:", error);
-
+      toast("error", error.message || "Failed to update profile image");
       throw error;
     }
   };
@@ -784,201 +571,180 @@ const AdminProfilePage = () => {
       </div>
     );
 
-  // Render Profile Page
-  return (
-    <div className="min-h-screen bg-gray-50 pt-10  ">
-      <div className=" mx-auto ">
-        {/* Back button for mobile */}
-        {activeSection !== "all" && (
-          <button
-            onClick={() => setActiveSection("all")}
-            className="inline-flex items-center text-[#808080] text-sm font-medium mt-4 mb-2 lg:hidden"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </button>
-        )}
-        {/* Profile Header with Cover - Simplified */}
-        <div className="bg-white shadow-sm rounded-lg mb-6 overflow-hidden">
-          <div className="relative">
-            {/* Cover Photo */}
-            <div
-              className="h-48 bg-cover bg-center"
-              style={{
-                backgroundImage: userData.coverPhotoUrl
-                  ? `url(${userData.coverPhotoUrl})`
-                  : `url(${defaultCoverPhoto})`,
-              }}
-            >
-              {/* Cover Photo Edit Button */}
-              {editMode && (
-                <div className="absolute top-4 right-4">
-                  <label
-                    htmlFor="cover-upload"
-                    className="cursor-pointer bg-black/30 hover:bg-black/40 text-white px-4 py-2 rounded-lg flex items-center text-sm backdrop-blur-sm transition-colors"
-                  >
-                    <Camera className="w-4 h-4 mr-2" /> Change Cover Photo
-                  </label>
-                  <input
-                    id="cover-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleUpdateCoverPhoto(e.target.files[0]);
-                      }
-                    }}
+  // Get profile tab content based on active tab
+  const getTabContent = () => {
+    switch (activeTab) {
+      case "User details":
+        return (
+          <>
+            {/* Account Settings Buttons - Moved to a more logical position */}
+
+            {/* Profile Content in Grid Layout */}
+            {(activeSection === "all" || activeSection === "account") && (
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-6`}>
+                {/* Account Information */}
+                <ProfileSection
+                  title="Account Information"
+                  icon={User}
+                  className={`col-span-1 ${
+                    activeSection !== "all" ? "md:col-span-2" : ""
+                  }`}
+                >
+                  <ProfileInfoRow
+                    icon={User}
+                    label="Username"
+                    value={userData.userName}
+                    fieldName="userName"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
                   />
-                </div>
-              )}
-            </div>
+                  <ProfileInfoRow
+                    icon={User}
+                    label="First Name"
+                    value={userData.firstName}
+                    fieldName="firstName"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                  />
+                  <ProfileInfoRow
+                    icon={User}
+                    label="Last Name"
+                    value={userData.lastName}
+                    fieldName="lastName"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                  />
+                  <ProfileInfoRow
+                    icon={Mail}
+                    label="Email Address"
+                    value={userData.email}
+                    fieldName="email"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="email"
+                  />
+                  <ProfileInfoRow
+                    icon={Phone}
+                    label="Phone Number"
+                    value={userData.phoneNumber}
+                    fieldName="phoneNumber"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="tel"
+                  />
+                </ProfileSection>
 
-            {/* Enhanced Profile and Actions Bar */}
-            <div className="p-4 flex flex-col sm:flex-row items-start sm:items-end justify-between relative">
-              {/* Profile Image - positioned higher */}
-              <div className="absolute -top-20 left-6 flex items-end">
-                <ProfileAvatar
-                  imageUrl={
-                    userData?.imageUrl
-                      ? `https://bravoadmin.uplms.org/uploads/${userData.imageUrl.replace(
-                          "https://100.42.179.27:7198/",
-                          ""
-                        )}`
-                      : noPP
-                  }
-                  size="large"
-                  editMode={editMode}
-                  onClick={() => setIsImageUploadModalOpen(true)}
-                />
-              </div>
-
-              {/* User Info with better spacing and typography */}
-              <div className="mt-16 sm:mt-0 sm:ml-40">
-                <div className="flex items-center flex-wrap">
-                  <h1 className="text-2xl font-bold text-gray-800 mr-3">
-                    {userData.firstName} {userData.lastName}
-                  </h1>
-                  <StatusBadge isActive={userData.isActive} className="ml-2" />
-                </div>
-                <p className="text-sm text-gray-600 mt-1.5 font-medium">
-                  {userData.position?.name || "No Position"}
-                </p>
-                <div className="flex flex-wrap items-center mt-3 text-sm text-gray-500">
-                  <div className="flex items-center mr-5 mb-1.5">
-                    <Mail className="w-4 h-4 mr-1.5 text-[#808080]" />
-                    <span>{userData.email}</span>
-                  </div>
-                  <div className="flex items-center mb-1.5">
-                    <Phone className="w-4 h-4 mr-1.5 text-[#808080]" />
-                    <span>{userData.phoneNumber || "No Phone"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="mt-4 sm:mt-0 w-full sm:w-auto flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                {editMode ? (
+                {activeSection === "all" && (
                   <>
-                    <button
-                      onClick={() => setEditMode(false)}
-                      className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors border border-gray-200"
+                    {/* Professional Information */}
+                    <ProfileSection
+                      title="Professional Information"
+                      icon={Briefcase}
+                      className="col-span-1"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleUpdateProfile}
-                      disabled={saveLoading}
-                      className={`bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors ${
-                        saveLoading ? "opacity-70 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      {saveLoading ? (
-                        <>
-                          <div className="animate-spin h-4 w-4 mr-1.5 border-2 border-white border-t-transparent rounded-full"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-1.5" /> Save
-                        </>
-                      )}
-                    </button>
+                      <ProfileInfoRow
+                        icon={Briefcase}
+                        label="Position"
+                        value={userData.position?.name}
+                        fieldName="positionId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={positions}
+                      />
+                      <ProfileInfoRow
+                        icon={Users}
+                        label="Position Group"
+                        value={userData.positionGroup?.name}
+                        fieldName="positionGroupId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={positionGroups}
+                      />
+                      <ProfileInfoRow
+                        icon={Building}
+                        label="Department"
+                        value={userData.department?.name}
+                        fieldName="departmentId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={departments}
+                      />
+                      <ProfileInfoRow
+                        icon={Layers}
+                        label="Division"
+                        value={userData.division?.name}
+                        fieldName="divisionId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={divisions}
+                      />
+                      <ProfileInfoRow
+                        icon={Layers}
+                        label="Sub Division"
+                        value={userData.subDivision?.name}
+                        fieldName="subDivisionId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={subDivisions}
+                      />
+                    </ProfileSection>
                   </>
-                ) : (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors"
-                  >
-                    <Edit className="w-4 h-4 mr-1.5" /> Edit Profile
-                  </button>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-        {/* Profile Content in Grid Layout */}
-        {(activeSection === "all" || activeSection === "account") && (
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-6`}>
-            {/* Account Information */}
-            <ProfileSection
-              title="Account Information"
-              icon={User}
-              className={`col-span-1 ${
-                activeSection !== "all" ? "md:col-span-2" : ""
-              }`}
-            >
-              <ProfileInfoRow
-                icon={User}
-                label="Username"
-                value={userData.userName}
-                fieldName="userName"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-              />
-              <ProfileInfoRow
-                icon={User}
-                label="First Name"
-                value={userData.firstName}
-                fieldName="firstName"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-              />
-              <ProfileInfoRow
-                icon={User}
-                label="Last Name"
-                value={userData.lastName}
-                fieldName="lastName"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-              />
-              <ProfileInfoRow
-                icon={Mail}
-                label="Email Address"
-                value={userData.email}
-                fieldName="email"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="email"
-              />
-              <ProfileInfoRow
-                icon={Phone}
-                label="Phone Number"
-                value={userData.phoneNumber}
-                fieldName="phoneNumber"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="tel"
-              />
-            </ProfileSection>
+            )}
 
+            {/* Show Additional Section in a second row when viewing all */}
             {activeSection === "all" && (
-              <>
-                {/* Professional Information */}
+              <div className="grid grid-cols-1 gap-5 mb-6">
+                {/* Additional Information */}
+                <ProfileSection title="Additional Information" icon={Globe}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ProfileInfoRow
+                      icon={Box}
+                      label="Project"
+                      value={userData.project?.name}
+                      fieldName="projectId"
+                      editMode={editMode}
+                      onEdit={handleFieldUpdate}
+                      type="select"
+                      options={projects}
+                    />
+                    <ProfileInfoRow
+                      icon={Award}
+                      label="Functional Area"
+                      value={userData.functionalArea?.name}
+                      fieldName="functionalAreaId"
+                      editMode={editMode}
+                      onEdit={handleFieldUpdate}
+                      type="select"
+                      options={functionalAreas}
+                    />
+                    <ProfileInfoRow
+                      icon={MapPin}
+                      label="Residential Area"
+                      value={userData.residentalArea?.name}
+                      fieldName="residentalAreaId"
+                      editMode={editMode}
+                      onEdit={handleFieldUpdate}
+                      type="select"
+                      options={residentialAreas}
+                    />
+                  </div>
+                </ProfileSection>
+              </div>
+            )}
+
+            {/* Show Professional Info if in professional section */}
+            {activeSection === "professional" && (
+              <div className="mb-6">
                 <ProfileSection
                   title="Professional Information"
                   icon={Briefcase}
-                  className="col-span-1"
                 >
                   <ProfileInfoRow
                     icon={Briefcase}
@@ -1031,177 +797,245 @@ const AdminProfilePage = () => {
                     options={subDivisions}
                   />
                 </ProfileSection>
-              </>
+              </div>
             )}
-          </div>
+
+            {/* Show Additional Info if in additional section */}
+            {activeSection === "additional" && (
+              <div className="mb-6">
+                <ProfileSection title="Additional Information" icon={Globe}>
+                  <ProfileInfoRow
+                    icon={Box}
+                    label="Project"
+                    value={userData.project?.name}
+                    fieldName="projectId"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="select"
+                    options={projects}
+                  />
+                  <ProfileInfoRow
+                    icon={Award}
+                    label="Functional Area"
+                    value={userData.functionalArea?.name}
+                    fieldName="functionalAreaId"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="select"
+                    options={functionalAreas}
+                  />
+                  <ProfileInfoRow
+                    icon={MapPin}
+                    label="Residential Area"
+                    value={userData.residentalArea?.name}
+                    fieldName="residentalAreaId"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="select"
+                    options={residentialAreas}
+                  />
+                  <ProfileInfoRow
+                    icon={FileText}
+                    label="Roles"
+                    value={
+                      userData.roleIds && userData.roleIds.length > 0
+                        ? `${userData.roleIds.length} roles assigned`
+                        : "No roles"
+                    }
+                    fieldName="roleIds"
+                    editMode={false}
+                    onEdit={handleFieldUpdate}
+                  />
+                </ProfileSection>
+              </div>
+            )}
+          </>
+        );
+      case "Achievements":
+        return <Placeholder />;
+      case "Trainings":
+        return <Placeholder />;
+      case "Courses":
+        return <Placeholder />;
+      default:
+        return null;
+    }
+  };
+
+  // Render Profile Page
+  return (
+    <div className="min-h-screen bg-gray-50 pt-10">
+      <div className="mx-auto">
+        {/* Back button for mobile */}
+        {activeSection !== "all" && (
+          <button
+            onClick={() => setActiveSection("all")}
+            className="inline-flex items-center text-[#808080] text-sm font-medium mt-4 mb-2 lg:hidden"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </button>
         )}
-        {/* Show Additional Section in a second row when viewing all */}
-        {activeSection === "all" && (
-          <div className="grid grid-cols-1 gap-5 mb-6">
-            {/* Additional Information */}
-            <ProfileSection title="Additional Information" icon={Globe}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <ProfileInfoRow
-                  icon={Box}
-                  label="Project"
-                  value={userData.project?.name}
-                  fieldName="projectId"
+
+        {/* Profile Header with Cover */}
+        <div className="bg-white shadow-sm rounded-lg mb-6 overflow-hidden">
+          <div className="relative">
+            {/* Cover Photo */}
+            <div
+              className="h-48 bg-cover bg-center"
+              style={{
+                backgroundImage: userData.coverPhotoUrl
+                  ? `url(${userData.coverPhotoUrl})`
+                  : `url(${defaultCoverPhoto})`,
+              }}
+            >
+              {/* Cover Photo Edit Button (now using main update function) */}
+              {editMode && (
+                <div className="absolute top-4 right-4">
+                  <button
+                    onClick={() => setIsImageUploadModalOpen(true)}
+                    className="cursor-pointer bg-black/30 hover:bg-black/40 text-white px-4 py-2 rounded-lg flex items-center text-sm backdrop-blur-sm transition-colors"
+                  >
+                    <Camera className="w-4 h-4 mr-2" /> Update Profile Photo
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Enhanced Profile and Actions Bar */}
+            <div className="p-4 flex flex-col sm:flex-row items-start sm:items-end justify-between relative">
+              {/* Profile Image - positioned higher */}
+              <div className="absolute -top-20 left-6 flex items-end">
+                <ProfileAvatar
+                  imageUrl={
+                    userData?.imageUrl
+                      ? `https://bravoadmin.uplms.org/uploads/${userData.imageUrl.replace(
+                          "https://100.42.179.27:7198/",
+                          ""
+                        )}`
+                      : noPP
+                  }
+                  size="large"
                   editMode={editMode}
-                  onEdit={handleFieldUpdate}
-                  type="select"
-                  options={projects}
-                />
-                <ProfileInfoRow
-                  icon={Award}
-                  label="Functional Area"
-                  value={userData.functionalArea?.name}
-                  fieldName="functionalAreaId"
-                  editMode={editMode}
-                  onEdit={handleFieldUpdate}
-                  type="select"
-                  options={functionalAreas}
-                />
-                <ProfileInfoRow
-                  icon={MapPin}
-                  label="Residential Area"
-                  value={userData.residentalArea?.name}
-                  fieldName="residentalAreaId"
-                  editMode={editMode}
-                  onEdit={handleFieldUpdate}
-                  type="select"
-                  options={residentialAreas}
+                  onClick={() => setIsImageUploadModalOpen(true)}
                 />
               </div>
-            </ProfileSection>
+
+              {/* User Info with better spacing and typography */}
+              <div className="mt-16 sm:mt-0 sm:ml-40">
+                <div className="flex items-center flex-wrap">
+                  <h1 className="text-2xl font-bold text-gray-800 mr-3">
+                    {userData.firstName} {userData.lastName}
+                  </h1>
+                  <StatusBadge isActive={userData.isActive} className="ml-2" />
+                </div>
+                <p className="text-sm text-gray-600 mt-1.5 font-medium">
+                  {userData.position?.name || "No Position"}
+                </p>
+                <div className="flex flex-wrap items-center mt-3 text-sm text-gray-500">
+                  <div className="flex items-center mr-5 mb-1.5">
+                    <Mail className="w-4 h-4 mr-1.5 text-[#808080]" />
+                    <span>{userData.email}</span>
+                  </div>
+                  <div className="flex items-center mb-1.5">
+                    <Phone className="w-4 h-4 mr-1.5 text-[#808080]" />
+                    <span>{userData.phoneNumber || "No Phone"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit/Save Buttons */}
+              <div className="mt-4 sm:mt-0 w-full sm:w-auto flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                {activeTab === "User details" && (
+                  <>
+                    {editMode ? (
+                      <>
+                        <button
+                          onClick={() => setEditMode(false)}
+                          className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors border border-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleUpdateProfile}
+                          disabled={saveLoading}
+                          className={`bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors ${
+                            saveLoading ? "opacity-70 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          {saveLoading ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 mr-1.5 border-2 border-white border-t-transparent rounded-full"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-1.5" /> Save
+                            </>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex  justify-end gap-3 mb-6">
+                        <button
+                          onClick={() => setIsPasswordModalOpen(true)}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm transition-colors"
+                        >
+                          <Key className="w-4 h-4 mr-1.5" /> Change Password
+                        </button>
+                        {/* <button
+                          onClick={() => setIsImageUploadModalOpen(true)}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm transition-colors"
+                        >
+                          <ImageIcon className="w-4 h-4 mr-1.5" /> Update Photo
+                        </button> */}
+                        <button
+                          onClick={() => setEditMode(true)}
+                          className="bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors"
+                        >
+                          <Edit className="w-4 h-4 mr-1.5" /> Edit Profile
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-        {/* Show Professional Info if in professional section */}
-        {activeSection === "professional" && (
-          <div className="mb-6">
-            <ProfileSection title="Professional Information" icon={Briefcase}>
-              <ProfileInfoRow
-                icon={Briefcase}
-                label="Position"
-                value={userData.position?.name}
-                fieldName="positionId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={positions}
-              />
-              <ProfileInfoRow
-                icon={Users}
-                label="Position Group"
-                value={userData.positionGroup?.name}
-                fieldName="positionGroupId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={positionGroups}
-              />
-              <ProfileInfoRow
-                icon={Building}
-                label="Department"
-                value={userData.department?.name}
-                fieldName="departmentId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={departments}
-              />
-              <ProfileInfoRow
-                icon={Layers}
-                label="Division"
-                value={userData.division?.name}
-                fieldName="divisionId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={divisions}
-              />
-              <ProfileInfoRow
-                icon={Layers}
-                label="Sub Division"
-                value={userData.subDivision?.name}
-                fieldName="subDivisionId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={subDivisions}
-              />
-            </ProfileSection>
-          </div>
-        )}
-        {/* Show Additional Info if in additional section */}
-        {activeSection === "additional" && (
-          <div className="mb-6">
-            <ProfileSection title="Additional Information" icon={Globe}>
-              <ProfileInfoRow
-                icon={Box}
-                label="Project"
-                value={userData.project?.name}
-                fieldName="projectId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={projects}
-              />
-              <ProfileInfoRow
-                icon={Award}
-                label="Functional Area"
-                value={userData.functionalArea?.name}
-                fieldName="functionalAreaId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={functionalAreas}
-              />
-              <ProfileInfoRow
-                icon={MapPin}
-                label="Residential Area"
-                value={userData.residentalArea?.name}
-                fieldName="residentalAreaId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={residentialAreas}
-              />
-              <ProfileInfoRow
-                icon={FileText}
-                label="Roles"
-                value={
-                  userData.roleIds && userData.roleIds.length > 0
-                    ? `${userData.roleIds.length} roles assigned`
-                    : "No roles"
-                }
-                fieldName="roleIds"
-                editMode={false}
-                onEdit={handleFieldUpdate}
-              />
-            </ProfileSection>
-          </div>
-        )}{" "}
-        {/* Action Buttons - Simplified */}
-        <div className="flex flex-wrap justify-center sm:justify-end gap-3 mb-16 sm:mb-6">
-          <button
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm transition-colors"
-          >
-            <Key className="w-4 h-4 mr-1.5" /> Change Password
-          </button>
-          <button
-            onClick={() => setIsImageUploadModalOpen(true)}
-            className="bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-2 rounded-md flex items-center text-sm transition-colors"
-          >
-            <ImageIcon className="w-4 h-4 mr-1.5" /> Update Photo
-          </button>
         </div>
+
+        {/* Tabs Navigation */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex overflow-x-auto">
+              {["User details", "Achievements", "Trainings", "Courses"].map(
+                (tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`whitespace-nowrap py-4 px-6 font-medium text-sm border-b-2 transition-colors ${
+                      activeTab === tab
+                        ? "border-[#0AAC9E] text-[#0AAC9E]"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                )
+              )}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mb-6">{getTabContent()}</div>
+
         {/* Modals */}
         {isPasswordModalOpen && (
           <PasswordChangeModal
             isOpen={isPasswordModalOpen}
             onClose={() => setIsPasswordModalOpen(false)}
-            onSubmit={handleChangePassword}
+            userId={userId}
           />
         )}
         {isImageUploadModalOpen && (

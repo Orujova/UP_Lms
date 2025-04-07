@@ -12,11 +12,10 @@ import {
   CheckCircle2,
   X,
   Loader2,
-  AlertCircle,
   Upload,
   Download,
+  AlertCircle,
 } from "lucide-react";
-import ExcelImportModal from "@/components/excelImportModal"; // Import the new component
 
 const levelOptions = [
   {
@@ -52,10 +51,8 @@ const PositionForm = ({
   handleSubmit,
   resetForm,
   setActiveTab,
-  onImportSuccess,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false); // State for import modal
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -123,63 +120,20 @@ const PositionForm = ({
     handleSubmit(positionData);
   };
 
-  // Handle import success
-  const handleImportSuccess = () => {
-    // Refresh the position list or perform any other necessary updates
-    if (onImportSuccess) {
-      onImportSuccess();
-    }
-    // Optionally navigate back to the list view
-    setActiveTab("list");
-  };
-
-  // Handle template download
-  const handleDownloadTemplate = () => {
-    // Create a link to download the template file
-    const link = document.createElement("a");
-    link.href = "/templates/Positionimport.xlsx"; // Set the path to where your file is stored
-    link.download = "Positionimport.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   // Filter position groups based on search term
   const filteredPositionGroups = availablePositionGroups.filter((group) =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <>
-      <form onSubmit={onSubmit} className="space-y-6">
+    <div className="max-w-2xl mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+      <form onSubmit={onSubmit} className="space-y-6 p-6">
         <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center text-gray-700">
               <User size={16} className="mr-2" />
               <h2 className="text-base font-medium">Position Information</h2>
             </div>
-
-            {/* Excel Import and Template Download Buttons */}
-            {!isEditing && (
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  className="flex items-center px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                >
-                  <Download size={14} className="mr-1.5" />
-                  Download Template
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsImportModalOpen(true)}
-                  className="flex items-center px-3 py-2 text-sm text-[#127D74] bg-[#f2fdfc] rounded-md hover:bg-[#e0f7f5] transition-colors"
-                >
-                  <Upload size={14} className="mr-1.5" />
-                  Import from Excel
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="mb-4">
@@ -195,7 +149,7 @@ const PositionForm = ({
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-0  focus:border-[#01DBC8]"
+                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-0 focus:border-[#01DBC8]"
                 placeholder="Enter position name"
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -274,7 +228,7 @@ const PositionForm = ({
                       type="text"
                       value={searchTerm}
                       onChange={handleSearchChange}
-                      className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-0  focus:border-[#01DBC8]"
+                      className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-0 focus:border-[#01DBC8]"
                       placeholder="Search position groups..."
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -316,7 +270,7 @@ const PositionForm = ({
                         }}
                       >
                         <div
-                          className={`w-5 h-5 border rounded mr-3 flex items-center justify-center `}
+                          className={`w-5 h-5 border rounded mr-3 flex items-center justify-center`}
                           style={{
                             backgroundColor: selectedPositionGroups.includes(
                               group.id
@@ -444,14 +398,7 @@ const PositionForm = ({
           </div>
         </div>
       </form>
-
-      {/* Import Excel Modal */}
-      <ExcelImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        onSuccess={handleImportSuccess}
-      />
-    </>
+    </div>
   );
 };
 

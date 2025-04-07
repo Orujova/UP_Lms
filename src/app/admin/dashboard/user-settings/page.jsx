@@ -8,12 +8,10 @@ import { toast } from "sonner";
 // Position Components
 import PositionList from "./positionList";
 import PositionForm from "./positionForm";
-import TabButtons from "./tabButtons";
 
 // Position Group Components
 import PositionGroupList from "./positionGroupList";
 import PositionGroupForm from "./positionGroupForm";
-import PositionGroupTabButtons from "./positionGroupTabButtons";
 
 // Shared Components
 import AlertMessage from "./alertMessage";
@@ -485,15 +483,6 @@ const UserSettings = () => {
       {/* Position Management */}
       {activeMainTab === "positions" && (
         <div>
-          <div className="flex justify-end mb-4">
-            <TabButtons
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              handleAddNew={handleAddNewPosition}
-              isEditing={isEditing}
-            />
-          </div>
-
           {activeTab === "list" ? (
             <PositionList
               positions={positions}
@@ -543,15 +532,6 @@ const UserSettings = () => {
       {/* Position Group Management */}
       {activeMainTab === "positionGroups" && (
         <div>
-          <div className="flex justify-end mb-4">
-            <PositionGroupTabButtons
-              activeTab={activeGroupTab}
-              setActiveTab={setActiveGroupTab}
-              handleAddNew={handleAddNewPositionGroup}
-              isEditing={isEditingGroup}
-            />
-          </div>
-
           {activeGroupTab === "list" ? (
             <PositionGroupList
               positionGroups={positionGroups}
