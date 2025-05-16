@@ -1,0 +1,30 @@
+.sectionSetting {
+    position: relative;
+    z-index: 999;
+
+    img {
+        cursor: pointer;
+        width: 2.222vw;
+        height: auto;
+    }
+
+    >div {
+        box-shadow: 0px 0px 17.8px 0px rgba(0, 0, 0, 0.12);
+        border-radius: 0.555vw;
+        position: absolute;
+        transform: translate(-50%, 10%);
+        z-index: 999;
+        background: #fff;
+
+        p {
+            cursor: pointer;
+            width: 9.1667vw;
+            padding: 0.6944vw;
+            font-size: 0.9722vw;
+            font-weight: 500;
+            line-height: 1.388vw;
+            letter-spacing: 0.10000000149011612px;
+            text-align: left;
+        }
+    }
+}

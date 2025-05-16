@@ -1,0 +1,48 @@
+.verifyComponent {
+    display: flex;
+    flex-direction: row;
+    gap: 1.11vw;
+    margin: 0.556vw 0 6.61042vw 0;
+
+    label {
+        display: block;
+        width: 3.5847vw;
+        height: 1.792vw;
+        background: rgba(236, 236, 236, 1);
+        border-radius: 1.792vw;
+        position: relative;
+        cursor: pointer;
+        transition: 1s;
+
+        .round {
+            position: absolute;
+            width: 1.792vw;
+            height: 1.792vw;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.35);
+            left: 0;
+            top: 0;
+            transition: 1s;
+        }
+    }
+
+    input {
+        display: none;
+
+        &:checked+label {
+            background: rgba(5, 141, 102, 1);
+
+            .round {
+                transform: translate(100%, 0);
+            }
+        }
+    }
+
+    >span {
+        font-size: 0.972vw;
+        font-weight: 600;
+        line-height: 1.3889vw;
+        letter-spacing: 0.10000000149011612px;
+    }
+}

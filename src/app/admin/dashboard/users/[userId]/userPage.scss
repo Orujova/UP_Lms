@@ -1,0 +1,55 @@
+.userPage {
+  padding: 1.528vw 0 0 0;
+
+  .userBanner {
+    width: 100%;
+    position: relative;
+
+    .banner {
+      width: 100%;
+      height: auto;
+    }
+
+    .profile {
+      position: absolute;
+      width: 12.5vw;
+      height: 12.5vw;
+      border-radius: 50%;
+      border: 0.694vw solid #fff;
+      bottom: -4.72vw;
+      left: 3.056vw;
+    }
+  }
+
+  .editAndDelete {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6944vw;
+    margin-top: 2.2222vw;
+
+    .button {
+      width: 7.5vw;
+      height: 2.5vw;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      border-radius: 0.2778vw;
+      cursor: pointer;
+      font-size: 0.97222vw;
+      font-weight: 400;
+      line-height: 1.18055vw;
+
+      &.edit {
+        color: rgba(255, 255, 255, 1);
+        background: #0aac9e;
+      }
+
+      &.delete {
+        border: 1px solid rgba(167, 167, 167, 1);
+        color: rgba(118, 118, 118, 1);
+      }
+    }
+  }
+}

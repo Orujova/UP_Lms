@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*Global Styles*/
+* {
+  box-sizing: border-box;
+}
+
+.box {
+  max-width: 1440px;
+  padding: 0px 40px;
+  margin: 0px auto;
+}
+
+input {
+  outline: none;
+  width: 100%;
+}
+
+.side-menu svg {
+  fill: #a1a1a1;
+}
+
+.card-ellipsis {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/***/
+.ellipsis-1-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: min-content;
+}
+
+/***/
+
+.active-link {
+  color: #000;
+  background: #f4f4f4;
+  font-weight: 700;
+}
+
+.active-link svg {
+  fill: red;
+}
+
+.active-link svg {
+  fill: #000;
+}
+
+/* Fixed header */
+.fixed-header {
+  position: sticky;
+  top: 0px;
+  width: 100%;
+  z-index: 999;
+  left: 0;
+}
+
+.sticky-sidebar {
+  position: sticky;
+  top: 0;
+}
+
+.sticky-read {
+  position: sticky;
+  top: 0;
+}
+
+/* Single blog page defaults */
+.svg-24 svg {
+  width: 24px;
+  height: 24px;
+}

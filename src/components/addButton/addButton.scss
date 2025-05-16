@@ -1,0 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap");
+.addButton {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: "Montserrat";
+  font-size: 12px;
+  font-weight: 500;
+
+  background: linear-gradient(to right, #0aac9e, #099e91);
+  color: white;
+  box-shadow: 0 2px 4px rgba(10, 172, 158, 0.2);
+}
+.addButton:hover {
+  background: linear-gradient(to right, #099e91, #088f83);
+  box-shadow: 0 4px 6px rgba(10, 172, 158, 0.3);
+}

@@ -1,0 +1,68 @@
+.courseContentComponent {
+
+    h3 {
+        font-size: 0.9722vw;
+        font-weight: 600;
+        line-height: 1.185vw;
+        margin-bottom: 0.972vw;
+    }
+
+    >div {
+        display: flex;
+        flex-direction: row;
+        gap: 0.694vw;
+
+        >div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.278vw;
+            width: 3.89vw;
+            height: 2.78vw;
+            border-radius: 0.556vw;
+
+            &.videos {
+                background: rgba(255, 247, 218, 1);
+
+                p {
+                    color: rgba(242, 193, 31, 1);
+                }
+
+            }
+
+            &.hours {
+                background: rgba(228, 248, 238, 1);
+
+                p {
+                    color: rgba(93, 194, 187, 1);
+                }
+            }
+
+            &.quiz {
+                background: rgba(239, 234, 254, 1);
+
+                p {
+                    color: rgba(148, 85, 255, 1);
+                }
+            }
+
+            .certification {
+                background: rgba(234, 246, 254, 1);
+            }
+
+            p {
+                font-size: 0.833vw;
+                line-height: 1.016vw;
+
+                &:first-child {
+                    font-weight: 700;
+                }
+
+                &:last-child {
+                    font-weight: 400;
+                }
+            }
+        }
+    }
+}
