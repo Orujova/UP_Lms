@@ -16,6 +16,9 @@ import {
   Heart,
   HeartOff,
   ArrowLeft,
+  Save,
+  Calendar,
+  Send,
 } from "lucide-react";
 
 // Import components
@@ -23,7 +26,7 @@ import InputComponent from "@/components/inputComponent";
 import SelectComponent from "@/components/selectComponent";
 import MultiImageUpload from "../MultiImageUpload";
 import MultiAttachmentUpload from "../MultiAttachmentUpload";
-import TargetGroupSelector from "../TargetGroupSelector";
+import TargetGroupSelector from "@/components/targetSelect";
 import Switch from "../Switch";
 import {
   serializeEditorData,
@@ -36,7 +39,7 @@ const PageTextComponent = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="border rounded p-4 min-h-[200px] flex items-center justify-center">
+      <div className="border rounded p-4 min-h-[300px] flex items-center justify-center">
         <div className="text-center">
           <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
           <p className="mt-2 text-gray-600 text-sm">Loading editor...</p>
@@ -63,7 +66,7 @@ const AlertDescription = ({ children }) => {
   return <div className="text-xs">{children}</div>;
 };
 
-export default function Page() {
+export default function AddPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [formErrors, setFormErrors] = useState({});
@@ -72,7 +75,7 @@ export default function Page() {
     title: "",
     subtitle: "",
     newsCategoryId: "",
-    targetGroupIds: [], // Array for multiple target groups
+    targetGroupIds: [],
     newsImages: [],
     attachments: [],
     hasNotification: false,
@@ -80,6 +83,11 @@ export default function Page() {
     hasLike: false,
     priority: "HIGH",
   });
+
+  // Target Group Selector States
+  const [searchValue, setSearchValue] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedTargetGroups, setSelectedTargetGroups] = useState([]);
 
   const [description, setDescription] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
@@ -95,6 +103,14 @@ export default function Page() {
     dispatch(newsCategoryAsync());
   }, [dispatch]);
 
+  // Update formData when selectedTargetGroups changes
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      targetGroupIds: selectedTargetGroups.map((group) => group.id),
+    }));
+  }, [selectedTargetGroups]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -107,6 +123,36 @@ export default function Page() {
     }
   };
 
+  // TargetGroupSelector handlers
+  const handleSearchChange = (value) => {
+    setSearchValue(value);
+  };
+
+  const handleToggleDropdown = (value) => {
+    setShowDropdown(value);
+  };
+
+  const handleSelectTargetGroup = (group) => {
+    if (!selectedTargetGroups.some((selected) => selected.id === group.id)) {
+      setSelectedTargetGroups([...selectedTargetGroups, group]);
+    } else {
+      setSelectedTargetGroups(
+        selectedTargetGroups.filter((selected) => selected.id !== group.id)
+      );
+    }
+
+    // Clear error when field is updated
+    if (formErrors.targetGroupIds) {
+      setFormErrors((prev) => ({ ...prev, targetGroupIds: null }));
+    }
+  };
+
+  const handleRemoveTargetGroup = (group) => {
+    setSelectedTargetGroups(
+      selectedTargetGroups.filter((selected) => selected.id !== group.id)
+    );
+  };
+
   const handleEditorChange = (value) => {
     // Use the utility function to properly handle the EditorJS data
     handleDescriptionChange(value, setDescription);
@@ -115,7 +161,6 @@ export default function Page() {
     }
   };
 
-  // Form validation
   const validateForm = () => {
     const errors = {};
     if (!formData.title.trim()) errors.title = "Title is required";
@@ -125,8 +170,6 @@ export default function Page() {
     if (formData.targetGroupIds.length === 0)
       errors.targetGroupIds = "At least one target group is required";
     if (!description) errors.description = "Body content is required";
-    if (formData.newsImages.length === 0)
-      errors.images = "At least one image is required";
     return errors;
   };
 
@@ -160,7 +203,6 @@ export default function Page() {
     queryParamsObj.append("HasLike", formData.hasLike);
 
     // Add each target group ID as a separate entry with the same parameter name
-    // This is the correct way to send array parameters in query strings
     formData.targetGroupIds.forEach((id) => {
       queryParamsObj.append("TargetGroupIds", id);
     });
@@ -227,147 +269,226 @@ export default function Page() {
   ];
 
   return (
-    <main className="pt-14 bg-gray-50/50 min-h-screen">
-      <div className="flex flex-col gap-10">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-800">Add News</h1>
+    <main className="pt-16 bg-gray-50/50 min-h-screen">
+      <div className="max-w-6xl mx-auto px-5 mb-16">
+        {/* Header with back button */}
+        <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
+          <h1 className="text-2xl font-semibold text-gray-800">Add News</h1>
           <button
             onClick={handleCancel}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-sm"
           >
             <ArrowLeft size={16} />
             <span>Back to list</span>
           </button>
         </div>
 
-        <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
-          <div>
-            <h3 className="text-sm font-medium mb-4 leading-5 text-gray-800/90">
-              Images
-            </h3>
-            <MultiImageUpload
-              images={formData.newsImages}
-              onChange={(newImages) =>
-                setFormData((prev) => ({ ...prev, newsImages: newImages }))
-              }
-            />
-            {formErrors.images && (
-              <p className="text-red-500 text-sm mt-2">{formErrors.images}</p>
-            )}
+        {responseMessage && (
+          <Alert
+            variant={
+              responseMessage.includes("success") ? "success" : "destructive"
+            }
+            className="mb-6"
+          >
+            <AlertDescription>{responseMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        <form className="grid grid-cols-1 gap-8" onSubmit={handleSubmit}>
+          {/* Main content area with 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left column - 2/3 width */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Title and subtitle section */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center mb-2 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Basic Information
+                  </h2>
+                </div>
+
+                <div className="space-y-5">
+                  <InputComponent
+                    text="Title"
+                    required
+                    type="text"
+                    placeholder="Enter news title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    name="title"
+                    error={formErrors.title}
+                  />
+
+                  <InputComponent
+                    text="Subtitle"
+                    required
+                    type="text"
+                    placeholder="Enter news subtitle"
+                    value={formData.subtitle}
+                    onChange={handleChange}
+                    name="subtitle"
+                    error={formErrors.subtitle}
+                  />
+                </div>
+              </div>
+
+              {/* Media section */}
+              <div className="bg-white rounded-lg shadow-sm px-6 py-5">
+                <div className="flex items-center mb-2 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">Media</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium mb-3 leading-5 text-gray-800/90">
+                      Images
+                    </h3>
+                    <MultiImageUpload
+                      images={formData.newsImages}
+                      onChange={(newImages) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          newsImages: newImages,
+                        }))
+                      }
+                    />
+                    {formErrors.images && (
+                      <p className="text-red-500 text-sm mt-2">
+                        {formErrors.images}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-3 leading-5 text-gray-800/90">
+                      Attachments
+                    </h3>
+                    <MultiAttachmentUpload
+                      attachments={formData.attachments}
+                      onChange={(newAttachments) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          attachments: newAttachments,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right sidebar - 1/3 width */}
+            <div className="lg:col-span-1 space-y-8">
+              {/* Publication settings */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Publication Settings
+                  </h2>
+                </div>
+
+                <div className="space-y-5">
+                  <SelectComponent
+                    text="Category"
+                    name="newsCategoryId"
+                    required
+                    value={formData.newsCategoryId}
+                    onChange={handleChange}
+                    options={newsCategory}
+                    error={formErrors.newsCategoryId}
+                  />
+
+                  <SelectComponent
+                    text="Priority"
+                    name="priority"
+                    required
+                    value={formData.priority}
+                    onChange={handleChange}
+                    options={priorityOptions}
+                  />
+
+                  {/* Target groups */}
+                  <div>
+                    <TargetGroupSelector
+                      targetGroups={targetGroups}
+                      searchValue={searchValue}
+                      selectedTargetGroups={selectedTargetGroups}
+                      showDropdown={showDropdown}
+                      onSearchChange={handleSearchChange}
+                      onToggleDropdown={handleToggleDropdown}
+                      onSelect={handleSelectTargetGroup}
+                      onRemove={handleRemoveTargetGroup}
+                    />
+                    {formErrors.targetGroupIds && (
+                      <p className="text-red-500 text-sm mt-2">
+                        {formErrors.targetGroupIds}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Interaction settings */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Interaction Settings
+                  </h2>
+                </div>
+
+                <div className="space-y-5">
+                  <Switch
+                    checked={formData.hasNotification}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasNotification: checked,
+                      }))
+                    }
+                    icon={Bell}
+                    offIcon={BellOff}
+                    label="Push Notification"
+                    description="Send push notification to users when this news is published"
+                  />
+
+                  <Switch
+                    checked={formData.hasComment}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, hasComment: checked }))
+                    }
+                    icon={MessageSquare}
+                    offIcon={MessageSquareOff}
+                    label="Enable Comments"
+                    description="Allow users to comment on this news"
+                  />
+
+                  <Switch
+                    checked={formData.hasLike}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, hasLike: checked }))
+                    }
+                    icon={Heart}
+                    offIcon={HeartOff}
+                    label="Enable Likes"
+                    description="Allow users to like this news"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-medium mb-4 leading-5 text-gray-800/90">
-              Attachments
-            </h3>
-            <MultiAttachmentUpload
-              attachments={formData.attachments}
-              onChange={(newAttachments) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  attachments: newAttachments,
-                }))
-              }
-            />
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-6">
-            <InputComponent
-              text="Title"
-              required
-              type="text"
-              placeholder="Title"
-              value={formData.title}
-              onChange={handleChange}
-              name="title"
-              error={formErrors.title}
-            />
-
-            <InputComponent
-              text="Subtitle"
-              required
-              type="text"
-              placeholder="Subtitle"
-              value={formData.subtitle}
-              onChange={handleChange}
-              name="subtitle"
-              error={formErrors.subtitle}
-            />
-
-            <SelectComponent
-              text="Category"
-              name="newsCategoryId"
-              required
-              value={formData.newsCategoryId}
-              onChange={handleChange}
-              options={newsCategory}
-              error={formErrors.newsCategoryId}
-            />
-
-            <SelectComponent
-              text="Priority"
-              name="priority"
-              required
-              value={formData.priority}
-              onChange={handleChange}
-              options={priorityOptions}
-            />
-
-            {/* Switches */}
-            <Switch
-              checked={formData.hasNotification}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, hasNotification: checked }))
-              }
-              icon={Bell}
-              offIcon={BellOff}
-              label="Push Notification"
-              description="Send push notification to users when this news is published"
-            />
-
-            <Switch
-              checked={formData.hasComment}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, hasComment: checked }))
-              }
-              icon={MessageSquare}
-              offIcon={MessageSquareOff}
-              label="Enable Comments"
-              description="Allow users to comment on this news"
-            />
-
-            <Switch
-              checked={formData.hasLike}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, hasLike: checked }))
-              }
-              icon={Heart}
-              offIcon={HeartOff}
-              label="Enable Likes"
-              description="Allow users to like this news"
-            />
-
-            {/* Target Group Selector with multiple selection */}
-            <TargetGroupSelector
-              targetGroups={targetGroups}
-              value={formData.targetGroupIds}
-              onChange={(value) =>
-                setFormData((prev) => ({ ...prev, targetGroupIds: value }))
-              }
-              error={formErrors.targetGroupIds}
-              multiple={true}
-            />
+          {/* Editor section - Full Width */}
+          <div className="bg-white rounded-lg shadow-sm p-6 w-full">
+            <div className="flex items-center mb-5 border-b border-gray-100 pb-3">
+              <h2 className="text-lg font-medium text-gray-800">Content</h2>
+            </div>
 
             <div className="descriptionEditor">
-              <label className="block text-sm font-medium mb-2 text-gray-800/90">
-                Body
+              <label className="block text-sm font-medium mb-3 text-gray-800/90">
+                Body <span className="text-red-500">*</span>
               </label>
-              <div>
-                <PageTextComponent
-                  onChange={handleEditorChange}
-                  desc={null} // Start with empty editor
-                />
+              <div className="mx-0">
+                <PageTextComponent onChange={handleEditorChange} desc={null} />
               </div>
               {formErrors.description && (
                 <p className="text-red-500 text-sm mt-2">
@@ -377,53 +498,53 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4 items-center justify-end">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-[#0AAC9E] text-white text-sm rounded-lg px-5 py-2 font-medium hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="animate-spin">⏳</span>
-                  Publishing...
-                </>
-              ) : (
-                "Publish"
-              )}
-            </button>
-            <button
-              type="button"
-              className="bg-white text-gray-700 rounded-lg text-sm px-5 py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
-            >
-              Schedule
-            </button>
-            <button
-              type="button"
-              className="bg-white text-gray-700 rounded-lg px-5 text-sm py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
-            >
-              Save as draft
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="bg-white text-gray-700 rounded-lg px-5 text-sm py-2 border border-gray-200 font-medium hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
+          {/* Action buttons - At bottom, full width */}
+          <div className="bg-white rounded-lg shadow-sm p-6 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#0AAC9E] text-white text-sm rounded-lg px-4 py-3 font-medium hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Publish
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="w-full bg-white text-gray-700 rounded-lg text-sm px-4 py-3 border border-gray-200 font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2"
+              >
+                <Calendar size={16} />
+                Schedule
+              </button>
+
+              <button
+                type="button"
+                className="w-full bg-white text-gray-700 rounded-lg px-4 text-sm py-3 border border-gray-200 font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2"
+              >
+                <Save size={16} />
+                Save as draft
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="w-full bg-white text-gray-700 rounded-lg px-4 text-sm py-3 border border-gray-200 font-medium hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </form>
-
-        {responseMessage && (
-          <Alert
-            variant={
-              responseMessage.includes("success") ? "success" : "destructive"
-            }
-          >
-            <AlertDescription>{responseMessage}</AlertDescription>
-          </Alert>
-        )}
       </div>
     </main>
   );

@@ -57,7 +57,7 @@ const MultiAttachmentUploadEdit = ({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6 text-blue-500"
+          className="w-6 h-6 text-cyan-600"
         >
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
           <circle cx="8.5" cy="8.5" r="1.5" />
@@ -79,7 +79,7 @@ const MultiAttachmentUploadEdit = ({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6 text-blue-600"
+          className="w-6 h-6 text-cyan-600"
         >
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
           <polyline points="14 2 14 8 20 8" />
@@ -103,7 +103,7 @@ const MultiAttachmentUploadEdit = ({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6 text-green-600"
+          className="w-6 h-6 text-teal-600"
         >
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
           <polyline points="14 2 14 8 20 8" />
@@ -249,12 +249,12 @@ const MultiAttachmentUploadEdit = ({
 
   return (
     <div className="space-y-4">
-      <div className="border-dashed border-2 border-[#0AAC9E] py-4 px-6 bg-white rounded-lg">
+      <div className="border-dashed border-2 border-[#0AAC9E] py-2 px-6 bg-white rounded-lg">
         {attachments.length === 0 ? (
-          <div className="flex justify-center items-center py-8 flex-col gap-4">
+          <div className="flex justify-center items-center py-3 flex-col gap-4">
             <div className="text-center">
-              <div className="w-14 h-14 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
-                <Upload className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
+                <Upload className="w-6 h-6 text-white" />
               </div>
               <div className="font-medium text-gray-700">
                 <label className="text-[#0AAC9E] hover:text-[#127D74] cursor-pointer">
@@ -269,7 +269,7 @@ const MultiAttachmentUploadEdit = ({
                 </label>
                 or drag and drop
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs font-normal text-gray-500 mt-2">
                 Supported formats: DOC, DOCX, PDF, XLS, XLSX, PPT, PPTX, TXT,
                 JPG, PNG
               </p>

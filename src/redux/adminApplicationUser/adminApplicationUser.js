@@ -3,8 +3,15 @@ import { fetchAdminApplicationUser } from "@/api/adminApplicationUser";
 
 export const adminApplicationUserAsync = createAsyncThunk(
   "data/fetchAdminApplicationUser",
-  async (page = 1) => {
-    const data = await fetchAdminApplicationUser(page);
+  async (params = {}) => {
+    // If params is just a number, treat it as page
+    if (typeof params === "number") {
+      const data = await fetchAdminApplicationUser(params);
+      return data;
+    }
+
+    // Otherwise, treat it as an object with page and filter params
+    const data = await fetchAdminApplicationUser(params);
     return data;
   }
 );

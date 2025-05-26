@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
 import { newsCategoryAsync } from "@/redux/newsCategory/newsCategory";
 import { getToken, getParsedToken } from "@/authtoken/auth.js";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import {
   Bell,
   BellOff,
@@ -16,17 +16,18 @@ import {
   Heart,
   HeartOff,
   ArrowLeft,
+  Save,
+  Calendar,
+  Send,
+  X,
 } from "lucide-react";
-
-import "./edit.scss";
 
 // Import components
 import InputComponent from "@/components/inputComponent";
 import SelectComponent from "@/components/selectComponent";
 import MultiImagesEdit from "../../MultiImagesEdit";
 import MultiAttachmentUploadEdit from "../../MultiAttachmentUploadEdit";
-import TargetGroupSelector from "../../TargetGroupSelector";
-import CategorySelector from "../../CategorySelector";
+import TargetGroupSelector from "@/components/targetSelect";
 import Switch from "../../Switch";
 import LoadingSpinner from "@/components/loadingSpinner";
 
@@ -42,7 +43,7 @@ const PageTextComponent = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="border rounded p-4 min-h-[200px] flex items-center justify-center">
+      <div className="border rounded p-4 min-h-[300px] flex items-center justify-center">
         <div className="text-center">
           <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
           <p className="mt-2 text-gray-600 text-sm">Loading editor...</p>
@@ -52,7 +53,24 @@ const PageTextComponent = dynamic(
   }
 );
 
-export default function Page() {
+// Custom Alert Component
+const Alert = ({ variant = "default", children }) => {
+  const variants = {
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-50 text-green-800",
+    destructive: "bg-red-50 text-red-800",
+  };
+
+  return (
+    <div className={`rounded-lg p-4 ${variants[variant]}`}>{children}</div>
+  );
+};
+
+const AlertDescription = ({ children }) => {
+  return <div className="text-xs">{children}</div>;
+};
+
+export default function EditPage() {
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
@@ -60,11 +78,20 @@ export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
+  // Flag to prevent circular updates
+  const isInitialLoad = useRef(true);
+  const skipTargetGroupsUpdate = useRef(false);
+
+  // Target Group Selector States
+  const [searchValue, setSearchValue] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedTargetGroups, setSelectedTargetGroups] = useState([]);
+
   const [formData, setFormData] = useState({
     title: "",
-    subTitle: "",
+    subtitle: "",
     newsCategoryId: "",
-    targetGroupIds: [], // Changed from targetGroupId to targetGroupIds array
+    targetGroupIds: [], // Array for multiple target groups
     newsImages: [],
     attachments: [],
     hasNotification: false,
@@ -94,6 +121,63 @@ export default function Page() {
     dispatch(newsCategoryAsync());
   }, [dispatch]);
 
+  // Only update formData when selectedTargetGroups changes AND
+  // it's not the initial load/API data setting the selection
+  useEffect(() => {
+    // Skip this effect if we're still loading initial data
+    if (skipTargetGroupsUpdate.current) {
+      return;
+    }
+
+    const newTargetGroupIds = selectedTargetGroups.map((group) =>
+      group.id.toString()
+    );
+
+    // Only update if the values are actually different to avoid loops
+    if (
+      JSON.stringify(newTargetGroupIds) !==
+      JSON.stringify(formData.targetGroupIds)
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        targetGroupIds: newTargetGroupIds,
+      }));
+
+      // Clear error when field is updated
+      if (formErrors.targetGroupIds) {
+        setFormErrors((prev) => ({ ...prev, targetGroupIds: null }));
+      }
+    }
+  }, [selectedTargetGroups, formErrors]);
+
+  // Target Group Selector handlers
+  const handleSearchChange = (value) => {
+    setSearchValue(value);
+  };
+
+  const handleToggleDropdown = (value) => {
+    setShowDropdown(value);
+  };
+
+  const handleSelectTargetGroup = (group) => {
+    skipTargetGroupsUpdate.current = false;
+
+    if (!selectedTargetGroups.some((selected) => selected.id === group.id)) {
+      setSelectedTargetGroups([...selectedTargetGroups, group]);
+    } else {
+      setSelectedTargetGroups(
+        selectedTargetGroups.filter((selected) => selected.id !== group.id)
+      );
+    }
+  };
+
+  const handleRemoveTargetGroup = (group) => {
+    skipTargetGroupsUpdate.current = false;
+    setSelectedTargetGroups(
+      selectedTargetGroups.filter((selected) => selected.id !== group.id)
+    );
+  };
+
   useEffect(() => {
     if (formData.newsCategoryId && newsCategory.length > 0) {
       const category = newsCategory.find(
@@ -108,29 +192,6 @@ export default function Page() {
       setCurrentCategoryName(originalData.newsCategoryName);
     }
   }, [formData.newsCategoryId, newsCategory, originalData]);
-
-  // Updated to handle multiple target groups
-  useEffect(() => {
-    if (formData.targetGroupIds.length > 0 && targetGroups.length > 0) {
-      const selectedGroups = targetGroups.filter((group) =>
-        formData.targetGroupIds.includes(group.id.toString())
-      );
-
-      if (selectedGroups.length > 0) {
-        setCurrentTargetGroupNames(selectedGroups.map((group) => group.name));
-      } else if (
-        originalData?.targetGroups &&
-        originalData.targetGroups.length > 0
-      ) {
-        setCurrentTargetGroupNames(originalData.targetGroups);
-      }
-    } else if (
-      originalData?.targetGroups &&
-      originalData.targetGroups.length > 0
-    ) {
-      setCurrentTargetGroupNames(originalData.targetGroups);
-    }
-  }, [formData.targetGroupIds, targetGroups, originalData]);
 
   // Process description data for editor
   useEffect(() => {
@@ -174,8 +235,6 @@ export default function Page() {
         }
 
         const data = await response.json();
-        console.log("Fetched news data:", data);
-
         setOriginalData(data);
 
         let categoryId = "";
@@ -237,10 +296,13 @@ export default function Page() {
             }))
           : [];
 
+        // Set flag to avoid the circular dependency during init
+        skipTargetGroupsUpdate.current = true;
+
         // Update form state
         setFormData({
           title: data.title || "",
-          subTitle: data.subTitle || "",
+          subtitle: data.subTitle || "",
           newsCategoryId: categoryId,
           targetGroupIds: targetGroupIds, // Now using array of IDs
           newsImages: existingImages,
@@ -256,6 +318,41 @@ export default function Page() {
           setCurrentTargetGroupNames(data.targetGroups);
         }
 
+        // Set selectedTargetGroups direct from the API data
+        if (targetGroupIds.length > 0 && targetGroups.length > 0) {
+          // Try to find actual matching groups
+          const matchingGroups = targetGroups.filter((group) =>
+            targetGroupIds.includes(group.id.toString())
+          );
+
+          if (matchingGroups.length > 0) {
+            setSelectedTargetGroups(matchingGroups);
+          } else if (data.targetGroups && data.targetGroups.length > 0) {
+            // Create temporary target group objects if no matches found
+            const tempGroups = targetGroupIds.map((id, index) => ({
+              id: id,
+              name: data.targetGroups[index] || `Group ${id}`,
+              userCount: 0,
+              filterGroupCount: 0,
+            }));
+            setSelectedTargetGroups(tempGroups);
+          }
+        } else if (
+          data.targetGroups &&
+          data.targetGroups.length > 0 &&
+          data.targetGroupIds &&
+          data.targetGroupIds.length > 0
+        ) {
+          // Create temporary target group objects
+          const tempGroups = data.targetGroupIds.map((id, index) => ({
+            id: id.toString(),
+            name: data.targetGroups[index] || `Group ${id}`,
+            userCount: 0,
+            filterGroupCount: 0,
+          }));
+          setSelectedTargetGroups(tempGroups);
+        }
+
         // Process description data - store raw data first, normalization happens in useEffect
         if (data.description) {
           setDescription(data.description);
@@ -265,11 +362,16 @@ export default function Page() {
         toast.error("Failed to fetch news data");
       } finally {
         setLoading(false);
+        // Reset the flag after a short delay to allow other effects to complete
+        setTimeout(() => {
+          skipTargetGroupsUpdate.current = false;
+          isInitialLoad.current = false;
+        }, 500);
       }
     };
 
     fetchNewsById();
-  }, [newsId, newsCategory]);
+  }, [newsId, newsCategory, targetGroups]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -299,15 +401,6 @@ export default function Page() {
     }
   };
 
-  // Updated to handle multiple target groups
-  const handleTargetGroupChange = (value) => {
-    setFormData((prev) => ({ ...prev, targetGroupIds: value }));
-
-    if (formErrors.targetGroupIds) {
-      setFormErrors((prev) => ({ ...prev, targetGroupIds: null }));
-    }
-  };
-
   const handleMarkAttachmentForDeletion = (id, isMarked) => {
     if (isMarked) {
       setAttachmentsToDelete((prev) => [...prev, id]);
@@ -328,7 +421,7 @@ export default function Page() {
   const validateForm = () => {
     const errors = {};
     if (!formData.title.trim()) errors.title = "Title is required";
-    if (!formData.subTitle.trim()) errors.subTitle = "Subtitle is required";
+    if (!formData.subtitle.trim()) errors.subtitle = "Subtitle is required";
     if (!formData.newsCategoryId)
       errors.newsCategoryId = "Category is required";
     if (formData.targetGroupIds.length === 0)
@@ -366,7 +459,7 @@ export default function Page() {
       // Add basic form fields
       formDataToSend.append("Id", newsId);
       formDataToSend.append("Title", formData.title.trim());
-      formDataToSend.append("SubTitle", formData.subTitle.trim());
+      formDataToSend.append("SubTitle", formData.subtitle.trim());
       formDataToSend.append("Description", description);
       formDataToSend.append("Priority", formData.priority.toLowerCase());
       formDataToSend.append(
@@ -413,7 +506,7 @@ export default function Page() {
       const queryParams = new URLSearchParams();
       queryParams.append("Id", newsId);
       queryParams.append("Title", formData.title.trim());
-      queryParams.append("SubTitle", formData.subTitle.trim());
+      queryParams.append("SubTitle", formData.subtitle.trim());
       queryParams.append("Description", description);
       queryParams.append("Priority", formData.priority.toLowerCase());
       queryParams.append(
@@ -492,202 +585,308 @@ export default function Page() {
     }
   };
 
+  const handleCancel = () => {
+    router.push("/admin/dashboard/news");
+  };
+
+  // Priority options
+  const priorityOptions = [
+    { id: "HIGH", name: "High" },
+    { id: "MEDIUM", name: "Medium" },
+    { id: "LOW", name: "Low" },
+  ];
+
   if (loading) {
     return <LoadingSpinner />;
   }
+
   return (
-    <div className="edit ">
-      <Toaster position="top-right" />
+    <main className="pt-16 bg-gray-50/50 min-h-screen">
+      <div className="max-w-6xl mx-auto px-5 mb-16">
+        {/* Header with back button */}
+        <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
+          <h1 className="text-2xl font-semibold text-gray-800">Edit News</h1>
+          <button
+            onClick={handleCancel}
+            className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-sm"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to list</span>
+          </button>
+        </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-800">Edit News</h1>
-        <button
-          onClick={() => router.push("/admin/dashboard/news")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to list</span>
-        </button>
-      </div>
-
-      <div className="banner ">
-        <h3 className="text-sm font-medium mb-4 leading-5 text-gray-800/90">
-          Images
-        </h3>
-        <MultiImagesEdit
-          images={formData.newsImages}
-          onChange={(newImages) =>
-            setFormData((prev) => ({ ...prev, newsImages: newImages }))
-          }
-          onMarkForDeletion={handleMarkImageForDeletion}
-        />
-        {formErrors.images && (
-          <p className="text-red-500 text-sm mt-2">{formErrors.images}</p>
+        {responseMessage && (
+          <Alert
+            variant={
+              responseMessage.includes("success") ? "success" : "destructive"
+            }
+            className="mb-6"
+          >
+            <AlertDescription>{responseMessage}</AlertDescription>
+          </Alert>
         )}
-      </div>
 
-      <div className="mb-8">
-        <h3 className="text-sm font-medium mb-4 leading-5 text-gray-800/90">
-          Attachments
-        </h3>
-        <MultiAttachmentUploadEdit
-          attachments={formData.attachments}
-          onChange={(newAttachments) =>
-            setFormData((prev) => ({
-              ...prev,
-              attachments: newAttachments,
-            }))
-          }
-          onMarkForDeletion={handleMarkAttachmentForDeletion}
-        />
-      </div>
+        <form className="grid grid-cols-1 gap-8" onSubmit={handleSubmit}>
+          {/* Main content area with 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left column - 2/3 width */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Title and subtitle section */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center mb-2 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Basic Information
+                  </h2>
+                </div>
 
-      <form className="newsEditForm mt-8" onSubmit={handleSubmit}>
-        <div className="inputs">
-          <InputComponent
-            text="Title"
-            required
-            className="w-full"
-            type="text"
-            placeholder="Enter news title"
-            value={formData.title}
-            onChange={handleChange}
-            name="title"
-          />
+                <div className="space-y-5">
+                  <InputComponent
+                    text="Title"
+                    required
+                    type="text"
+                    placeholder="Enter news title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    name="title"
+                    error={formErrors.title}
+                  />
 
-          <InputComponent
-            text="Subtitle"
-            required
-            className="w-full"
-            type="text"
-            placeholder="Enter subTitle"
-            value={formData.subTitle}
-            onChange={handleChange}
-            name="subTitle"
-            error={formErrors.subTitle}
-          />
+                  <InputComponent
+                    text="Subtitle"
+                    required
+                    type="text"
+                    placeholder="Enter news subtitle"
+                    value={formData.subtitle}
+                    onChange={handleChange}
+                    name="subtitle"
+                    error={formErrors.subtitle}
+                  />
+                </div>
+              </div>
 
-          <CategorySelector
-            value={formData.newsCategoryId}
-            onChange={handleChange}
-            options={newsCategory}
-            hideLabel={false}
-            error={formErrors.newsCategoryId}
-          />
+              {/* Media section */}
+              <div className="bg-white rounded-lg shadow-sm px-6 py-5">
+                <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">Media</h2>
+                </div>
 
-          <SelectComponent
-            text="Priority"
-            name="priority"
-            required
-            value={formData.priority}
-            onChange={handleChange}
-            options={[
-              { id: "HIGH", name: "High" },
-              { id: "MEDIUM", name: "Medium" },
-              { id: "LOW", name: "Low" },
-            ]}
-          />
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="text-sm font-medium mb-3 leading-5 text-gray-800">
+                      Images <span className="text-red-500">*</span>
+                    </h3>
+                    <MultiImagesEdit
+                      images={formData.newsImages}
+                      onChange={(newImages) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          newsImages: newImages,
+                        }))
+                      }
+                      onMarkForDeletion={handleMarkImageForDeletion}
+                    />
+                    {formErrors.images && (
+                      <p className="text-red-500 text-sm mt-2">
+                        {formErrors.images}
+                      </p>
+                    )}
+                  </div>
 
-          {/* Switches */}
-          <Switch
-            checked={formData.hasNotification}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, hasNotification: checked }))
-            }
-            icon={Bell}
-            offIcon={BellOff}
-            label="Push Notification"
-            description="Send push notification to users when this news is published"
-          />
-
-          <Switch
-            checked={formData.hasComment}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, hasComment: checked }))
-            }
-            icon={MessageSquare}
-            offIcon={MessageSquareOff}
-            label="Enable Comments"
-            description="Allow users to comment on this news"
-          />
-
-          <Switch
-            checked={formData.hasLike}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, hasLike: checked }))
-            }
-            icon={Heart}
-            offIcon={HeartOff}
-            label="Enable Likes"
-            description="Allow users to like this news"
-          />
-
-          <div className="mb-4">
-            {/* Updated to use multiple mode */}
-            <TargetGroupSelector
-              targetGroups={targetGroups}
-              value={formData.targetGroupIds}
-              onChange={handleTargetGroupChange}
-              hideLabel={false}
-              error={formErrors.targetGroupIds}
-              multiple={true}
-            />
-          </div>
-
-          <div className="descriptionEditor">
-            <label className="block text-sm font-medium mb-2 text-gray-800/90">
-              Body
-            </label>
-            <div>
-              {/* Only render the editor when normalizedEditorData is available */}
-              {normalizedEditorData ? (
-                <PageTextComponent
-                  desc={normalizedEditorData}
-                  onChange={handleEditorChange}
-                />
-              ) : (
-                <div className="border rounded p-4 min-h-[200px] flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
-                    <p className="mt-2 text-gray-600 text-sm">
-                      Preparing editor...
-                    </p>
+                  <div>
+                    <h3 className="text-sm font-medium mb-3 leading-5 text-gray-800">
+                      Attachments
+                    </h3>
+                    <MultiAttachmentUploadEdit
+                      attachments={formData.attachments}
+                      onChange={(newAttachments) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          attachments: newAttachments,
+                        }))
+                      }
+                      onMarkForDeletion={handleMarkAttachmentForDeletion}
+                    />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Right sidebar - 1/3 width */}
+            <div className="lg:col-span-1 space-y-8">
+              {/* Publication settings */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Publication Settings
+                  </h2>
+                </div>
+
+                <div className="space-y-5">
+                  <SelectComponent
+                    text="Category"
+                    name="newsCategoryId"
+                    required
+                    value={formData.newsCategoryId}
+                    onChange={handleChange}
+                    options={newsCategory}
+                    error={formErrors.newsCategoryId}
+                  />
+
+                  <SelectComponent
+                    text="Priority"
+                    name="priority"
+                    required
+                    value={formData.priority}
+                    onChange={handleChange}
+                    options={priorityOptions}
+                  />
+
+                  {/* Target groups */}
+                  <div>
+                    <TargetGroupSelector
+                      targetGroups={targetGroups}
+                      searchValue={searchValue}
+                      selectedTargetGroups={selectedTargetGroups}
+                      showDropdown={showDropdown}
+                      onSearchChange={handleSearchChange}
+                      onToggleDropdown={handleToggleDropdown}
+                      onSelect={handleSelectTargetGroup}
+                      onRemove={handleRemoveTargetGroup}
+                    />
+                    {formErrors.targetGroupIds && (
+                      <p className="text-red-500 text-sm mt-2">
+                        {formErrors.targetGroupIds}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Interaction settings */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Interaction Settings
+                  </h2>
+                </div>
+
+                <div className="space-y-5">
+                  <Switch
+                    checked={formData.hasNotification}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasNotification: checked,
+                      }))
+                    }
+                    icon={Bell}
+                    offIcon={BellOff}
+                    label="Push Notification"
+                    description="Send push notification to users when this news is published"
+                  />
+
+                  <Switch
+                    checked={formData.hasComment}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, hasComment: checked }))
+                    }
+                    icon={MessageSquare}
+                    offIcon={MessageSquareOff}
+                    label="Enable Comments"
+                    description="Allow users to comment on this news"
+                  />
+
+                  <Switch
+                    checked={formData.hasLike}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, hasLike: checked }))
+                    }
+                    icon={Heart}
+                    offIcon={HeartOff}
+                    label="Enable Likes"
+                    description="Allow users to like this news"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Editor section - Full Width */}
+          <div className="bg-white rounded-lg shadow-sm p-6 w-full">
+            <div className="flex items-center mb-5 border-b border-gray-100 pb-3">
+              <h2 className="text-lg font-medium text-gray-800">Content</h2>
+            </div>
+
+            <div className="descriptionEditor">
+              <label className="block text-sm font-medium mb-3 text-gray-800/90">
+                Body <span className="text-red-500">*</span>
+              </label>
+              <div className="mx-0">
+                {normalizedEditorData ? (
+                  <PageTextComponent
+                    desc={normalizedEditorData}
+                    onChange={handleEditorChange}
+                  />
+                ) : (
+                  <div className="border rounded p-4 min-h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
+                      <p className="mt-2 text-gray-600 text-sm">
+                        Preparing editor...
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {formErrors.description && (
+                <p className="text-red-500 text-sm mt-2">
+                  {formErrors.description}
+                </p>
               )}
             </div>
-            {formErrors.description && (
-              <p className="text-red-500 text-sm mt-2">
-                {formErrors.description}
-              </p>
-            )}
           </div>
-        </div>
-        <div className="formButtons">
-          <button type="submit" disabled={isSubmitting} className="button">
-            {isSubmitting ? (
-              <>
-                <span className="animate-spin mr-2">⏳</span>
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/admin/dashboard/news")}
-            className="backButton"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-      {responseMessage && (
-        <div className="mt-4 text-center text-lg font-medium text-emerald-600">
-          {responseMessage}
-        </div>
-      )}
-    </div>
+
+          {/* Action buttons - At bottom, full width */}
+          <div>
+            <div className="grid grid-cols-4 gap-4">
+              {/* First two columns are empty */}
+              <div className="col-span-2"></div>
+
+              {/* Cancel button in third column */}
+              <div className="col-span-1">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="w-full bg-white text-gray-700 rounded-lg px-4 text-sm py-3 border border-gray-200 font-medium hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {/* Update button in fourth column */}
+              <div className="col-span-1">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#0AAC9E] text-white text-sm rounded-lg px-4 py-3 font-medium hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Update
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
   );
 }

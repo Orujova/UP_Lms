@@ -63,6 +63,22 @@ export default function CreatePrivacyPolicy() {
     return Object.keys(errors).length === 0;
   };
 
+  // Format description for API submission
+  const formatDescriptionForSubmission = (description) => {
+    const currentDate = new Date();
+    const formattedDate = `${currentDate
+      .getDate()
+      .toString()
+      .padStart(2, "0")}-${(currentDate.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${currentDate.getFullYear().toString().slice(2)}`;
+
+    return JSON.stringify({
+      sections: description,
+      last_updated: formattedDate,
+    });
+  };
+
   // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,12 +91,18 @@ export default function CreatePrivacyPolicy() {
     setError(null);
 
     try {
+      // Create a copy of the form data to modify for submission
+      const submissionData = {
+        ...formData,
+        description: formatDescriptionForSubmission(formData.description),
+      };
+
       const response = await fetch(`${API_URL}Policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
@@ -185,7 +207,7 @@ export default function CreatePrivacyPolicy() {
                 rows={12}
                 required
                 error={validationErrors.description}
-                helpText="Describe your organization's approach to user data and privacy."
+                helpText="Enter your policy content with sections separated by line breaks. This will be automatically formatted when saved."
               />
 
               <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">

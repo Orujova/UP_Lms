@@ -10,7 +10,6 @@ import {
   Edit,
   Key,
   Image as ImageIcon,
-  CheckCircle,
   XCircle,
   Camera,
   Building,
@@ -18,11 +17,12 @@ import {
   FileText,
   Users,
   Globe,
-  Hash,
   Box,
   Save,
-  Search,
   ArrowLeft,
+  Target,
+  Upload,
+  CheckCircle,
 } from "lucide-react";
 import { getToken, getUserId } from "@/authtoken/auth.js";
 import PasswordChangeModal from "./PasswordChangeModal ";
@@ -30,205 +30,95 @@ import ImageUploadModal from "./ImageUploadModal ";
 import noPP from "@/images/noPP.png";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/loadingSpinner";
+import Placeholder from "@/components/profile/Placeholder";
+import ProfileSection from "@/components/profile/ProfileSection";
+import ProfileInfoRow from "@/components/profile/ProfileInfoRow";
+import { useDispatch, useSelector } from "react-redux";
+import { createSelector } from "reselect";
 
-// Enhanced profile section card with hover effect
-const ProfileSection = ({ title, icon: Icon, children, className = "" }) => (
-  <div
-    className={`bg-white rounded-xl shadow-md p-6 transition-all duration-300 hover:shadow-lg ${className}`}
-  >
-    <div className="flex items-center mb-5">
-      {Icon && (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ecfcfb] text-[#0AAC9E] mr-3">
-          <Icon className="w-5 h-5" />
-        </div>
-      )}
-      <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-    </div>
-    <div className="space-y-1">{children}</div>
-  </div>
-);
+// Redux Async Actions Import
+import { functionalAreaAsync } from "@/redux/functionalArea/functionalArea";
+import { departmentAsync } from "@/redux/department/department";
+import { projectAsync } from "@/redux/project/project";
+import { divisionAsync } from "@/redux/division/division";
+import { subDivisionAsync } from "@/redux/subDivision/subDivision";
+import { positionGroupAsync } from "@/redux/positionGroup/positionGroup";
+import { positionAsync } from "@/redux/position/position";
+import { genderAsync } from "@/redux/gender/gender";
+import { residentalAreaAsync } from "@/redux/residentalArea/residentalArea";
+import CoverPhotoUploadModal from "@/components/coverPhotoUploadModal";
+// Base selectors
+const getFunctionalAreaState = (state) => state.functionalArea;
+const getDepartmentState = (state) => state.department;
+const getProjectState = (state) => state.project;
+const getDivisionState = (state) => state.division;
+const getSubDivisionState = (state) => state.subDivision;
+const getPositionGroupState = (state) => state.positionGroup;
+const getPositionState = (state) => state.position;
+const getGenderState = (state) => state.gender;
+const getResidentalAreaState = (state) => state.residentalArea;
 
-// Enhanced profile info row with better spacing and transitions
-const ProfileInfoRow = ({
-  icon: Icon,
-  label,
-  value,
-  fieldName,
-  editMode,
-  onEdit,
-  type = "text",
-  options = [],
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-  const [searchText, setSearchText] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+const extractSafeData = (state, dataKey) => {
+  if (!state || !state.data) return [];
 
-  useEffect(() => {
-    setEditValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const handleSave = () => {
-    onEdit(fieldName, editValue);
-    setIsEditing(false);
-    setShowDropdown(false);
-  };
-
-  if (editMode && isEditing) {
-    return (
-      <div className="flex items-center py-3 transition-colors bg-gray-50 rounded-lg p-3 my-2">
-        <Icon className="w-4 h-4 mr-3 text-gray-950 flex-shrink-0" />
-
-        {type === "select" ? (
-          <div className="flex-grow mr-3 relative" ref={dropdownRef}>
-            <div
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="w-full px-3 py-2 border rounded-lg flex justify-between items-center cursor-pointer hover:border-[#01DBC8] bg-white transition-colors"
-            >
-              <span className="truncate">
-                {options && Array.isArray(options) && options.length > 0
-                  ? options.find((opt) => opt.id === parseInt(editValue))
-                      ?.name || "Select an option"
-                  : "Select an option"}
-              </span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`h-4 w-4 transition-transform ${
-                  showDropdown ? "transform rotate-180" : ""
-                }`}
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-
-            {showDropdown && options && Array.isArray(options) && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                <div className="p-2 sticky top-0 bg-white border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border rounded-md"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                </div>
-                <div>
-                  {options
-                    .filter((option) =>
-                      option.name
-                        ?.toLowerCase()
-                        .includes(searchText.toLowerCase())
-                    )
-                    .map((option) => (
-                      <div
-                        key={option.id}
-                        className={`px-3 py-2 text-xs font-medium cursor-pointer hover:bg-[#f2fdfc] transition-colors ${
-                          parseInt(editValue) === option.id
-                            ? "bg-[#f2fdfc] text-[#0AAC9E] font-medium"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setEditValue(option.id.toString());
-                          setShowDropdown(false);
-                        }}
-                      >
-                        {option.name}
-                      </div>
-                    ))}
-                  {options.filter((option) =>
-                    option.name
-                      ?.toLowerCase()
-                      .includes(searchText.toLowerCase())
-                  ).length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-500 italic text-center">
-                      No results found
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <input
-            type={type}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="flex-grow mr-3 px-3 py-2 border outline-0 rounded-lg focus:ring-0 focus:border-[#01DBC8]  text-sm"
-            autoFocus
-          />
-        )}
-
-        <div className="flex space-x-2">
-          <button
-            onClick={handleSave}
-            className="p-1.5 bg-[#ecfcfb]  text-[#0AAC9E] rounded-md hover:bg-[#e0fbf8] transition-colors"
-            title="Save"
-          >
-            <CheckCircle className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => {
-              setIsEditing(false);
-              setShowDropdown(false);
-            }}
-            className="p-1.5 bg-red-50 text-red-500 rounded-md hover:bg-red-100 transition-colors"
-            title="Cancel"
-          >
-            <XCircle className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
+  // Try different data structures
+  if (
+    Array.isArray(state.data) &&
+    state.data[0] &&
+    Array.isArray(state.data[0][dataKey])
+  ) {
+    return state.data[0][dataKey] || [];
   }
 
-  return (
-    <div className="flex items-center py-3 border-b border-gray-100 last:border-b-0 transition-colors hover:bg-gray-50 rounded-md px-3">
-      <Icon className="w-4 h-4 text-gray-500 mr-3" />
-      <div className="flex-grow">
-        <span className="text-xs text-gray-500 block">{label}</span>
-        <span className="font-medium text-gray-800 text-sm">
-          {value || "N/A"}
-        </span>
-      </div>
+  if (state.data && Array.isArray(state.data[dataKey])) {
+    return state.data[dataKey] || [];
+  }
 
-      {editMode && (
-        <button
-          onClick={() => setIsEditing(true)}
-          className="p-1.5 text-gray-400 hover:text-[#0AAC9E] hover:bg-[#f2fdfc] rounded-md transition-colors"
-          title="Edit"
-        >
-          <Edit className="w-4 h-4" />
-        </button>
-      )}
-    </div>
-  );
+  return [];
 };
 
-// Enhanced profile avatar with better shadows and hover effects
+// Memoized selectors
+const selectFunctionalAreas = createSelector(
+  [getFunctionalAreaState],
+  (state) => extractSafeData(state, "functionalAreas")
+);
+
+const selectDepartments = createSelector([getDepartmentState], (state) =>
+  extractSafeData(state, "departments")
+);
+
+const selectProjects = createSelector([getProjectState], (state) =>
+  extractSafeData(state, "projects")
+);
+
+const selectDivisions = createSelector([getDivisionState], (state) =>
+  extractSafeData(state, "divisions")
+);
+
+const selectSubDivisions = createSelector([getSubDivisionState], (state) =>
+  extractSafeData(state, "subDivisions")
+);
+
+const selectPositionGroups = createSelector([getPositionGroupState], (state) =>
+  extractSafeData(state, "positionGroups")
+);
+
+const selectPositions = createSelector([getPositionState], (state) =>
+  extractSafeData(state, "positions")
+);
+
+// Special cases
+const selectGenders = createSelector(
+  [getGenderState],
+  (state) => state?.data || []
+);
+
+const selectResidentalAreas = createSelector(
+  [getResidentalAreaState],
+  (state) => extractSafeData(state, "residentalAreas")
+);
+
+// ProfileAvatar component - Enhanced with better shadows and hover effects
 const ProfileAvatar = ({ imageUrl, size = "large", onClick, editMode }) => {
   const sizeClasses = {
     small: "w-16 h-16",
@@ -255,10 +145,11 @@ const ProfileAvatar = ({ imageUrl, size = "large", onClick, editMode }) => {
           />
         )}
       </div>
-      {editMode && onClick && (
+      {onClick && editMode && (
         <button
           onClick={onClick}
           className="absolute bottom-0 right-0 bg-[#54c5bb] text-white rounded-full p-2 hover:bg-[#3bbdb1] shadow-md transition-colors"
+          title="Update Photo"
         >
           <Camera className="w-4 h-4" />
         </button>
@@ -267,15 +158,15 @@ const ProfileAvatar = ({ imageUrl, size = "large", onClick, editMode }) => {
   );
 };
 
-// Enhanced status badge with animation
+// StatusBadge component - Enhanced with animation
 const StatusBadge = ({ isActive }) => (
   <span
     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors
-    ${isActive ? "bg-[#ecfcfb] text-[#3bbdb1]" : "bg-gray-100 text-gray-700"}`}
+    ${isActive ? "bg-[#ecfcfb] text-[#3bbdb1]" : "bg-red-50 text-red-600"}`}
   >
     <span
       className={`h-2 w-2 rounded-full mr-1.5 ${
-        isActive ? "bg-[#3bbdb1] animate-pulse" : "bg-gray-500"
+        isActive ? "bg-[#3bbdb1] animate-pulse" : "bg-red-500"
       }`}
     ></span>
     {isActive ? "Active" : "Inactive"}
@@ -284,25 +175,29 @@ const StatusBadge = ({ isActive }) => (
 
 // Main AdminProfilePage Component
 const AdminProfilePage = () => {
+  const dispatch = useDispatch();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
+  const [isCoverPhotoModalOpen, setIsCoverPhotoModalOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("User details");
+  const [activeSection, setActiveSection] = useState("all");
+  const dataFetched = useRef(false);
 
-  const [activeSection, setActiveSection] = useState("all"); // For mobile view: "all", "account", "professional", "additional"
-
-  // Options for dropdown lists
-  const [functionalAreas, setFunctionalAreas] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [divisions, setDivisions] = useState([]);
-  const [subDivisions, setSubDivisions] = useState([]);
-  const [positionGroups, setPositionGroups] = useState([]);
-  const [positions, setPositions] = useState([]);
-  const [residentialAreas, setResidentialAreas] = useState([]);
+  // Use Redux selectors
+  const functionalAreas = useSelector(selectFunctionalAreas);
+  const departments = useSelector(selectDepartments);
+  const projects = useSelector(selectProjects);
+  const divisions = useSelector(selectDivisions);
+  const subDivisions = useSelector(selectSubDivisions);
+  const positionGroups = useSelector(selectPositionGroups);
+  const positions = useSelector(selectPositions);
+  const genders = useSelector(selectGenders);
+  const residentalAreas = useSelector(selectResidentalAreas);
 
   const token = getToken();
   const userId = getUserId();
@@ -338,6 +233,8 @@ const AdminProfilePage = () => {
         }
 
         const data = await response.json();
+        // Set the active status based on isDeleted flag (inverted logic)
+        data.isActive = !data.isDeleted;
         setUserData(data);
         setLoading(false);
       } catch (error) {
@@ -350,179 +247,31 @@ const AdminProfilePage = () => {
     fetchUserData();
   }, [userId, token, API_URL]);
 
-  // Fetch dropdown options
+  // Fetch dropdown options using Redux
   useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        if (!token) return;
+    if (!dataFetched.current) {
+      // Dispatch all Redux async actions
+      Promise.all([
+        dispatch(functionalAreaAsync()),
+        dispatch(departmentAsync()),
+        dispatch(projectAsync()),
+        dispatch(divisionAsync()),
+        dispatch(subDivisionAsync()),
+        dispatch(positionGroupAsync()),
+        dispatch(positionAsync()),
+        dispatch(genderAsync()),
+        dispatch(residentalAreaAsync()),
+      ])
+        .then(() => {
+          dataFetched.current = true;
+        })
+        .catch((error) => {
+          console.error("Error fetching dropdown data:", error);
+          toast.error("Failed to load dropdown options");
+        });
+    }
+  }, [dispatch]);
 
-        // Fetch functional areas
-        const fetchFunctionalAreas = async () => {
-          const response = await fetch(`${API_URL}FunctionalArea`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch functional areas");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].functionalAreas)) {
-            setFunctionalAreas(data[0].functionalAreas);
-          }
-        };
-
-        // Fetch departments
-        const fetchDepartments = async () => {
-          const response = await fetch(`${API_URL}Department`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch departments");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].departments)) {
-            setDepartments(data[0].departments);
-          }
-        };
-
-        // Fetch projects
-        const fetchProjects = async () => {
-          const response = await fetch(`${API_URL}Project`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch projects");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].projects)) {
-            setProjects(data[0].projects);
-          }
-        };
-
-        // Fetch divisions
-        const fetchDivisions = async () => {
-          const response = await fetch(`${API_URL}Division`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch divisions");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].divisions)) {
-            setDivisions(data[0].divisions);
-          }
-        };
-
-        // Fetch sub divisions
-        const fetchSubDivisions = async () => {
-          const response = await fetch(`${API_URL}SubDivision`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch sub divisions");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].subDivisions)) {
-            setSubDivisions(data[0].subDivisions);
-          }
-        };
-
-        // Fetch position groups
-        const fetchPositionGroups = async () => {
-          const response = await fetch(`${API_URL}PositionGroup`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch position groups");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].positionGroups)) {
-            setPositionGroups(data[0].positionGroups);
-          }
-        };
-
-        // Fetch positions
-        const fetchPositions = async () => {
-          const response = await fetch(`${API_URL}Position`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch positions");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].positions)) {
-            setPositions(data[0].positions);
-          } else {
-            // Fallback if structure is different
-            setPositions(data && Array.isArray(data) ? data : []);
-          }
-        };
-
-        // Fetch residential areas
-        const fetchResidentialAreas = async () => {
-          const response = await fetch(`${API_URL}ResidentalArea`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok)
-            throw new Error("Failed to fetch residential areas");
-
-          const data = await response.json();
-          if (data && data[0] && Array.isArray(data[0].residentialAreas)) {
-            setResidentialAreas(data[0].residentialAreas);
-          }
-        };
-
-        // Execute all fetches in parallel for better performance
-        await Promise.all([
-          fetchFunctionalAreas(),
-          fetchDepartments(),
-          fetchProjects(),
-          fetchDivisions(),
-          fetchSubDivisions(),
-          fetchPositionGroups(),
-          fetchPositions(),
-          fetchResidentialAreas(),
-        ]);
-      } catch (error) {
-        console.error("Error fetching dropdown options:", error);
-        toast("error", "Failed to load dropdown options");
-      }
-    };
-
-    fetchOptions();
-  }, [token, API_URL]);
   // Handle field updates
   const handleFieldUpdate = (fieldName, value) => {
     // Create a deep copy of userData to prevent issues with nested objects
@@ -560,9 +309,21 @@ const AdminProfilePage = () => {
           break;
         case "position":
           newObject = positions.find((item) => item.id === numericValue);
+
+          // Automatically update managerial level based on position level
+          if (newObject) {
+            if (newObject.level === 0) {
+              updatedUserData.managerialLevel = "Manager";
+            } else if (newObject.level === 1) {
+              updatedUserData.managerialLevel = "Non-manager";
+            }
+          }
           break;
         case "residentalArea":
-          newObject = residentialAreas.find((item) => item.id === numericValue);
+          newObject = residentalAreas.find((item) => item.id === numericValue);
+          break;
+        case "gender":
+          newObject = genders.find((item) => item.id === numericValue);
           break;
         default:
           break;
@@ -579,55 +340,304 @@ const AdminProfilePage = () => {
     setUserData(updatedUserData);
   };
 
-  // Prepare data for PUT request
   const prepareUpdateData = () => {
     return {
-      id: userData.id,
-      userName: userData.userName,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      email: userData.email,
-      phoneNumber: userData.phoneNumber,
-      functionalAreaId:
+      Id: userData.id,
+      UserName: userData.userName,
+      FirstName: userData.firstName,
+      LastName: userData.lastName,
+      Email: userData.email,
+      Badge: userData.badge,
+      Pin: userData.pin,
+      PhoneNumber: userData.phoneNumber,
+      Password: userData.password,
+      IsServiceUser: userData.isServiceUser,
+      ManagerialLevel: userData.managerialLevel,
+      BirthDate: userData.birthDate,
+      StartedDate: userData.startedDate,
+      GenderId: userData.genderId || userData.gender?.id,
+      RoleIds: userData.roleIds || [],
+      TargetGroupIds: userData.targetGroupIds || [],
+      FunctionalAreaId:
         userData.functionalAreaId || userData.functionalArea?.id,
-      departmentId: userData.departmentId || userData.department?.id,
-      projectId: userData.projectId || userData.project?.id,
-      divisionId: userData.divisionId || userData.division?.id,
-      subDivisionId: userData.subDivisionId || userData.subDivision?.id,
-      positionGroupId: userData.positionGroupId || userData.positionGroup?.id,
-      positionId: userData.positionId || userData.position?.id,
-      residentalAreaId:
+      DepartmentId: userData.departmentId || userData.department?.id,
+      ProjectId: userData.projectId || userData.project?.id,
+      DivisionId: userData.divisionId || userData.division?.id,
+      SubDivisionId: userData.subDivisionId || userData.subDivision?.id,
+      PositionGroupId: userData.positionGroupId || userData.positionGroup?.id,
+      PositionId: userData.positionId || userData.position?.id,
+      ResidentalAreaId:
         userData.residentalAreaId || userData.residentalArea?.id,
-      roleIds: userData.roleIds || [],
-      imageUrl: userData.imageUrl,
-      coverPhotoUrl: userData.coverPhotoUrl,
-      isActive: userData.isActive,
+      CoverPhotoUrl: userData.coverPhotoUrl,
+      ImageUrl: userData.imageUrl,
     };
   };
 
-  // Handle Update Profile
   const handleUpdateProfile = async () => {
     setSaveLoading(true);
     try {
       const updateData = prepareUpdateData();
+      console.log("Sending data:", updateData);
 
-      const response = await fetch(`${API_URL}AdminApplicationUser`, {
+      // Convert updateData to query parameters
+      const queryParams = new URLSearchParams({
+        Id: updateData.Id,
+        UserName: updateData.UserName,
+        FirstName: updateData.FirstName,
+        LastName: updateData.LastName,
+        Email: updateData.Email,
+        Badge: updateData.Badge,
+        Pin: updateData.Pin,
+        PhoneNumber: updateData.PhoneNumber,
+        Password: updateData.Password,
+        IsServiceUser: String(updateData.IsServiceUser),
+        ManagerialLevel: updateData.ManagerialLevel,
+        BirthDate: updateData.BirthDate || "",
+        StartedDate: updateData.StartedDate || "",
+        GenderId: updateData.GenderId || "",
+        FunctionalAreaId: updateData.FunctionalAreaId || "",
+        DepartmentId: updateData.DepartmentId || "",
+        ProjectId: updateData.ProjectId || "",
+        DivisionId: updateData.DivisionId || "",
+        SubDivisionId: updateData.SubDivisionId || "",
+        PositionGroupId: updateData.PositionGroupId || "",
+        PositionId: updateData.PositionId || "",
+        ResidentalAreaId: updateData.ResidentalAreaId || "",
+        CoverPhotoUrl: updateData.CoverPhotoUrl || "",
+        ImageUrl: updateData.ImageUrl || "",
+      });
+
+      // Add array fields (RoleIds, TargetGroupIds)
+      updateData.RoleIds.forEach((id) => queryParams.append("RoleIds", id));
+      updateData.TargetGroupIds.forEach((id) =>
+        queryParams.append("TargetGroupIds", id)
+      );
+
+      const url = `${API_URL}AdminApplicationUser?${queryParams.toString()}`;
+
+      console.log("Sending request to:", url);
+
+      const response = await fetch(url, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData),
+      });
+
+      const responseText = await response.text();
+      console.log("Raw API response:", responseText);
+
+      if (response.ok) {
+        // 200-299 status codes
+        toast.success("Profile updated successfully");
+        setEditMode(false);
+
+        // Refresh user data
+        const refreshResponse = await fetch(
+          `${API_URL}AdminApplicationUser/${userData.id}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (refreshResponse.ok) {
+          const refreshedData = await refreshResponse.json();
+          refreshedData.isActive = !refreshedData.isDeleted;
+          setUserData(refreshedData);
+        } else {
+          console.warn(
+            "Failed to refresh user data:",
+            await refreshResponse.text()
+          );
+        }
+      } else {
+        let responseData;
+        try {
+          responseData = responseText
+            ? JSON.parse(responseText)
+            : { title: response.statusText };
+        } catch (e) {
+          responseData = { title: "Invalid response from server" };
+        }
+
+        if (response.status === 400 && responseData.errors) {
+          const errorMessages = Object.values(responseData.errors).flat();
+          const displayErrors = errorMessages.slice(0, 3);
+          const remaining =
+            errorMessages.length > 3
+              ? ` and ${errorMessages.length - 3} more errors`
+              : "";
+          toast.error(
+            `Validation errors: ${displayErrors.join(", ")}${remaining}`
+          );
+        } else {
+          toast.error(responseData.title || "Failed to update profile");
+        }
+      }
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast.error(error.message || "Failed to update profile");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  // Update Profile Image Handler
+  const handleUpdateImage = async (file) => {
+    try {
+      // Create FormData object
+      const formData = new FormData();
+      formData.append("ImageFile", file);
+
+      // API endpoint for profile image
+      const endpoint = `${API_URL}AdminApplicationUser/UpdateUserImage?Id=${userData.id}`;
+
+      const response = await fetch(endpoint, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Profile update failed");
+        const errorResponse = await response.text();
+        console.error("Server error response:", errorResponse);
+        throw new Error("Failed to update profile image");
       }
 
-      // Fetch updated user data
-      const updatedResponse = await fetch(
-        `${API_URL}AdminApplicationUser/${userId}`,
+      // Show success message
+      toast.success("Profile image updated successfully");
+
+      // Refresh the user data from the server
+      try {
+        const updatedResponse = await fetch(
+          `${API_URL}AdminApplicationUser/${userData.id}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (updatedResponse.ok) {
+          const refreshedData = await updatedResponse.json();
+          refreshedData.isActive = !refreshedData.isDeleted;
+          setUserData(refreshedData);
+        }
+      } catch (refreshError) {
+        console.warn(
+          "Could not refresh user data after image upload",
+          refreshError
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Image update error:", error);
+      toast.error(error.message || "Failed to update profile image");
+      throw error;
+    }
+  };
+
+  // Update Cover Photo Handler
+  const handleUpdateCoverPhoto = async (file) => {
+    try {
+      // First, upload the file to a temporary location (if needed)
+      // Then create a data URL for the selected file
+      const reader = new FileReader();
+      const coverPhotoPromise = new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+
+      // Get the data URL
+      const coverPhotoBase64 = await coverPhotoPromise;
+
+      // Update userData with the new cover photo
+      const updatedUserData = {
+        ...userData,
+        coverPhotoUrl: coverPhotoBase64,
+      };
+
+      setUserData(updatedUserData);
+
+      // Now save the profile with the new cover photo
+      await handleSaveWithCoverPhoto(updatedUserData);
+
+      toast.success("Cover photo updated successfully");
+
+      return true;
+    } catch (error) {
+      console.error("Cover photo update error:", error);
+      toast.error(error.message || "Failed to update cover photo");
+      throw error;
+    }
+  };
+
+  // Save profile with updated cover photo
+  const handleSaveWithCoverPhoto = async (updatedData) => {
+    setSaveLoading(true);
+    try {
+      const updateData = prepareUpdateData(updatedData);
+
+      // Convert updateData to query parameters
+      const queryParams = new URLSearchParams({
+        Id: updateData.Id,
+        UserName: updateData.UserName,
+        FirstName: updateData.FirstName,
+        LastName: updateData.LastName,
+        Email: updateData.Email,
+        Badge: updateData.Badge,
+        Pin: updateData.Pin,
+        PhoneNumber: updateData.PhoneNumber,
+        Password: updateData.Password,
+        IsServiceUser: String(updateData.IsServiceUser),
+        ManagerialLevel: updateData.ManagerialLevel,
+        BirthDate: updateData.BirthDate || "",
+        StartedDate: updateData.StartedDate || "",
+        GenderId: updateData.GenderId || "",
+        FunctionalAreaId: updateData.FunctionalAreaId || "",
+        DepartmentId: updateData.DepartmentId || "",
+        ProjectId: updateData.ProjectId || "",
+        DivisionId: updateData.DivisionId || "",
+        SubDivisionId: updateData.SubDivisionId || "",
+        PositionGroupId: updateData.PositionGroupId || "",
+        PositionId: updateData.PositionId || "",
+        ResidentalAreaId: updateData.ResidentalAreaId || "",
+        CoverPhotoUrl: updateData.CoverPhotoUrl || "",
+        ImageUrl: updateData.ImageUrl || "",
+      });
+
+      // Add array fields (RoleIds, TargetGroupIds)
+      updateData.RoleIds.forEach((id) => queryParams.append("RoleIds", id));
+      updateData.TargetGroupIds.forEach((id) =>
+        queryParams.append("TargetGroupIds", id)
+      );
+
+      const url = `${API_URL}AdminApplicationUser?${queryParams.toString()}`;
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update cover photo");
+      }
+
+      // Refresh user data
+      const refreshResponse = await fetch(
+        `${API_URL}AdminApplicationUser/${userData.id}`,
         {
           method: "GET",
           headers: {
@@ -637,125 +647,18 @@ const AdminProfilePage = () => {
         }
       );
 
-      if (updatedResponse.ok) {
-        const updatedData = await updatedResponse.json();
-        setUserData(updatedData);
+      if (refreshResponse.ok) {
+        const refreshedData = await refreshResponse.json();
+        refreshedData.isActive = !refreshedData.isDeleted;
+        setUserData(refreshedData);
       }
 
-      setEditMode(false);
-      toast("success", "Profile updated successfully");
+      return true;
     } catch (error) {
       console.error("Profile update error:", error);
+      throw error;
     } finally {
       setSaveLoading(false);
-    }
-  };
-
-  // Change Password Handler
-  const handleChangePassword = async (currentPassword, newPassword) => {
-    try {
-      const response = await fetch(
-        `${API_URL}AdminApplicationUser/ChangePassword`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId: userData.id,
-            currentPassword,
-            newPassword,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to change password");
-      }
-
-      toast("success", "Password changed successfully");
-      return true;
-    } catch (error) {
-      console.error("Password change error:", error);
-
-      throw error;
-    }
-  };
-
-  // Update Profile Image Handler
-  const handleUpdateProfileImage = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("id", userData.id);
-
-      const response = await fetch(
-        `${API_URL}AdminApplicationUser/UpdateUserImage`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update profile image");
-      }
-
-      // Update user data with new image URL
-      const updatedUser = await response.json();
-      setUserData((prev) => ({ ...prev, imageUrl: updatedUser.imageUrl }));
-
-      toast("success", "Profile image updated successfully");
-      return true;
-    } catch (error) {
-      console.error("Profile image update error:", error);
-
-      throw error;
-    }
-  };
-
-  // Update Cover Photo Handler
-  const handleUpdateCoverPhoto = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("id", userData.id);
-
-      const response = await fetch(
-        `${API_URL}AdminApplicationUser/UpdateCoverPhoto`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update cover photo");
-      }
-
-      // Update user data with new cover photo URL
-      const updatedUser = await response.json();
-      setUserData((prev) => ({
-        ...prev,
-        coverPhotoUrl: updatedUser.coverPhotoUrl,
-      }));
-
-      toast("success", "Cover photo updated successfully");
-      return true;
-    } catch (error) {
-      console.error("Cover photo update error:", error);
-
-      throw error;
     }
   };
 
@@ -784,201 +687,206 @@ const AdminProfilePage = () => {
       </div>
     );
 
-  // Render Profile Page
-  return (
-    <div className="min-h-screen bg-gray-50 pt-10  ">
-      <div className=" mx-auto ">
-        {/* Back button for mobile */}
-        {activeSection !== "all" && (
-          <button
-            onClick={() => setActiveSection("all")}
-            className="inline-flex items-center text-[#808080] text-sm font-medium mt-4 mb-2 lg:hidden"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </button>
-        )}
-        {/* Profile Header with Cover - Simplified */}
-        <div className="bg-white shadow-sm rounded-lg mb-6 overflow-hidden">
-          <div className="relative">
-            {/* Cover Photo */}
-            <div
-              className="h-48 bg-cover bg-center"
-              style={{
-                backgroundImage: userData.coverPhotoUrl
-                  ? `url(${userData.coverPhotoUrl})`
-                  : `url(${defaultCoverPhoto})`,
-              }}
-            >
-              {/* Cover Photo Edit Button */}
-              {editMode && (
-                <div className="absolute top-4 right-4">
-                  <label
-                    htmlFor="cover-upload"
-                    className="cursor-pointer bg-black/30 hover:bg-black/40 text-white px-4 py-2 rounded-lg flex items-center text-sm backdrop-blur-sm transition-colors"
-                  >
-                    <Camera className="w-4 h-4 mr-2" /> Change Cover Photo
-                  </label>
-                  <input
-                    id="cover-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleUpdateCoverPhoto(e.target.files[0]);
-                      }
-                    }}
+  // Get profile tab content based on active tab
+  const getTabContent = () => {
+    switch (activeTab) {
+      case "User details":
+        return (
+          <>
+            {/* Profile Content in Grid Layout */}
+            {(activeSection === "all" || activeSection === "account") && (
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-6`}>
+                {/* Account Information */}
+                <ProfileSection
+                  title="Account Information"
+                  icon={User}
+                  className={`col-span-1 ${
+                    activeSection !== "all" ? "md:col-span-2" : ""
+                  }`}
+                >
+                  <ProfileInfoRow
+                    icon={User}
+                    label="Username"
+                    value={userData.userName}
+                    fieldName="userName"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
                   />
-                </div>
-              )}
-            </div>
+                  <ProfileInfoRow
+                    icon={User}
+                    label="First Name"
+                    value={userData.firstName}
+                    fieldName="firstName"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                  />
+                  <ProfileInfoRow
+                    icon={User}
+                    label="Last Name"
+                    value={userData.lastName}
+                    fieldName="lastName"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                  />
+                  <ProfileInfoRow
+                    icon={Mail}
+                    label="Email Address"
+                    value={userData.email}
+                    fieldName="email"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="email"
+                  />
+                  <ProfileInfoRow
+                    icon={Phone}
+                    label="Phone Number"
+                    value={userData.phoneNumber}
+                    fieldName="phoneNumber"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="tel"
+                  />
+                </ProfileSection>
 
-            {/* Enhanced Profile and Actions Bar */}
-            <div className="p-4 flex flex-col sm:flex-row items-start sm:items-end justify-between relative">
-              {/* Profile Image - positioned higher */}
-              <div className="absolute -top-20 left-6 flex items-end">
-                <ProfileAvatar
-                  imageUrl={
-                    userData?.imageUrl
-                      ? `https://bravoadmin.uplms.org/uploads/${userData.imageUrl.replace(
-                          "https://100.42.179.27:7198/",
-                          ""
-                        )}`
-                      : noPP
-                  }
-                  size="large"
-                  editMode={editMode}
-                  onClick={() => setIsImageUploadModalOpen(true)}
-                />
-              </div>
-
-              {/* User Info with better spacing and typography */}
-              <div className="mt-16 sm:mt-0 sm:ml-40">
-                <div className="flex items-center flex-wrap">
-                  <h1 className="text-2xl font-bold text-gray-800 mr-3">
-                    {userData.firstName} {userData.lastName}
-                  </h1>
-                  <StatusBadge isActive={userData.isActive} className="ml-2" />
-                </div>
-                <p className="text-sm text-gray-600 mt-1.5 font-medium">
-                  {userData.position?.name || "No Position"}
-                </p>
-                <div className="flex flex-wrap items-center mt-3 text-sm text-gray-500">
-                  <div className="flex items-center mr-5 mb-1.5">
-                    <Mail className="w-4 h-4 mr-1.5 text-[#808080]" />
-                    <span>{userData.email}</span>
-                  </div>
-                  <div className="flex items-center mb-1.5">
-                    <Phone className="w-4 h-4 mr-1.5 text-[#808080]" />
-                    <span>{userData.phoneNumber || "No Phone"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="mt-4 sm:mt-0 w-full sm:w-auto flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                {editMode ? (
+                {activeSection === "all" && (
                   <>
-                    <button
-                      onClick={() => setEditMode(false)}
-                      className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors border border-gray-200"
+                    {/* Professional Information */}
+                    <ProfileSection
+                      title="Professional Information"
+                      icon={Briefcase}
+                      className="col-span-1"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleUpdateProfile}
-                      disabled={saveLoading}
-                      className={`bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors ${
-                        saveLoading ? "opacity-70 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      {saveLoading ? (
-                        <>
-                          <div className="animate-spin h-4 w-4 mr-1.5 border-2 border-white border-t-transparent rounded-full"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-1.5" /> Save
-                        </>
-                      )}
-                    </button>
+                      <ProfileInfoRow
+                        icon={Briefcase}
+                        label="Position"
+                        value={userData.position?.name}
+                        fieldName="positionId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={positions}
+                      />
+                      <ProfileInfoRow
+                        icon={Users}
+                        label="Position Group"
+                        value={userData.positionGroup?.name}
+                        fieldName="positionGroupId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={positionGroups}
+                      />
+                      <ProfileInfoRow
+                        icon={Building}
+                        label="Department"
+                        value={userData.department?.name}
+                        fieldName="departmentId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={departments}
+                      />
+                      <ProfileInfoRow
+                        icon={Layers}
+                        label="Division"
+                        value={userData.division?.name}
+                        fieldName="divisionId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={divisions}
+                      />
+                      <ProfileInfoRow
+                        icon={Layers}
+                        label="Sub Division"
+                        value={userData.subDivision?.name}
+                        fieldName="subDivisionId"
+                        editMode={editMode}
+                        onEdit={handleFieldUpdate}
+                        type="select"
+                        options={subDivisions}
+                      />
+                    </ProfileSection>
                   </>
-                ) : (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors"
-                  >
-                    <Edit className="w-4 h-4 mr-1.5" /> Edit Profile
-                  </button>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-        {/* Profile Content in Grid Layout */}
-        {(activeSection === "all" || activeSection === "account") && (
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-6`}>
-            {/* Account Information */}
-            <ProfileSection
-              title="Account Information"
-              icon={User}
-              className={`col-span-1 ${
-                activeSection !== "all" ? "md:col-span-2" : ""
-              }`}
-            >
-              <ProfileInfoRow
-                icon={User}
-                label="Username"
-                value={userData.userName}
-                fieldName="userName"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-              />
-              <ProfileInfoRow
-                icon={User}
-                label="First Name"
-                value={userData.firstName}
-                fieldName="firstName"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-              />
-              <ProfileInfoRow
-                icon={User}
-                label="Last Name"
-                value={userData.lastName}
-                fieldName="lastName"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-              />
-              <ProfileInfoRow
-                icon={Mail}
-                label="Email Address"
-                value={userData.email}
-                fieldName="email"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="email"
-              />
-              <ProfileInfoRow
-                icon={Phone}
-                label="Phone Number"
-                value={userData.phoneNumber}
-                fieldName="phoneNumber"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="tel"
-              />
-            </ProfileSection>
+            )}
 
+            {/* Show Additional Section in a second row when viewing all */}
             {activeSection === "all" && (
-              <>
-                {/* Professional Information */}
+              <div className="grid grid-cols-1 gap-5 mb-6">
+                {/* Additional Information */}
+                <ProfileSection title="Additional Information" icon={Globe}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ProfileInfoRow
+                      icon={Box}
+                      label="Project"
+                      value={userData.project?.name}
+                      fieldName="projectId"
+                      editMode={editMode}
+                      onEdit={handleFieldUpdate}
+                      type="select"
+                      options={projects}
+                    />
+                    <ProfileInfoRow
+                      icon={Award}
+                      label="Functional Area"
+                      value={userData.functionalArea?.name}
+                      fieldName="functionalAreaId"
+                      editMode={editMode}
+                      onEdit={handleFieldUpdate}
+                      type="select"
+                      options={functionalAreas}
+                    />
+                    <ProfileInfoRow
+                      icon={MapPin}
+                      label="Residential Area"
+                      value={userData.residentalArea?.name}
+                      fieldName="residentalAreaId"
+                      editMode={editMode}
+                      onEdit={handleFieldUpdate}
+                      type="select"
+                      options={residentalAreas}
+                    />
+                  </div>
+                </ProfileSection>
+              </div>
+            )}
+            {/* Target Groups Section as a standalone section when viewing all */}
+            {activeSection === "all" &&
+              userData.targetGroupNames &&
+              userData.targetGroupNames.length > 0 && (
+                <div className="mb-6">
+                  <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                    <div className="flex items-center mb-4">
+                      <div className="h-10 w-10 rounded-lg bg-[#ecfcfb] flex items-center justify-center mr-3">
+                        <Target className="h-5 w-5 text-[#0AAC9E]" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Target Groups
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {userData.targetGroupNames.map((group, index) => (
+                        <div
+                          key={index}
+                          className="bg-[#F6FFFD] border text-sm border-[#D0F5F1] py-2 px-4 rounded-lg text-[#0AAC9E] font-medium shadow-sm flex items-center hover:shadow-md transition-shadow duration-200"
+                        >
+                          <Target className="h-4 w-4 mr-2 text-[#0AAC9E]" />
+                          {group}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Show Professional Info if in professional section */}
+            {activeSection === "professional" && (
+              <div className="mb-6">
                 <ProfileSection
                   title="Professional Information"
                   icon={Briefcase}
-                  className="col-span-1"
                 >
                   <ProfileInfoRow
                     icon={Briefcase}
@@ -1031,184 +939,261 @@ const AdminProfilePage = () => {
                     options={subDivisions}
                   />
                 </ProfileSection>
-              </>
+              </div>
             )}
-          </div>
+
+            {/* Show Additional Info if in additional section */}
+            {activeSection === "additional" && (
+              <div className="mb-6">
+                <ProfileSection title="Additional Information" icon={Globe}>
+                  <ProfileInfoRow
+                    icon={Box}
+                    label="Project"
+                    value={userData.project?.name}
+                    fieldName="projectId"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="select"
+                    options={projects}
+                  />
+                  <ProfileInfoRow
+                    icon={Award}
+                    label="Functional Area"
+                    value={userData.functionalArea?.name}
+                    fieldName="functionalAreaId"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="select"
+                    options={functionalAreas}
+                  />
+                  <ProfileInfoRow
+                    icon={MapPin}
+                    label="Residential Area"
+                    value={userData.residentalArea?.name}
+                    fieldName="residentalAreaId"
+                    editMode={editMode}
+                    onEdit={handleFieldUpdate}
+                    type="select"
+                    options={residentalAreas}
+                  />
+                  <ProfileInfoRow
+                    icon={FileText}
+                    label="Roles"
+                    value={
+                      userData.roleIds && userData.roleIds.length > 0
+                        ? `${userData.roleIds.length} roles assigned`
+                        : "No roles"
+                    }
+                    fieldName="roleIds"
+                    editMode={false}
+                    onEdit={handleFieldUpdate}
+                  />
+                </ProfileSection>
+              </div>
+            )}
+          </>
+        );
+      case "Achievements":
+        return <Placeholder />;
+      case "Trainings":
+        return <Placeholder />;
+      case "Courses":
+        return <Placeholder />;
+      default:
+        return null;
+    }
+  };
+
+  // Render Profile Page
+  return (
+    <div className="min-h-screen bg-gray-50 pt-10">
+      <div className="mx-auto">
+        {/* Back button for mobile */}
+        {activeSection !== "all" && (
+          <button
+            onClick={() => setActiveSection("all")}
+            className="inline-flex items-center text-[#808080] text-sm font-medium mt-4 mb-2 lg:hidden"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </button>
         )}
-        {/* Show Additional Section in a second row when viewing all */}
-        {activeSection === "all" && (
-          <div className="grid grid-cols-1 gap-5 mb-6">
-            {/* Additional Information */}
-            <ProfileSection title="Additional Information" icon={Globe}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <ProfileInfoRow
-                  icon={Box}
-                  label="Project"
-                  value={userData.project?.name}
-                  fieldName="projectId"
+
+        {/* Profile Header with Cover */}
+        <div className="bg-white shadow-sm rounded-lg mb-6 overflow-hidden">
+          <div className="relative">
+            {/* Cover Photo with direct update button */}
+            {/* Cover Photo with update modal button */}
+            <div
+              className="h-48 bg-cover bg-center relative"
+              style={{
+                backgroundImage: userData.coverPhotoUrl
+                  ? `url(${userData.coverPhotoUrl.replace(
+                      "https://100.42.179.27:7198/",
+                      "https://bravoadmin.uplms.org/uploads/"
+                    )})`
+                  : `url(${defaultCoverPhoto})`,
+              }}
+            >
+              {/* Cover Photo Edit Button */}
+              {editMode && (
+                <div className="absolute top-4 right-4">
+                  <button
+                    onClick={() => setIsCoverPhotoModalOpen(true)}
+                    className="bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-md flex items-center text-sm transition-colors backdrop-blur-sm shadow-lg"
+                  >
+                    <Camera className="w-4 h-4 mr-2" /> Update Cover Photo
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Enhanced Profile and Actions Bar */}
+            <div className="p-4 flex flex-col sm:flex-row items-start sm:items-end justify-between relative">
+              {/* Profile Image - positioned higher */}
+              <div className="absolute -top-20 left-6 flex items-end">
+                <ProfileAvatar
+                  imageUrl={
+                    userData?.imageUrl
+                      ? userData.imageUrl.replace(
+                          "https://100.42.179.27:7198/",
+                          "https://bravoadmin.uplms.org/uploads/"
+                        )
+                      : noPP
+                  }
+                  size="large"
                   editMode={editMode}
-                  onEdit={handleFieldUpdate}
-                  type="select"
-                  options={projects}
-                />
-                <ProfileInfoRow
-                  icon={Award}
-                  label="Functional Area"
-                  value={userData.functionalArea?.name}
-                  fieldName="functionalAreaId"
-                  editMode={editMode}
-                  onEdit={handleFieldUpdate}
-                  type="select"
-                  options={functionalAreas}
-                />
-                <ProfileInfoRow
-                  icon={MapPin}
-                  label="Residential Area"
-                  value={userData.residentalArea?.name}
-                  fieldName="residentalAreaId"
-                  editMode={editMode}
-                  onEdit={handleFieldUpdate}
-                  type="select"
-                  options={residentialAreas}
+                  onClick={() => setIsImageUploadModalOpen(true)}
                 />
               </div>
-            </ProfileSection>
+
+              {/* User Info with better spacing and typography */}
+              <div className="mt-16 sm:mt-0 sm:ml-40">
+                <div className="flex items-center flex-wrap">
+                  <h1 className="text-2xl font-bold text-gray-800 mr-3">
+                    {userData.firstName} {userData.lastName}
+                  </h1>
+                  <StatusBadge isActive={userData.isActive} className="ml-2" />
+                </div>
+                <p className="text-sm text-gray-600 mt-1.5 font-medium">
+                  {userData.position?.name || "No Position"}{" "}
+                  {userData.managerialLevel
+                    ? `(${userData.managerialLevel})`
+                    : ""}
+                </p>
+                <div className="flex flex-wrap items-center mt-3 text-sm text-gray-500">
+                  <div className="flex items-center mr-5 mb-1.5">
+                    <Mail className="w-4 h-4 mr-1.5 text-[#808080]" />
+                    <span>{userData.email}</span>
+                  </div>
+                  <div className="flex items-center mb-1.5">
+                    <Phone className="w-4 h-4 mr-1.5 text-[#808080]" />
+                    <span>{userData.phoneNumber || "No Phone"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit/Save Buttons */}
+              <div className="mt-4 sm:mt-0 w-full sm:w-auto flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                {activeTab === "User details" && (
+                  <>
+                    {editMode ? (
+                      <>
+                        <button
+                          onClick={() => setEditMode(false)}
+                          className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors border border-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleUpdateProfile}
+                          disabled={saveLoading}
+                          className={`bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors ${
+                            saveLoading ? "opacity-70 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          {saveLoading ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 mr-1.5 border-2 border-white border-t-transparent rounded-full"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-1.5" /> Save
+                            </>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => setIsPasswordModalOpen(true)}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm transition-colors"
+                        >
+                          <Key className="w-4 h-4 mr-1.5" /> Change Password
+                        </button>
+                        <button
+                          onClick={() => setEditMode(true)}
+                          className="bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-1.5 rounded-md text-sm flex items-center justify-center transition-colors"
+                        >
+                          <Edit className="w-4 h-4 mr-1.5" /> Edit Profile
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-        {/* Show Professional Info if in professional section */}
-        {activeSection === "professional" && (
-          <div className="mb-6">
-            <ProfileSection title="Professional Information" icon={Briefcase}>
-              <ProfileInfoRow
-                icon={Briefcase}
-                label="Position"
-                value={userData.position?.name}
-                fieldName="positionId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={positions}
-              />
-              <ProfileInfoRow
-                icon={Users}
-                label="Position Group"
-                value={userData.positionGroup?.name}
-                fieldName="positionGroupId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={positionGroups}
-              />
-              <ProfileInfoRow
-                icon={Building}
-                label="Department"
-                value={userData.department?.name}
-                fieldName="departmentId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={departments}
-              />
-              <ProfileInfoRow
-                icon={Layers}
-                label="Division"
-                value={userData.division?.name}
-                fieldName="divisionId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={divisions}
-              />
-              <ProfileInfoRow
-                icon={Layers}
-                label="Sub Division"
-                value={userData.subDivision?.name}
-                fieldName="subDivisionId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={subDivisions}
-              />
-            </ProfileSection>
-          </div>
-        )}
-        {/* Show Additional Info if in additional section */}
-        {activeSection === "additional" && (
-          <div className="mb-6">
-            <ProfileSection title="Additional Information" icon={Globe}>
-              <ProfileInfoRow
-                icon={Box}
-                label="Project"
-                value={userData.project?.name}
-                fieldName="projectId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={projects}
-              />
-              <ProfileInfoRow
-                icon={Award}
-                label="Functional Area"
-                value={userData.functionalArea?.name}
-                fieldName="functionalAreaId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={functionalAreas}
-              />
-              <ProfileInfoRow
-                icon={MapPin}
-                label="Residential Area"
-                value={userData.residentalArea?.name}
-                fieldName="residentalAreaId"
-                editMode={editMode}
-                onEdit={handleFieldUpdate}
-                type="select"
-                options={residentialAreas}
-              />
-              <ProfileInfoRow
-                icon={FileText}
-                label="Roles"
-                value={
-                  userData.roleIds && userData.roleIds.length > 0
-                    ? `${userData.roleIds.length} roles assigned`
-                    : "No roles"
-                }
-                fieldName="roleIds"
-                editMode={false}
-                onEdit={handleFieldUpdate}
-              />
-            </ProfileSection>
-          </div>
-        )}{" "}
-        {/* Action Buttons - Simplified */}
-        <div className="flex flex-wrap justify-center sm:justify-end gap-3 mb-16 sm:mb-6">
-          <button
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm transition-colors"
-          >
-            <Key className="w-4 h-4 mr-1.5" /> Change Password
-          </button>
-          <button
-            onClick={() => setIsImageUploadModalOpen(true)}
-            className="bg-[#0AAC9E] hover:bg-[#099b8e] text-white px-4 py-2 rounded-md flex items-center text-sm transition-colors"
-          >
-            <ImageIcon className="w-4 h-4 mr-1.5" /> Update Photo
-          </button>
         </div>
+
+        {/* Tabs Navigation */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex overflow-x-auto">
+              {["User details", "Achievements", "Trainings", "Courses"].map(
+                (tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`whitespace-nowrap py-4 px-6 font-medium text-sm border-b-2 transition-colors ${
+                      activeTab === tab
+                        ? "border-[#0AAC9E] text-[#0AAC9E]"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                )
+              )}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mb-6">{getTabContent()}</div>
+
         {/* Modals */}
         {isPasswordModalOpen && (
           <PasswordChangeModal
             isOpen={isPasswordModalOpen}
             onClose={() => setIsPasswordModalOpen(false)}
-            onSubmit={handleChangePassword}
+            userId={userId}
           />
         )}
         {isImageUploadModalOpen && (
           <ImageUploadModal
             isOpen={isImageUploadModalOpen}
             onClose={() => setIsImageUploadModalOpen(false)}
-            onUpload={handleUpdateProfileImage}
+            onUpload={handleUpdateImage}
+            title={"Update Profile Photo"}
+          />
+        )}
+        {isCoverPhotoModalOpen && (
+          <CoverPhotoUploadModal
+            isOpen={isCoverPhotoModalOpen}
+            onClose={() => setIsCoverPhotoModalOpen(false)}
+            onUpload={handleUpdateCoverPhoto}
           />
         )}
       </div>

@@ -1,19 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { getToken } from "@/authtoken/auth.js";
-import { Settings } from "lucide-react";
+import { Settings, Plus } from "lucide-react";
 import DeleteConfirmationModal from "@/components/deleteModal";
 import { toast } from "sonner";
 
 // Position Components
 import PositionList from "./positionList";
-import PositionForm from "./positionForm";
-import TabButtons from "./tabButtons";
+import PositionFormModal from "./positionForm"; // Import the position modal
 
 // Position Group Components
 import PositionGroupList from "./positionGroupList";
-import PositionGroupForm from "./positionGroupForm";
-import PositionGroupTabButtons from "./positionGroupTabButtons";
+import PositionGroupFormModal from "./positionGroupForm"; // Import the position group modal
 
 // Shared Components
 import AlertMessage from "./alertMessage";
@@ -23,51 +21,134 @@ const UserSettings = () => {
   // Main navigation state
   const [activeMainTab, setActiveMainTab] = useState("positions"); // 'positions' or 'positionGroups'
 
+  // Position states
   const [name, setName] = useState("");
   const [level, setLevel] = useState(0);
   const [selectedPositionGroups, setSelectedPositionGroups] = useState([]);
   const [positionId, setPositionId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-
-  // Position UI states
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("list"); // 'list' or 'form'
+  const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
 
   // Position list states
   const [positions, setPositions] = useState([]);
+  const [filteredPositions, setFilteredPositions] = useState([]);
   const [availablePositionGroups, setAvailablePositionGroups] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPositions, setTotalPositions] = useState(0);
 
-  // ===== POSITION GROUP STATES =====
-  // Position group form states
+  // Position group states
   const [groupName, setGroupName] = useState("");
   const [positionGroupId, setPositionGroupId] = useState(null);
   const [isEditingGroup, setIsEditingGroup] = useState(false);
-
-  // Position group UI states
   const [groupSearchTerm, setGroupSearchTerm] = useState("");
-  const [activeGroupTab, setActiveGroupTab] = useState("list"); // 'list' or 'form'
+  const [isPositionGroupModalOpen, setIsPositionGroupModalOpen] =
+    useState(false);
 
   // Position group list states
   const [positionGroups, setPositionGroups] = useState([]);
+  const [filteredPositionGroups, setFilteredPositionGroups] = useState([]);
   const [currentGroupPage, setCurrentGroupPage] = useState(1);
   const [itemsPerGroupPage, setItemsPerGroupPage] = useState(10);
   const [totalPositionGroups, setTotalPositionGroups] = useState(0);
 
-  // ===== SHARED STATES =====
+  // Search states
+  const [allPositions, setAllPositions] = useState([]);
+  const [allPositionGroups, setAllPositionGroups] = useState([]);
+
+  // Shared states
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
 
   // Delete modal states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleteItemType, setDeleteItemType] = useState(""); // 'position' or 'positionGroup'
+  const [deleteItemType, setDeleteItemType] = useState("");
 
   // API config
   const token = getToken();
   const API_URL = "https://bravoadmin.uplms.org/api/";
+
+  // ===== SEARCH FUNCTIONS =====
+  // Handle search term and group search term changes
+  const handleSearchTermChange = (term) => {
+    setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page when search changes
+  };
+
+  const handleGroupSearchTermChange = (term) => {
+    setGroupSearchTerm(term);
+    setCurrentGroupPage(1); // Reset to first page when search changes
+  };
+
+  // Handle page change for position groups
+  const handleGroupPageChange = (newPage) => {
+    // Reset filtered results when changing pages (will be refetched)
+    setFilteredPositionGroups([]);
+    setCurrentGroupPage(newPage);
+  };
+
+  // Apply search for positions
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      // When search is empty, just use paginated results
+      setFilteredPositions(positions);
+      setTotalPositions(allPositions.length);
+    } else {
+      // Filter from all positions
+      const filtered = allPositions.filter(
+        (position) =>
+          (position.name &&
+            position.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (position.positionGroupName &&
+            position.positionGroupName.some(
+              (name) =>
+                name && name.toLowerCase().includes(searchTerm.toLowerCase())
+            ))
+      );
+
+      // Set filtered positions for current page
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const paginatedFiltered = filtered.slice(
+        startIndex,
+        startIndex + itemsPerPage
+      );
+
+      setFilteredPositions(paginatedFiltered);
+      setTotalPositions(filtered.length);
+    }
+  }, [searchTerm, positions, allPositions, currentPage, itemsPerPage]);
+
+  // Apply search for position groups
+  useEffect(() => {
+    // Safety check to ensure we have data before filtering
+    if (!allPositionGroups || allPositionGroups.length === 0) {
+      return;
+    }
+
+    if (groupSearchTerm.trim() === "") {
+      // When search is empty, keep the paginated results
+      // Don't modify the current filtered results as they come from the API with pagination
+    } else {
+      // Filter from all position groups
+      const filtered = allPositionGroups.filter(
+        (group) =>
+          group.name &&
+          group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
+      );
+
+      // Set filtered position groups for current page
+      const startIndex = (currentGroupPage - 1) * itemsPerGroupPage;
+      const paginatedFiltered = filtered.slice(
+        startIndex,
+        startIndex + itemsPerGroupPage
+      );
+
+      setFilteredPositionGroups(paginatedFiltered);
+      setTotalPositionGroups(filtered.length);
+    }
+  }, [groupSearchTerm, allPositionGroups, currentGroupPage, itemsPerGroupPage]);
 
   // ===== FETCH DATA =====
   // Fetch data on component mount and tab change
@@ -75,18 +156,52 @@ const UserSettings = () => {
     if (activeMainTab === "positions") {
       fetchPositionGroups();
       fetchPositions();
+      fetchAllPositionsForSearch();
+    } else if (activeMainTab === "positionGroups") {
+      fetchPositionGroups();
+      fetchAllPositionGroups();
+      fetchAllPositionGroupsForSearch();
+    }
+  }, [activeMainTab]);
+
+  // Fetch paginated data when page or items per page changes
+  useEffect(() => {
+    if (activeMainTab === "positions") {
+      fetchPositions();
     } else if (activeMainTab === "positionGroups") {
       fetchAllPositionGroups();
     }
   }, [
-    activeMainTab,
     currentPage,
     itemsPerPage,
     currentGroupPage,
     itemsPerGroupPage,
+    activeMainTab,
   ]);
 
   // ===== POSITION FUNCTIONS =====
+  // Fetch all positions (not paginated) for search
+  const fetchAllPositionsForSearch = async () => {
+    try {
+      const response = await fetch(`${API_URL}Position?ShowMore.Take=1000`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch all positions");
+      }
+
+      const data = await response.json();
+      setAllPositions(data[0].positions);
+    } catch (error) {
+      console.error("Error fetching all positions:", error);
+    }
+  };
+
   // Fetch position groups for dropdown
   const fetchPositionGroups = async () => {
     try {
@@ -135,6 +250,7 @@ const UserSettings = () => {
 
       const data = await response.json();
       setPositions(data[0].positions);
+      setFilteredPositions(data[0].positions);
       setTotalPositions(data[0].totalPositionCount);
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
@@ -164,7 +280,8 @@ const UserSettings = () => {
       toast.success("Position created successfully!");
       resetPositionForm();
       fetchPositions();
-      setActiveTab("list");
+      fetchAllPositionsForSearch();
+      setIsPositionModalOpen(false); // Close modal after successful creation
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {
@@ -193,7 +310,8 @@ const UserSettings = () => {
       toast.success("Position updated successfully!");
       resetPositionForm();
       fetchPositions();
-      setActiveTab("list");
+      fetchAllPositionsForSearch();
+      setIsPositionModalOpen(false); // Close modal after successful update
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {
@@ -221,6 +339,7 @@ const UserSettings = () => {
       setMessage({ text: "Position deleted successfully!", type: "success" });
       toast.success("Position deleted successfully!");
       fetchPositions();
+      fetchAllPositionsForSearch();
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {
@@ -245,7 +364,7 @@ const UserSettings = () => {
     setLevel(position.level);
     setSelectedPositionGroups(position.positionGroupId || []);
     setIsEditing(true);
-    setActiveTab("form");
+    setIsPositionModalOpen(true); // Open modal for editing
   };
 
   // Reset position form
@@ -262,14 +381,58 @@ const UserSettings = () => {
   // Handle adding new position
   const handleAddNewPosition = () => {
     resetPositionForm();
-    setActiveTab("form");
+    setIsPositionModalOpen(true); // Open modal for adding new position
+  };
+
+  // Close position modal
+  const handleClosePositionModal = () => {
+    setIsPositionModalOpen(false);
+    resetPositionForm();
   };
 
   // ===== POSITION GROUP FUNCTIONS =====
+  // Fetch all position groups (not paginated) for search
+  const fetchAllPositionGroupsForSearch = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `${API_URL}PositionGroup?ShowMore.Take=1000`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch all position groups");
+      }
+
+      const data = await response.json();
+      if (data && data[0].positionGroups) {
+        const allGroups = data[0].positionGroups;
+        setAllPositionGroups(allGroups);
+        console.log("All position groups for search:", allGroups);
+      }
+    } catch (error) {
+      console.error("Error fetching all position groups:", error);
+      setMessage({
+        text: "Failed to load search data: " + error.message,
+        type: "error",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch all position groups with pagination
   const fetchAllPositionGroups = async () => {
     try {
       setIsLoading(true);
+
+      // Make sure we're using the currentGroupPage from state for pagination
       const response = await fetch(
         `${API_URL}PositionGroup?Page=${currentGroupPage}&ShowMore.Take=${itemsPerGroupPage}`,
         {
@@ -287,11 +450,29 @@ const UserSettings = () => {
 
       const data = await response.json();
       if (data && data[0].positionGroups) {
-        setPositionGroups(data[0].positionGroups);
+        const groupsData = data[0].positionGroups;
+
+        // Only update display data if we're not searching
+        if (groupSearchTerm.trim() === "") {
+          setPositionGroups(groupsData);
+          setFilteredPositionGroups(groupsData);
+        }
+
+        // Always update the total count
         setTotalPositionGroups(data[0].totalPositionGroupCount);
+
+        // Log the data for debugging
+        console.log(
+          `Fetched position groups for page ${currentGroupPage}:`,
+          groupsData
+        );
+        console.log(
+          `Total position groups: ${data[0].totalPositionGroupCount}`
+        );
       }
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
+      console.error("Error fetching position groups:", error);
     } finally {
       setIsLoading(false);
     }
@@ -321,7 +502,8 @@ const UserSettings = () => {
       toast.success("Position group created successfully!");
       resetPositionGroupForm();
       fetchAllPositionGroups();
-      setActiveGroupTab("list");
+      fetchAllPositionGroupsForSearch();
+      setIsPositionGroupModalOpen(false); // Close modal after successful creation
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {
@@ -353,7 +535,8 @@ const UserSettings = () => {
       toast.success("Position group updated successfully!");
       resetPositionGroupForm();
       fetchAllPositionGroups();
-      setActiveGroupTab("list");
+      fetchAllPositionGroupsForSearch();
+      setIsPositionGroupModalOpen(false); // Close modal after successful update
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {
@@ -384,6 +567,7 @@ const UserSettings = () => {
       });
       toast.success("Position group deleted successfully!");
       fetchAllPositionGroups();
+      fetchAllPositionGroupsForSearch();
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {
@@ -406,7 +590,7 @@ const UserSettings = () => {
     setPositionGroupId(positionGroup.id);
     setGroupName(positionGroup.name);
     setIsEditingGroup(true);
-    setActiveGroupTab("form");
+    setIsPositionGroupModalOpen(true); // Open modal for editing
   };
 
   // Reset position group form
@@ -421,7 +605,13 @@ const UserSettings = () => {
   // Handle adding new position group
   const handleAddNewPositionGroup = () => {
     resetPositionGroupForm();
-    setActiveGroupTab("form");
+    setIsPositionGroupModalOpen(true); // Open modal for adding
+  };
+
+  // Close position group modal
+  const handleClosePositionGroupModal = () => {
+    setIsPositionGroupModalOpen(false);
+    resetPositionGroupForm();
   };
 
   // ===== SHARED FUNCTIONS =====
@@ -432,7 +622,7 @@ const UserSettings = () => {
     setIsDeleteModalOpen(true);
   };
 
-  // Handle confirm delete - called when user confirms in modal
+  // Handle confirm delete
   const handleConfirmDelete = () => {
     if (itemToDelete) {
       if (deleteItemType === "position") {
@@ -445,15 +635,6 @@ const UserSettings = () => {
       setDeleteItemType("");
     }
   };
-
-  // Reset all forms when switching main tabs
-  useEffect(() => {
-    if (activeMainTab === "positions") {
-      resetPositionGroupForm();
-    } else if (activeMainTab === "positionGroups") {
-      resetPositionForm();
-    }
-  }, [activeMainTab]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 pt-14">
@@ -485,99 +666,81 @@ const UserSettings = () => {
       {/* Position Management */}
       {activeMainTab === "positions" && (
         <div>
-          <div className="flex justify-end mb-4">
-            <TabButtons
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              handleAddNew={handleAddNewPosition}
-              isEditing={isEditing}
-            />
-          </div>
+          <PositionList
+            positions={filteredPositions}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            setSearchTerm={handleSearchTermChange}
+            handleAddNew={handleAddNewPosition}
+            handleEditPosition={handleEditPosition}
+            handleDeleteClick={(id) => handleDeleteClick(id, "position")}
+            getLevelLabel={(value) => {
+              const levelOptions = [
+                { value: 0, label: "Manager" },
+                { value: 1, label: "Non-Manager" },
+                { value: 2, label: "N/A" },
+              ];
+              const option = levelOptions.find((opt) => opt.value === value);
+              return option ? option.label : "Unknown";
+            }}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
+            totalPositions={totalPositions}
+          />
 
-          {activeTab === "list" ? (
-            <PositionList
-              positions={positions}
-              isLoading={isLoading}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              handleAddNew={handleAddNewPosition}
-              handleEditPosition={handleEditPosition}
-              handleDeleteClick={(id) => handleDeleteClick(id, "position")}
-              getLevelLabel={(value) => {
-                const levelOptions = [
-                  { value: 0, label: "Manager" },
-                  { value: 1, label: "Non-Manager" },
-                  { value: 2, label: "N/A" },
-                ];
-                const option = levelOptions.find((opt) => opt.value === value);
-                return option ? option.label : "Unknown";
-              }}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              setItemsPerPage={setItemsPerPage}
-              totalPositions={totalPositions}
-            />
-          ) : (
-            <PositionForm
-              name={name}
-              setName={setName}
-              level={level}
-              setLevel={setLevel}
-              selectedPositionGroups={selectedPositionGroups}
-              setSelectedPositionGroups={setSelectedPositionGroups}
-              availablePositionGroups={availablePositionGroups}
-              isLoading={isLoading}
-              isEditing={isEditing}
-              positionId={positionId}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              handleSubmit={handlePositionSubmit}
-              resetForm={resetPositionForm}
-              setActiveTab={setActiveTab}
-            />
-          )}
+          {/* Position Form Modal */}
+          <PositionFormModal
+            isOpen={isPositionModalOpen}
+            onClose={handleClosePositionModal}
+            name={name}
+            setName={setName}
+            level={level}
+            setLevel={setLevel}
+            selectedPositionGroups={selectedPositionGroups}
+            setSelectedPositionGroups={setSelectedPositionGroups}
+            availablePositionGroups={availablePositionGroups}
+            isLoading={isLoading}
+            isEditing={isEditing}
+            positionId={positionId}
+            searchTerm={searchTerm}
+            setSearchTerm={handleSearchTermChange}
+            handleSubmit={handlePositionSubmit}
+            resetForm={resetPositionForm}
+          />
         </div>
       )}
 
       {/* Position Group Management */}
       {activeMainTab === "positionGroups" && (
         <div>
-          <div className="flex justify-end mb-4">
-            <PositionGroupTabButtons
-              activeTab={activeGroupTab}
-              setActiveTab={setActiveGroupTab}
-              handleAddNew={handleAddNewPositionGroup}
-              isEditing={isEditingGroup}
-            />
-          </div>
+          <PositionGroupList
+            positionGroups={filteredPositionGroups}
+            isLoading={isLoading}
+            searchTerm={groupSearchTerm}
+            setSearchTerm={handleGroupSearchTermChange}
+            handleAddNew={handleAddNewPositionGroup}
+            handleEditPositionGroup={handleEditPositionGroup}
+            handleDeleteClick={(id) => handleDeleteClick(id, "positionGroup")}
+            currentPage={currentGroupPage}
+            setCurrentPage={handleGroupPageChange}
+            itemsPerPage={itemsPerGroupPage}
+            totalPositionGroups={totalPositionGroups}
+          />
 
-          {activeGroupTab === "list" ? (
-            <PositionGroupList
-              positionGroups={positionGroups}
-              isLoading={isLoading}
-              searchTerm={groupSearchTerm}
-              setSearchTerm={setGroupSearchTerm}
-              handleAddNew={handleAddNewPositionGroup}
-              handleEditPositionGroup={handleEditPositionGroup}
-              handleDeleteClick={(id) => handleDeleteClick(id, "positionGroup")}
-              currentPage={currentGroupPage}
-              setCurrentPage={setCurrentGroupPage}
-              itemsPerPage={itemsPerGroupPage}
-              totalPositionGroups={totalPositionGroups}
-            />
-          ) : (
-            <PositionGroupForm
-              name={groupName}
-              setName={setGroupName}
-              isLoading={isLoading}
-              isEditing={isEditingGroup}
-              positionGroupId={positionGroupId}
-              handleSubmit={handlePositionGroupSubmit}
-              resetForm={resetPositionGroupForm}
-              setActiveTab={setActiveGroupTab}
-            />
-          )}
+          {/* Position Group Form Modal */}
+          <PositionGroupFormModal
+            isOpen={isPositionGroupModalOpen}
+            onClose={handleClosePositionGroupModal}
+            name={groupName}
+            setName={setGroupName}
+            isLoading={isLoading}
+            isEditing={isEditingGroup}
+            positionGroupId={positionGroupId}
+            handleSubmit={handlePositionGroupSubmit}
+            resetForm={resetPositionGroupForm}
+          />
         </div>
       )}
 

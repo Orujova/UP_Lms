@@ -1,8 +1,8 @@
-// src/components/event/CropModal.jsx
+// event CropModal Component
 import React, { useState, useCallback } from "react";
 import { X } from "lucide-react";
-import Cropper from "react-easy-crop";
 import { toast } from "sonner";
+import Cropper from "react-easy-crop";
 
 const CropModal = ({ image, onCancel, onCrop }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });

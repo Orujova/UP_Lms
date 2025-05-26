@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { toast } from "sonner";
 import { getToken } from "@/authtoken/auth.js";
-import logo from "@/images/logo.png";
-import overlayImage from "@/images/overlay.png";
 import { getUserId } from "@/authtoken/auth";
+import BrandingSlider from "@/components/brandingSlider"; // Import the reusable component
 import {
   Lock,
   Phone,
@@ -171,7 +169,7 @@ export default function ImprovedForgotPassword() {
       case "phone":
         return (
           <div className="w-full space-y-6">
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <h1 className="text-2xl font-semibold text-gray-900 mb-2">
                 Forgot Password?
               </h1>
@@ -316,7 +314,7 @@ export default function ImprovedForgotPassword() {
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter new password"
-                    className="w-full pl-10 pr-4 py-3 border-2 outline-0 border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-500 transition duration-300"
+                    className="w-full pl-10 pr-10 py-3 border-2 outline-0 border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-500 transition duration-300"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={isLoading}
@@ -374,7 +372,7 @@ export default function ImprovedForgotPassword() {
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm new password"
-                    className="w-full pl-10 pr-4 py-3 border-2 outline-0 border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-500 transition duration-300"
+                    className="w-full pl-10 pr-10 py-3 border-2 outline-0 border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-500 transition duration-300"
                     value={repeatNewPassword}
                     onChange={(e) => setRepeatNewPassword(e.target.value)}
                     disabled={isLoading}
@@ -451,26 +449,5 @@ export default function ImprovedForgotPassword() {
     }
   };
 
-  return (
-    <main className="bg-login1 w-full h-screen bg-no-repeat relative flex items-center justify-end pr-20 overflow-hidden">
-      {/* Overlay Image */}
-      {/* <div className="absolute inset-0 z-10">
-        <Image src={overlayImage} alt="Overlay" priority />
-      </div> */}
-
-      <div className="relative z-20 w-full max-w-md p-6 bg-white ">
-        <div className="mb-6 text-center">
-          <Image
-            className="mx-auto mb-4"
-            src={logo}
-            alt="logo"
-            width={190}
-            height={40}
-          />
-        </div>
-
-        {renderContent()}
-      </div>
-    </main>
-  );
+  return <BrandingSlider>{renderContent()}</BrandingSlider>;
 }

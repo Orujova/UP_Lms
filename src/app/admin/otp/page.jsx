@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { getUserId, getPhoneNumber } from "@/authtoken/auth";
+import BrandingSlider from "@/components/brandingSlider"; // Import the reusable component
+
 //style
 import "./otp.scss";
 
 //images
 import logo from "@/images/logo.png";
-import overlayImage from "@/images/overlay.png"; // Import the same overlay image as login page
 
 export default function Page() {
   const router = useRouter();
@@ -162,82 +163,72 @@ export default function Page() {
   };
 
   return (
-    <main className="bg-login1 w-fully h-fully bg-no-repeat relative overflow-hidden">
-      {/* Overlay Image - same as login page */}
-      {/* <div className="absolute inset-0 z-10">
-        <Image src={overlayImage} alt="Overlay" priority />
-      </div> */}
-
-      <div className="w-full h-fully flex items-center justify-end box relative z-20">
-        <div className="w-40 ml-auto max-w-[420px]">
-          <Image className="logo" src={logo} alt="logo" />
-          <div className="flex flex-col items-center gap-8 w-full">
-            <h1 className="text-2xl font-semibold">OTP Verification</h1>
-            <form
-              onSubmit={submitOTP}
-              className="flex flex-col items-center gap-6 w-full"
-            >
-              <div className="text-base font-medium">
-                Enter OTP verification sent to{" "}
-                <span className="font-semibold">{formattedPhoneNumber}</span>
-              </div>
-              <div className="flex gap-5 justify-center">
-                {otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    type="text"
-                    maxLength="1"
-                    value={digit}
-                    onChange={(e) => handleOtpChange(e, index)}
-                    onKeyDown={(e) => handleBackspace(e, index)}
-                    ref={(el) => (inputRefs.current[index] = el)}
-                    className="py-7 rounded-md text-center  text-black w-16 h-16 text-2xl bg-gray-100 border-1 border-gray-400 transition-all focus:border-[#01DBC8] focus:bg-white"
-                    style={{ boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-2 text-16 text-gray-600">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M8 4V8L10.5 10.5M15 8C15 11.866 11.866 15 8 15C4.13401 15 1 11.866 1 8C1 4.13401 4.13401 1 8 1C11.866 1 15 4.13401 15 8Z"
-                    stroke="#4B5565"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span>
-                  Time remaining:{" "}
-                  <span className="font-semibold">{formatTime(timeLeft)}</span>
-                </span>
-              </div>
-              <button
-                className="w-full bg-black text-white rounded-16 py-4 hover:bg-gray-800 transition-colors mt-4 font-medium"
-                disabled={otp.join("").length !== 4}
-              >
-                Verify
-              </button>
-              <div className="text-14 text-center w-full">
-                Didn't receive code?{" "}
-                <span
-                  className={`text-mainBlue cursor-pointer ${
-                    !canResend ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                  onClick={resendOTP}
-                >
-                  Resend
-                </span>
-              </div>
-            </form>
+    <BrandingSlider showLogo={true}>
+      <div className="flex flex-col items-center gap-8 w-full">
+        <h1 className="text-2xl font-semibold">OTP Verification</h1>
+        <form
+          onSubmit={submitOTP}
+          className="flex flex-col items-center gap-6 w-full"
+        >
+          <div className="text-sm font-medium">
+            Enter OTP verification sent to{" "}
+            <span className="font-semibold">{formattedPhoneNumber}</span>
           </div>
-        </div>
+          <div className="flex gap-5 justify-center">
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                type="text"
+                maxLength="1"
+                value={digit}
+                onChange={(e) => handleOtpChange(e, index)}
+                onKeyDown={(e) => handleBackspace(e, index)}
+                ref={(el) => (inputRefs.current[index] = el)}
+                className="py-7 rounded-md text-center text-black w-16 h-16 text-2xl bg-gray-100 border-1 border-gray-400 transition-all focus:border-[#01DBC8] focus:bg-white"
+                style={{ boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-2 text-16 text-gray-600">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8 4V8L10.5 10.5M15 8C15 11.866 11.866 15 8 15C4.13401 15 1 11.866 1 8C1 4.13401 4.13401 1 8 1C11.866 1 15 4.13401 15 8Z"
+                stroke="#4B5565"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>
+              Time remaining:{" "}
+              <span className="font-semibold">{formatTime(timeLeft)}</span>
+            </span>
+          </div>
+          <button
+            className="w-full bg-black text-white rounded-lg py-4 hover:bg-gray-800 transition-colors mt-4 font-medium"
+            disabled={otp.join("").length !== 4}
+          >
+            Verify
+          </button>
+          <div className="text-14 text-center w-full">
+            Didn't receive code?{" "}
+            <span
+              className={`text-mainBlue cursor-pointer ${
+                !canResend ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              onClick={resendOTP}
+            >
+              Resend
+            </span>
+          </div>
+        </form>
       </div>
-    </main>
+    </BrandingSlider>
   );
 }

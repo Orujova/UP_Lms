@@ -1,9 +1,9 @@
-// Updated NewsManagement.jsx with integrated Redux actions
+// Updated NewsManagement.jsx with Category Management integration
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import Link from "next/link";
-import { Filter, Plus, Download, Search, FileText } from "lucide-react";
+import { Filter, Plus, Download, Search, FileText, List } from "lucide-react";
 import {
   newsAsync,
   deleteNewsAsync,
@@ -167,6 +167,14 @@ export default function NewsManagement() {
               <Filter className="w-4 h-3" />
               Filter
             </button>
+
+            {/* News Category Management Link */}
+            <Link href="/admin/dashboard/newsCategory">
+              <button className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+                <List className="w-4 h-4" />
+                Categories
+              </button>
+            </Link>
 
             <Link href="/admin/dashboard/news/add">
               <button className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#127D74]">

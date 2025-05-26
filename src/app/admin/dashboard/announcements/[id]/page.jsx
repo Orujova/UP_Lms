@@ -11,7 +11,6 @@ import {
   Timer,
   AlertCircle,
   ChartBar,
-  Shield,
   Eye,
   User,
   Users,
@@ -25,6 +24,7 @@ import LoadingSpinner from "@/components/loadingSpinner";
 const token = getToken();
 const userId = getUserId();
 
+// Badge components
 const StatusBadge = ({ scheduledDate, expiryDate }) => {
   const now = new Date();
   const scheduled = new Date(scheduledDate);
@@ -32,71 +32,68 @@ const StatusBadge = ({ scheduledDate, expiryDate }) => {
 
   if (scheduled > now) {
     return (
-      <span className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-full">
-        Scheduled
-      </span>
+      <div className="inline-flex items-center bg-yellow-50 border border-yellow-100 rounded-md px-2 py-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 mr-1.5"></div>
+        <span className="text-xs font-medium text-yellow-700">Scheduled</span>
+      </div>
     );
   } else if (expiry < now && expiry.getFullYear() !== 1) {
     return (
-      <span className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full">
-        Expired
-      </span>
+      <div className="inline-flex items-center bg-gray-50 border border-gray-100 rounded-md px-2 py-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1.5"></div>
+        <span className="text-xs font-medium text-gray-700">Expired</span>
+      </div>
     );
   } else if (scheduled <= now && (expiry > now || expiry.getFullYear() === 1)) {
     return (
-      <span className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full">
-        Active
-      </span>
+      <div className="inline-flex items-center bg-green-50 border border-green-100 rounded-md px-2 py-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5"></div>
+        <span className="text-xs font-medium text-green-700">Active</span>
+      </div>
     );
   }
+
   return (
-    <span className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-full">
-      Draft
-    </span>
+    <div className="inline-flex items-center bg-purple-50 border border-purple-100 rounded-md px-2 py-1">
+      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mr-1.5"></div>
+      <span className="text-xs font-medium text-purple-700">Draft</span>
+    </div>
   );
 };
 
 const PriorityBadge = ({ priority }) => {
-  const priorityStyles = {
-    HIGH: "bg-red-100 text-red-700",
-    NORMAL: "bg-yellow-100 text-yellow-700",
-    LOW: "bg-gray-100 text-gray-700",
+  const styles = {
+    HIGH: {
+      bg: "bg-red-50",
+      border: "border-red-100",
+      dot: "bg-red-400",
+      text: "text-red-700",
+    },
+    NORMAL: {
+      bg: "bg-yellow-50",
+      border: "border-yellow-100",
+      dot: "bg-yellow-400",
+      text: "text-yellow-700",
+    },
+    LOW: {
+      bg: "bg-gray-50",
+      border: "border-gray-100",
+      dot: "bg-gray-400",
+      text: "text-gray-700",
+    },
   };
 
+  const style = styles[priority] || styles.LOW;
+
   return (
-    <span
-      className={`px-3 py-1.5 text-xs font-medium rounded-full ${
-        priorityStyles[priority] || priorityStyles.LOW
-      }`}
+    <div
+      className={`inline-flex items-center ${style.bg} border ${style.border} rounded-md px-2 py-1`}
     >
-      {priority}
-    </span>
+      <div className={`w-1.5 h-1.5 rounded-full ${style.dot} mr-1.5`}></div>
+      <span className={`text-xs font-medium ${style.text}`}>{priority}</span>
+    </div>
   );
 };
-
-const DateInfoCard = ({ icon: Icon, label, date, color }) => (
-  <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-    <div className="flex items-center gap-3">
-      <div className={`p-1.5 rounded-md bg-${color}-50`}>
-        <Icon className={`w-4 h-4 text-${color}-500`} />
-      </div>
-      <span className="text-sm text-gray-600">{label}</span>
-    </div>
-    <span className="text-sm font-medium text-gray-900">{date}</span>
-  </div>
-);
-
-const InfoRow = ({ icon: Icon, label, value, color = "blue" }) => (
-  <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg">
-    <div className="flex items-center gap-3">
-      <div className={`p-1.5 rounded-md bg-${color}-50`}>
-        <Icon className={`w-4 h-4 text-${color}-500`} />
-      </div>
-      <span className="text-sm text-gray-600">{label}</span>
-    </div>
-    <span className="text-sm font-medium text-gray-900">{value}</span>
-  </div>
-);
 
 export default function AnnouncementDetail({ params }) {
   const [announcement, setAnnouncement] = useState(null);
@@ -109,6 +106,7 @@ export default function AnnouncementDetail({ params }) {
     fetchAnnouncementDetail();
   }, []);
 
+  // Fetch announcement data
   const fetchAnnouncementDetail = async () => {
     try {
       setLoading(true);
@@ -124,6 +122,7 @@ export default function AnnouncementDetail({ params }) {
     }
   };
 
+  // Delete announcement handler
   const deleteAnnouncement = async () => {
     try {
       const response = await fetch(
@@ -144,6 +143,7 @@ export default function AnnouncementDetail({ params }) {
     setIsDeleteModalOpen(false);
   };
 
+  // Helper function to format dates
   const formatDate = (dateString) => {
     if (dateString === "0001-01-01T00:00:00") return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -155,10 +155,12 @@ export default function AnnouncementDetail({ params }) {
     });
   };
 
+  // Show loading spinner while data is being fetched
   if (loading) {
     return <LoadingSpinner />;
   }
 
+  // Show "not found" message if announcement doesn't exist
   if (!announcement) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -186,114 +188,119 @@ export default function AnnouncementDetail({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pt-14 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Top Navigation */}
-        <nav className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => router.push("/admin/dashboard/announcements")}
-            className="inline-flex items-center px-4 py-2 text-base text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Announcements
-          </button>
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50 pt-14">
+      <div>
+        {/* Header and Action Buttons */}
+        <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/admin/dashboard/announcements")}
+              className="text-gray-600 hover:bg-gray-100 rounded-lg p-1 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-base font-medium text-gray-900">
+              Back to Announcements
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
             <button
               onClick={() =>
                 router.push(
                   `/admin/dashboard/announcements/edit/${announcement.id}`
                 )
               }
-              className="inline-flex items-center px-4 py-2 text-sm text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors"
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 transition-colors"
             >
-              <Pencil className="w-4 h-4 mr-2" />
+              <Pencil className="w-3.5 h-3.5 mr-1.5" />
               Edit
             </button>
             <button
               onClick={() => setIsDeleteModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors"
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-md hover:bg-red-100 transition-colors"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
               Delete
             </button>
           </div>
-        </nav>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Content Column */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Hero Image */}
-            {announcement.imageUrl && (
-              <div className="relative rounded-xl overflow-hidden bg-gray-100 shadow-sm">
-                <img
-                  src={`https://bravoadmin.uplms.org/uploads/${announcement.imageUrl.replace(
-                    "https://100.42.179.27:7198/",
-                    ""
-                  )}`}
-                  alt={announcement.title}
-                  className="w-full h-80 object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/api/placeholder/800/400";
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-              </div>
-            )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Title and Status Card */}
+            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+              {/* Hero Image Section */}
+              {announcement.imageUrl && (
+                <div className="relative h-48 bg-gray-100">
+                  <img
+                    src={`https://bravoadmin.uplms.org/uploads/${announcement.imageUrl.replace(
+                      "https://100.42.179.27:7198/",
+                      ""
+                    )}`}
+                    alt={announcement.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/api/placeholder/800/400";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                </div>
+              )}
 
-            {/* Title Section */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-5">
+              {/* Title and Description */}
+              <div className="p-5 grid grid-cols-2 gap-4">
                 <div>
-                  <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     {announcement.title}
-                  </h1>
+                  </h2>
                   {announcement.subTitle && (
-                    <p className="text-base text-gray-600">
+                    <p className="text-sm text-gray-600 mb-2">
                       {announcement.subTitle}
                     </p>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <PriorityBadge priority={announcement.priority} />
-                  <StatusBadge
-                    scheduledDate={announcement.scheduledDate}
-                    expiryDate={announcement.expiryDate}
-                  />
+
+                {/* Status badges and view counter */}
+                <div className="flex flex-col items-end space-y-2">
+                  <div className="flex space-x-2">
+                    <StatusBadge
+                      scheduledDate={announcement.scheduledDate}
+                      expiryDate={announcement.expiryDate}
+                    />
+                    <PriorityBadge priority={announcement.priority} />
+                  </div>
+
+                  {/* View Counter */}
+                  {announcement.totalView && (
+                    <div className="flex items-center bg-blue-50 px-2 py-1 rounded-md">
+                      <Eye className="w-4 h-4 text-blue-500 mr-2" />
+                      <div>
+                        <span className="text-sm  text-gray-900 mr-1">
+                          {announcement.totalView}
+                        </span>
+                        <span className="text-xs text-gray-500">Views</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* View Count - Only show what's available from API */}
-              {announcement.totalView && (
-                <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-center">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded-full">
-                      <Eye className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-gray-900">
-                        {announcement.totalView}
-                      </span>
-                      <span className="text-sm text-gray-500 ml-2">Views</span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Description Content */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-base font-medium text-gray-900 mb-3 pb-2 border-b border-gray-100">
                 Content
-              </h2>
+              </h3>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {announcement.shortDescription && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">
+                    <h4 className="text-xs uppercase tracking-wider font-medium text-gray-500 mb-2">
                       Short Description
-                    </h3>
-                    <div className="p-5 bg-gray-50 rounded-xl text-base text-gray-600 leading-relaxed border border-gray-200">
+                    </h4>
+                    <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed border border-gray-200">
                       {announcement.shortDescription}
                     </div>
                   </div>
@@ -301,10 +308,10 @@ export default function AnnouncementDetail({ params }) {
 
                 {announcement.description && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">
+                    <h4 className="text-xs uppercase tracking-wider font-medium text-gray-500 mb-2">
                       Full Description
-                    </h3>
-                    <div className="p-5 bg-gray-50 rounded-xl text-base text-gray-600 leading-relaxed border border-gray-200">
+                    </h4>
+                    <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed border border-gray-200">
                       {announcement.description}
                     </div>
                   </div>
@@ -313,114 +320,150 @@ export default function AnnouncementDetail({ params }) {
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Status Card */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
+          {/* Right Column - Sidebar */}
+          <div className="space-y-5">
+            {/* Status Information Card */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-base font-medium text-gray-900 mb-3 pb-2 border-b border-gray-100">
                 Status Information
-              </h2>
-              <div className="space-y-4">
+              </h3>
+              <div className="space-y-3">
                 {announcement.createdDate && (
-                  <DateInfoCard
-                    icon={Calendar}
-                    label="Created"
-                    date={formatDate(announcement.createdDate)}
-                    color="blue"
-                  />
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-blue-50 rounded-md mr-2">
+                        <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Created
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-800">
+                      {formatDate(announcement.createdDate)}
+                    </span>
+                  </div>
                 )}
 
                 {announcement.scheduledDate && (
-                  <DateInfoCard
-                    icon={Clock}
-                    label="Scheduled"
-                    date={formatDate(announcement.scheduledDate)}
-                    color="green"
-                  />
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-green-50 rounded-md mr-2">
+                        <Clock className="w-3.5 h-3.5 text-green-500" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Scheduled
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-800">
+                      {formatDate(announcement.scheduledDate)}
+                    </span>
+                  </div>
                 )}
 
                 {announcement.expiryDate && (
-                  <DateInfoCard
-                    icon={Timer}
-                    label="Expires"
-                    date={formatDate(announcement.expiryDate)}
-                    color="red"
-                  />
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-red-50 rounded-md mr-2">
+                        <Timer className="w-3.5 h-3.5 text-red-500" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Expires
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-800">
+                      {formatDate(announcement.expiryDate)}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Additional Meta Info */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
+            {/* Additional Information */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-base font-medium text-gray-900 mb-3 pb-2 border-b border-gray-100">
                 Additional Information
-              </h2>
-              <div className="space-y-4">
+              </h3>
+              <div className="space-y-3">
                 {announcement.pollUnitId && (
-                  <InfoRow
-                    icon={ChartBar}
-                    label="Poll Unit ID"
-                    value={announcement.pollUnitId}
-                    color="purple"
-                  />
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-purple-50 rounded-md mr-2">
+                        <ChartBar className="w-3.5 h-3.5 text-purple-500" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Poll Unit ID
+                      </span>
+                    </div>
+                    <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-md">
+                      {announcement.pollUnitId}
+                    </span>
+                  </div>
                 )}
 
                 {announcement.hasNotification !== undefined && (
-                  <InfoRow
-                    icon={Bell}
-                    label="Has Notification"
-                    value={announcement.hasNotification ? "Yes" : "No"}
-                    color="yellow"
-                  />
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-yellow-50 rounded-md mr-2">
+                        <Bell className="w-3.5 h-3.5 text-yellow-500" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Has Notification
+                      </span>
+                    </div>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-md ${
+                        announcement.hasNotification
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {announcement.hasNotification ? "Yes" : "No"}
+                    </span>
+                  </div>
                 )}
 
                 {announcement.createdBy && (
-                  <InfoRow
-                    icon={User}
-                    label="Created By"
-                    value={announcement.createdBy}
-                    color="indigo"
-                  />
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-indigo-50 rounded-md mr-2">
+                        <User className="w-3.5 h-3.5 text-indigo-500" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Created By
+                      </span>
+                    </div>
+                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md">
+                      {announcement.createdBy}
+                    </span>
+                  </div>
                 )}
               </div>
 
-              {/* Target Groups Section */}
+              {/* Target Groups */}
               {announcement.targetGroups &&
                 announcement.targetGroups.length > 0 && (
-                  <div className="mt-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-1.5 rounded-md bg-green-50">
-                        <Users className="w-4 h-4 text-green-500" />
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex items-center mb-3">
+                      <div className="p-1.5 bg-green-50 rounded-md mr-2">
+                        <Users className="w-3.5 h-3.5 text-green-500" />
                       </div>
-                      <h3 className="text-base font-medium text-gray-700">
+                      <h4 className="text-xs uppercase tracking-wider font-medium text-gray-500">
                         Target Groups
-                      </h3>
+                      </h4>
                     </div>
 
-                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                      <div className="flex flex-wrap gap-2">
-                        {announcement.targetGroups.map((group, index) => (
-                          <span
-                            key={index}
-                            className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 rounded-full border border-blue-100"
-                          >
-                            {group}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {announcement.targetGroups.map((group, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-md border border-blue-100"
+                        >
+                          {group}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
-            </div>
-
-            {/* Announcement ID Card */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Announcement ID</span>
-                <span className="text-sm font-medium bg-gray-100 px-3 py-1 rounded-full">
-                  {announcement.id}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -431,7 +474,7 @@ export default function AnnouncementDetail({ params }) {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={deleteAnnouncement}
-        item={"announcement"}
+        item="announcement"
       />
     </div>
   );

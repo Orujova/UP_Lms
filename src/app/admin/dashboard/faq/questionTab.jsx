@@ -59,7 +59,7 @@ const QuestionTab = ({
                   onClick={() => toggleExpandQuestion(question.id)}
                 >
                   <div className="flex-1">
-                    <div className="flex items-center">
+                    <div className="flex items-center mb-2">
                       <span
                         className={`px-2 mr-2  inline-flex text-xs leading-5 font-medium rounded-full ${
                           question.isActive
@@ -73,7 +73,7 @@ const QuestionTab = ({
                         {question.faqCategoryName}
                       </span>
                     </div>
-                    <h3 className="text-base font-medium text-gray-900 mt-1">
+                    <h3 className="text-sm font-medium text-gray-900 mt-1">
                       {question.questionText}
                     </h3>
                   </div>

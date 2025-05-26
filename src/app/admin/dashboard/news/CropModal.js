@@ -1,3 +1,4 @@
+//news crop modal
 "use client";
 import React, { useState, useCallback } from "react";
 import { X } from "lucide-react";
@@ -14,12 +15,19 @@ const CropModal = ({ image, onCancel, onCrop }) => {
 
   const createCroppedImage = async () => {
     try {
+      if (!croppedAreaPixels) {
+        console.error("No cropped area available");
+        return;
+      }
+
       const canvas = document.createElement("canvas");
       const img = new Image();
-      img.src = image;
 
-      await new Promise((resolve) => {
+      // Create a new promise to ensure image is loaded before proceeding
+      await new Promise((resolve, reject) => {
         img.onload = resolve;
+        img.onerror = reject;
+        img.src = image;
       });
 
       // Set dimensions for 16:9 ratio
@@ -27,6 +35,11 @@ const CropModal = ({ image, onCancel, onCrop }) => {
       canvas.height = 900;
 
       const ctx = canvas.getContext("2d");
+
+      // Clear the canvas first
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the cropped image
       ctx.drawImage(
         img,
         croppedAreaPixels.x,
@@ -39,16 +52,31 @@ const CropModal = ({ image, onCancel, onCrop }) => {
         canvas.height
       );
 
+      // Convert to blob with a unique filename
       canvas.toBlob(
         (blob) => {
-          const file = new File([blob], "cropped_news_image.jpg", {
+          if (!blob) {
+            console.error("Failed to create blob");
+            return;
+          }
+
+          // Create unique filename with timestamp
+          const filename = `cropped_news_image_${Date.now()}.jpg`;
+
+          // Create file from blob
+          const file = new File([blob], filename, {
             type: "image/jpeg",
             lastModified: Date.now(),
           });
-          onCrop(file, URL.createObjectURL(blob));
+
+          // Generate preview URL
+          const previewUrl = URL.createObjectURL(blob);
+
+          // Pass both the file and the preview URL to parent component
+          onCrop(file, previewUrl);
         },
         "image/jpeg",
-        0.8
+        0.9 // Higher quality
       );
     } catch (error) {
       console.error("Error creating cropped image:", error);
@@ -63,6 +91,7 @@ const CropModal = ({ image, onCancel, onCrop }) => {
           <button
             onClick={onCancel}
             className="text-gray-500 hover:text-gray-700"
+            type="button"
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,12 +128,14 @@ const CropModal = ({ image, onCancel, onCrop }) => {
           <button
             onClick={onCancel}
             className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            type="button"
           >
             Cancel
           </button>
           <button
             onClick={createCroppedImage}
             className="px-3 text-sm py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#127D74]"
+            type="button"
           >
             Apply Crop
           </button>

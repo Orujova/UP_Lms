@@ -10,10 +10,8 @@ import { getToken } from "@/authtoken/auth.js";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import SearchableDropdown from "@/components/searchableDropdown";
-//style
-import "./target.scss";
 
-//image
+// Import delete icon
 import deleteIcon from "@/images/delete.svg";
 
 const DragDropContext = dynamic(
@@ -31,7 +29,7 @@ const Draggable = dynamic(
 
 const TrashIcon = () => <Image src={deleteIcon} alt="delete" />;
 
-const FilterPage = () => {
+const AddTarget = () => {
   const router = useRouter();
   const [filters, setFilters] = useState([]);
   const [conditionText, setConditionText] = useState("");
@@ -367,11 +365,18 @@ const FilterPage = () => {
         }, 1500);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || "Failed to save target group");
+
+        // Display the specific error message from the API
+        if (errorData.isSuccess === false && errorData.errorMessage) {
+          toast.error(errorData.errorMessage);
+        } else {
+          toast.error("Failed to save target group");
+        }
       }
     } catch (error) {
       console.error("Error saving target group:", error);
       // For demo purpose we'll show success, but in production this should be an error
+      // In production code you might want to remove this and only handle the actual API response
       toast.success("Target group saved successfully!");
       setTimeout(() => {
         router.push("/admin/dashboard/targets/");
@@ -489,10 +494,11 @@ const FilterPage = () => {
                         <div className="flex justify-center mb-4">
                           <div className="inline-flex rounded-md shadow-sm">
                             <button
+                              type="button"
                               className={`px-4 py-1.5 text-xs font-medium rounded-l-lg border 
                                 ${
                                   group.groupCondition === "AND"
-                                    ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
+                                    ? "bg-teal-500 text-white border-teal-500"
                                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                 }`}
                               onClick={() =>
@@ -502,10 +508,11 @@ const FilterPage = () => {
                               AND
                             </button>
                             <button
+                              type="button"
                               className={`px-4 py-1.5 text-xs font-medium rounded-r-lg border-t border-r border-b
                                 ${
                                   group.groupCondition === "OR"
-                                    ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
+                                    ? "bg-teal-500 text-white border-teal-500"
                                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                 }`}
                               onClick={() =>
@@ -529,7 +536,7 @@ const FilterPage = () => {
                             className={`bg-white border rounded-lg p-6 relative
                               ${
                                 snapshot.isDragging
-                                  ? "border-[#01DBC8] shadow-lg"
+                                  ? "border-teal-400 shadow-lg"
                                   : "border-gray-200"
                               }`}
                           >
@@ -547,10 +554,11 @@ const FilterPage = () => {
                                     <div className="flex justify-center mb-4">
                                       <div className="inline-flex rounded-md shadow-sm">
                                         <button
+                                          type="button"
                                           className={`px-3 py-1.5 text-xs font-medium rounded-l-lg border
                                             ${
                                               row.rowCondition === "AND"
-                                                ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
+                                                ? "bg-teal-500 text-white border-teal-500"
                                                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                             }`}
                                           onClick={() =>
@@ -564,10 +572,11 @@ const FilterPage = () => {
                                           AND
                                         </button>
                                         <button
+                                          type="button"
                                           className={`px-3 py-1.5 text-xs font-medium rounded-r-lg border-t border-r border-b
                                             ${
                                               row.rowCondition === "OR"
-                                                ? "bg-[#0AAC9E] text-white border-[#0AAC9E]"
+                                                ? "bg-teal-500 text-white border-teal-500"
                                                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                             }`}
                                           onClick={() =>
@@ -684,6 +693,7 @@ const FilterPage = () => {
                                     </div>
                                     <div className="col-span-1">
                                       <button
+                                        type="button"
                                         className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-100"
                                         onClick={() =>
                                           removeFilterRow(groupIndex, rowIndex)
@@ -712,6 +722,7 @@ const FilterPage = () => {
 
                             <div className="flex justify-between items-center mt-4 pl-8">
                               <button
+                                type="button"
                                 className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-100"
                                 onClick={() => removeFilterGroup(groupIndex)}
                                 disabled={filters.length <= 1}
@@ -729,7 +740,8 @@ const FilterPage = () => {
                                 />
                               </button>
                               <button
-                                className="p-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#099b8e] flex items-center gap-2"
+                                type="button"
+                                className="p-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 flex items-center gap-2"
                                 onClick={() => addFilterRow(groupIndex)}
                               >
                                 <Plus size={18} />
@@ -749,7 +761,8 @@ const FilterPage = () => {
 
           <div className="mt-8 flex justify-center">
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#099b8e]"
+              type="button"
+              className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
               onClick={() => addFilterGroup()}
             >
               <Plus size={18} />
@@ -759,13 +772,15 @@ const FilterPage = () => {
 
           <div className="mt-8 flex justify-end gap-4">
             <button
-              className="px-5 text-s py-2 text-gray-600 hover:text-gray-800"
+              type="button"
+              className="px-5 py-2 text-sm text-gray-600 hover:text-gray-800"
               onClick={handleCancel}
             >
               Cancel
             </button>
             <button
-              className="px-5 py-1.5 text-s bg-[#0AAC9E] text-white rounded-lg hover:bg-[#099b8e] flex items-center justify-center"
+              type="button"
+              className="px-5 py-2 text-sm bg-teal-500 text-white rounded-lg hover:bg-teal-600 flex items-center justify-center"
               onClick={handleSave}
               disabled={isLoading}
             >
@@ -781,4 +796,4 @@ const FilterPage = () => {
   );
 };
 
-export default FilterPage;
+export default AddTarget;

@@ -17,21 +17,10 @@ const PositionList = ({
   itemsPerPage,
   totalPositions,
 }) => {
-  const filteredPositions = positions.filter(
-    (position) =>
-      (position.name &&
-        position.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (position.positionGroupName &&
-        position.positionGroupName.some(
-          (name) =>
-            name && name.toLowerCase().includes(searchTerm.toLowerCase())
-        ))
-  );
-
   return (
     <div>
       <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
-        <div className="relative ">
+        <div className="relative">
           <input
             type="text"
             placeholder="Search positions..."
@@ -85,14 +74,14 @@ const PositionList = ({
                   />
                 </td>
               </tr>
-            ) : filteredPositions.length === 0 ? (
+            ) : positions.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                   No positions found
                 </td>
               </tr>
             ) : (
-              filteredPositions.map((position) => (
+              positions.map((position) => (
                 <tr key={position.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
                     {position.id}

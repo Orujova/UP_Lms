@@ -64,6 +64,8 @@ export default function UserComponent({
   department,
   position,
   isActive = true,
+  index,
+  totalItems,
 }) {
   const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
@@ -81,23 +83,42 @@ export default function UserComponent({
     bottom: true,
   });
 
-  // Check if dropdown would go off-screen and adjust position
+  // Improved dropdown position calculation
   useEffect(() => {
     if (showSettings && settingsRef.current && dropdownRef.current) {
       const buttonRect = settingsRef.current.getBoundingClientRect();
       const dropdownHeight = dropdownRef.current.offsetHeight;
       const viewportHeight = window.innerHeight;
+      const tableBodyElement = document.querySelector("#tableBody");
+
+      // Check if this is one of the last few rows
+      const isNearBottom =
+        index !== undefined &&
+        totalItems !== undefined &&
+        totalItems - index <= 3;
 
       // Check if there's not enough space below
       const spaceBelow = viewportHeight - buttonRect.bottom;
-      const shouldShowAbove = spaceBelow < dropdownHeight + 10;
+      const shouldShowAbove = spaceBelow < dropdownHeight + 10 || isNearBottom;
 
       setDropdownPosition({
         top: shouldShowAbove,
         bottom: !shouldShowAbove,
       });
+
+      // If dropdown is showing above and near the top of the table, scroll up a bit
+      if (
+        shouldShowAbove &&
+        tableBodyElement &&
+        buttonRect.top < dropdownHeight
+      ) {
+        tableBodyElement.scrollBy({
+          top: -(dropdownHeight - buttonRect.top + 20),
+          behavior: "smooth",
+        });
+      }
     }
-  }, [showSettings]);
+  }, [showSettings, index, totalItems]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -320,7 +341,7 @@ export default function UserComponent({
 
   return (
     <div
-      className={`grid grid-cols-[2fr_1.5fr_1.5fr_1.5fr_80px] gap-4 py-3.5 px-6 border-b border-gray-200 transition-all duration-200 text-base hover:bg-gray-50 ${
+      className={`grid grid-cols-[2fr_1fr_1fr_2fr_80px] gap-4 py-3.5 px-6 border-b border-gray-200 transition-all duration-200 text-base hover:bg-gray-50 ${
         !isActive ? "bg-gray-50 border-l-2 border-l-gray-300" : ""
       }`}
     >

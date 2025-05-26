@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Edit,
@@ -11,26 +11,31 @@ import {
   AlertCircle,
   ChevronDown,
   Filter,
-  ArrowLeft,
-  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   Grid,
   List,
   Bookmark,
   Tag,
   Eye,
   SquareArrowOutUpRight,
+  Loader2,
+  X,
 } from "lucide-react";
 
 import Link from "next/link";
 import { toast } from "sonner";
 import DeleteConfirmationModal from "@/components/deleteModal";
 import LoadingSpinner from "@/components/loadingSpinner";
+
 const PAGE_SIZE = 12;
 
 export default function AnnouncementsList() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [sortBy, setSortBy] = useState("nameasc");
@@ -40,25 +45,71 @@ export default function AnnouncementsList() {
   const [deleteAnnouncementId, setDeleteAnnouncementId] = useState(null);
   const router = useRouter();
 
+  const timeoutRef = useRef(null);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setCurrentPage(1);
+    }, 600);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        setLoading(true);
+        if (debouncedSearch !== searchInput) {
+          setSearchLoading(true);
+        } else if (!announcements.length) {
+          setLoading(true);
+        }
+
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/Announcement?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${search}&OrderBy=${sortBy}`
+          `https://bravoadmin.uplms.org/api/Announcement?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${debouncedSearch}&OrderBy=${sortBy}`
         );
+
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
         const data = await response.json();
-        setAnnouncements(data[0].announcements);
-        setTotalCount(data[0].totalAnnouncementCount);
+        console.log("API response:", data);
+
+        if (data && data[0]) {
+          setAnnouncements(data[0].announcements || []);
+          setTotalCount(data[0].totalAnnouncementCount || 0);
+          console.log(
+            `Received ${data[0].announcements?.length} items, total count: ${data[0].totalAnnouncementCount}`
+          );
+        } else {
+          console.error("Unexpected API response structure:", data);
+          toast.error("Invalid data format received from server");
+        }
       } catch (error) {
         console.error("Error fetching announcements:", error);
+        toast.error("Failed to load announcements");
       } finally {
         setLoading(false);
+        setSearchLoading(false);
       }
     };
 
     fetchAnnouncements();
-  }, [currentPage, search, sortBy]);
+  }, [currentPage, debouncedSearch, sortBy]);
 
   const deleteAnnouncement = async (id) => {
     try {
@@ -71,9 +122,8 @@ export default function AnnouncementsList() {
         setAnnouncements((prev) =>
           prev.filter((announcement) => announcement.id !== id)
         );
-
+        setTotalCount((prevCount) => prevCount - 1);
         toast.success("Announcement deleted successfully");
-
         if (announcements.length === 1 && currentPage > 1) {
           setCurrentPage((prev) => prev - 1);
         }
@@ -89,7 +139,6 @@ export default function AnnouncementsList() {
     }
   };
 
-  // Create a function to handle delete button clicks
   const handleDeleteClick = (id) => {
     setDeleteAnnouncementId(id);
     setIsDeleteModalOpen(true);
@@ -103,8 +152,9 @@ export default function AnnouncementsList() {
       day: "numeric",
     });
   };
-
+  console.log(totalCount);
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  console.log("Total Pages:", totalPages);
 
   const sortOptions = [
     { value: "nameasc", label: "Title (A-Z)" },
@@ -112,6 +162,14 @@ export default function AnnouncementsList() {
     { value: "dateasc", label: "Date (Oldest)" },
     { value: "datedesc", label: "Date (Newest)" },
   ];
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      console.log(`Changing to page ${newPage}`);
+      setCurrentPage(newPage);
+      window.scrollTo(0, 0);
+    }
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -186,15 +244,8 @@ export default function AnnouncementsList() {
                   <Clock className="w-3.5 h-3.5" />
                   <span>{formatDate(announcement.scheduledDate)}</span>
                 </div>
-              )}{" "}
-              <SquareArrowOutUpRight
-                onClick={() =>
-                  router.push(
-                    `/admin/dashboard/announcements/${announcement.id}`
-                  )
-                }
-                className="w-3.5 h-3.5 ml-2 font-medium text-gray-500 hover:text-gray-600 cursor-pointer"
-              />
+              )}
+              <SquareArrowOutUpRight className="w-3.5 h-3.5 ml-2 font-medium text-gray-500 hover:text-gray-600 cursor-pointer" />
             </div>
           </div>
         </div>
@@ -276,7 +327,7 @@ export default function AnnouncementsList() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-12">
-      <div className=" mx-auto">
+      <div className="container mx-auto px-4">
         {/* Top Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -354,17 +405,29 @@ export default function AnnouncementsList() {
           <div className="p-5">
             <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                {searchLoading ? (
+                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                )}
                 <input
                   type="text"
                   placeholder="Search announcements..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full pl-10 pr-4 py-2 text-xs border-1 border-gray-200 rounded-xl focus:ring-1 focus:ring-[#01DBC8] "
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-2 text-xs border border-gray-200 rounded-xl focus:ring-1 focus:ring-[#01DBC8] focus:border-[#01DBC8] outline-none"
                 />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput("");
+                      setDebouncedSearch("");
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -420,90 +483,145 @@ export default function AnnouncementsList() {
           </div>
         </div>
 
-        {/* Content */}
-        {announcements.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No announcements found
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Try adjusting your search criteria or create a new announcement
-            </p>
-            <Link href="/admin/dashboard/announcements/add">
-              <button className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-xl hover:bg-[#127D74] transition-all">
-                <Plus className="w-5 h-5" />
-                Create First Announcement
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <div className="mb-8">
-            {viewMode === "grid" ? <GridView /> : <ListView />}
-          </div>
-        )}
+        {/* Content with loading overlay for search */}
+        <div className="relative mb-8">
+          {searchLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 text-[#0AAC9E] animate-spin mx-auto" />
+                <p className="mt-2 text-sm text-gray-600">Searching...</p>
+              </div>
+            </div>
+          )}
+
+          {announcements.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No announcements found
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Try adjusting your search criteria or create a new announcement
+              </p>
+              <Link href="/admin/dashboard/announcements/add">
+                <button className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-xl hover:bg-[#127D74] transition-all">
+                  <Plus className="w-5 h-5" />
+                  Create First Announcement
+                </button>
+              </Link>
+            </div>
+          ) : viewMode === "grid" ? (
+            <GridView />
+          ) : (
+            <ListView />
+          )}
+        </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center">
-            <div className="bg-white rounded-xl shadow-sm inline-flex items-center divide-x divide-gray-100">
+        {totalCount > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+            {/* Showing Entries Info */}
+            <div className="text-sm text-gray-500">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1} to{" "}
+              {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount}{" "}
+              announcements
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-2">
+              {/* Previous Button */}
               <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`p-3 first:rounded-l-xl transition-colors ${
+                className={`flex items-center justify-center w-9 h-9 rounded-md border border-gray-200 ${
                   currentPage === 1
-                    ? "text-gray-300 cursor-not-allowed"
-                    : "text-gray-500 hover:bg-gray-50"
+                    ? "text-gray-300 bg-gray-50 cursor-not-allowed"
+                    : "text-gray-600 bg-white hover:bg-gray-50"
                 }`}
+                aria-label="Previous page"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              {Array.from({ length: totalPages }).map((_, index) => {
-                // Show first page, last page, current page, and one page before and after current
-                if (
-                  index === 0 ||
-                  index === totalPages - 1 ||
-                  index === currentPage - 1 ||
-                  Math.abs(index - (currentPage - 1)) <= 1
-                ) {
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPage(index + 1)}
-                      className={`px-4 py-2 min-w-[40px] text-sm font-medium transition-colors ${
-                        currentPage === index + 1
-                          ? "bg-[#0AAC9E] text-white"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
-                  );
-                } else if (index === 1 || index === totalPages - 2) {
-                  // Show ellipsis
-                  return (
+
+              {/* Page Numbers */}
+              {(() => {
+                const maxPagesToShow = 5; // Show up to 5 page numbers at a time
+                const pageNumbers = [];
+                const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+                // Calculate the start and end page numbers to display
+                let startPage = Math.max(
+                  1,
+                  currentPage - Math.floor(maxPagesToShow / 2)
+                );
+                let endPage = Math.min(
+                  totalPages,
+                  startPage + maxPagesToShow - 1
+                );
+
+                // Adjust startPage if endPage is at the maximum
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                  startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                // Add first page and ellipsis if needed
+                if (startPage > 1) {
+                  pageNumbers.push(1);
+                  if (startPage > 2) {
+                    pageNumbers.push("...");
+                  }
+                }
+
+                // Add page numbers in the calculated range
+                for (let i = startPage; i <= endPage; i++) {
+                  pageNumbers.push(i);
+                }
+
+                // Add last page and ellipsis if needed
+                if (endPage < totalPages) {
+                  if (endPage < totalPages - 1) {
+                    pageNumbers.push("...");
+                  }
+                  pageNumbers.push(totalPages);
+                }
+
+                return pageNumbers.map((page, index) =>
+                  page === "..." ? (
                     <span
-                      key={index}
-                      className="px-4 py-2 text-sm text-gray-400"
+                      key={`ellipsis-${index}`}
+                      className="flex items-center justify-center w-9 h-9 text-gray-500"
                     >
                       ...
                     </span>
-                  );
-                }
-                return null;
-              })}
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`flex items-center justify-center w-9 h-9 border border-gray-200 rounded-md text-sm ${
+                        page === currentPage
+                          ? "bg-[#0AAC9E] text-white border-[#0AAC9E] font-medium"
+                          : "bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
+                      aria-label={`Page ${page}`}
+                    >
+                      {page}
+                    </button>
+                  )
+                );
+              })()}
+
+              {/* Next Button */}
               <button
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
+                onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`p-3 last:rounded-r-xl transition-colors ${
+                className={`flex items-center justify-center w-9 h-9 rounded-md border border-gray-200 ${
                   currentPage === totalPages
-                    ? "text-gray-300 cursor-not-allowed"
-                    : "text-gray-500 hover:bg-gray-50"
+                    ? "text-gray-300 bg-gray-50 cursor-not-allowed"
+                    : "text-gray-600 bg-white hover:bg-gray-50"
                 }`}
+                aria-label="Next page"
               >
-                <ArrowRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

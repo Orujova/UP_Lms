@@ -3,16 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save, X } from "lucide-react";
 
 // Import modular components
 import BasicInfo from "@/components/announcement/BasicInfo";
 import Description from "@/components/announcement/Description";
 import ImageUpload from "@/components/announcement/ImageUpload";
-import PollUnitSelector from "@/components/announcement/PollUnitSelector";
-import TargetGroupSelector from "@/components/announcement/TargetGroupSelector";
+import PollUnitSelector from "@/components/polUnits";
+import TargetGroupSelector from "@/components/targetSelect";
 import Settings from "@/components/announcement/Settings";
-import FormActions from "@/components/announcement/FormActions";
 import LoadingSpinner from "@/components/loadingSpinner";
 
 // Import auth functions for API access
@@ -362,124 +361,162 @@ export default function EditAnnouncement({ params }) {
     }
   };
 
+  const handleCancel = () => {
+    router.push("/admin/dashboard/announcements");
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pt-10">
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 text-red-500">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Error loading data
-              </h3>
-              <div className="mt-1 text-sm text-red-700">{error}</div>
-            </div>
-            <div className="ml-auto pl-3">
-              <button
-                onClick={fetchAnnouncementData}
-                className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-xs"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="min-h-screen bg-gray-50/50">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex justify-between w-full">
-            <button
-              onClick={() => router.push("/admin/dashboard/announcements")}
-              className="text-gray-500 hover:text-gray-700 flex items-center gap-2"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back
-            </button>
-            <h1 className="text-lg font-semibold mt-2">Edit Announcement</h1>
-          </div>
+    <div className="min-h-screen bg-gray-50/50 pt-14">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12">
+        {/* Header with back button */}
+        <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Edit Announcement
+          </h1>
+          <button
+            onClick={() => router.push("/admin/dashboard/announcements")}
+            className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-sm"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to announcements</span>
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Image Upload */}
-          <ImageUpload
-            imagePreview={imagePreview}
-            onImageChange={handleImageChange}
-            onImageRemove={handleImageRemove}
-          />
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 text-red-500">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Error loading data
+                </h3>
+                <div className="mt-1 text-sm text-red-700">{error}</div>
+              </div>
+              <div className="ml-auto pl-3">
+                <button
+                  onClick={fetchAnnouncementData}
+                  className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-xs"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-          {/* Basic Information */}
-          <BasicInfo
-            title={formData.Title}
-            subtitle={formData.SubTitle}
-            onInputChange={handleInputChange}
-          />
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+        >
+          {/* Main content area - 2/3 width */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Image Upload */}
+            <ImageUpload
+              imagePreview={imagePreview}
+              onImageChange={handleImageChange}
+              onImageRemove={handleImageRemove}
+            />
 
-          {/* Description */}
-          <Description
-            shortDescription={formData.ShortDescription}
-            fullDescription={formData.Description}
-            onInputChange={handleInputChange}
-          />
+            {/* Basic Information */}
+            <BasicInfo
+              title={formData.Title}
+              subtitle={formData.SubTitle}
+              onInputChange={handleInputChange}
+            />
 
-          {/* Poll Unit Selector */}
-          <PollUnitSelector
-            pollUnits={pollUnits}
-            searchValue={searchPollUnit}
-            selectedPollUnitId={formData.PollUnitId}
-            showDropdown={showPollUnitDropdown}
-            onSearchChange={setSearchPollUnit}
-            onToggleDropdown={setShowPollUnitDropdown}
-            onSelect={handleSelectPollUnit}
-            onClear={handleClearPollUnit}
-          />
+            {/* Description */}
+            <Description
+              shortDescription={formData.ShortDescription}
+              fullDescription={formData.Description}
+              onInputChange={handleInputChange}
+            />
+          </div>
 
-          {/* Target Group Selector */}
-          <TargetGroupSelector
-            targetGroups={targetGroups}
-            searchValue={searchTargetGroup}
-            selectedTargetGroups={selectedTargetGroups}
-            showDropdown={showTargetGroupDropdown}
-            onSearchChange={setSearchTargetGroup}
-            onToggleDropdown={setShowTargetGroupDropdown}
-            onSelect={handleSelectTargetGroup}
-            onRemove={handleRemoveTargetGroup}
-          />
+          {/* Sidebar - 1/3 width */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Settings */}
+            <Settings
+              priority={formData.Priority}
+              scheduledDate={formData.ScheduledDate}
+              expiryDate={formData.ExpiryDate}
+              hasNotification={formData.HasNotification}
+              onInputChange={handleInputChange}
+            />
 
-          {/* Settings */}
-          <Settings
-            priority={formData.Priority}
-            scheduledDate={formData.ScheduledDate}
-            expiryDate={formData.ExpiryDate}
-            hasNotification={formData.HasNotification}
-            onInputChange={handleInputChange}
-          />
+            {/* Poll Unit Selector */}
+            <PollUnitSelector
+              pollUnits={pollUnits}
+              searchValue={searchPollUnit}
+              selectedPollUnitId={formData.PollUnitId}
+              showDropdown={showPollUnitDropdown}
+              onSearchChange={setSearchPollUnit}
+              onToggleDropdown={setShowPollUnitDropdown}
+              onSelect={handleSelectPollUnit}
+              onClear={handleClearPollUnit}
+            />
 
-          {/* Action Buttons */}
-          <FormActions
-            isSubmitting={saving}
-            onCancel={() => router.push("/admin/dashboard/announcements")}
-            submitButtonText="Save Changes"
-            loadingText="Saving..."
-          />
+            {/* Target Group Selector */}
+            <TargetGroupSelector
+              targetGroups={targetGroups}
+              searchValue={searchTargetGroup}
+              selectedTargetGroups={selectedTargetGroups}
+              showDropdown={showTargetGroupDropdown}
+              onSearchChange={setSearchTargetGroup}
+              onToggleDropdown={setShowTargetGroupDropdown}
+              onSelect={handleSelectTargetGroup}
+              onRemove={handleRemoveTargetGroup}
+            />
+
+            {/* Action buttons in a card */}
+            <div className="bg-white rounded-lg p-5 border border-gray-200">
+              <h2 className="text-base font-medium mb-4">Actions</h2>
+              <div className="space-y-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full bg-[#0AAC9E] text-white text-sm rounded-lg px-4 py-2.5 font-medium hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="w-full bg-white text-gray-700 rounded-lg px-4 text-sm py-2.5 border border-gray-200 font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                >
+                  <X size={16} />
+                  <span>Cancel</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
     </div>

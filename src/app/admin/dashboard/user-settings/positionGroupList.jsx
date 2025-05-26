@@ -16,11 +16,6 @@ const PositionGroupList = ({
   itemsPerPage,
   totalPositionGroups,
 }) => {
-  const filteredPositionGroups = positionGroups.filter(
-    (group) =>
-      group.name && group.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-3">
@@ -52,7 +47,7 @@ const PositionGroupList = ({
           <Loader2 size={20} className="animate-spin text-[#0AAC9E]" />
           <span className="ml-2 text-xs text-gray-500">Loading...</span>
         </div>
-      ) : filteredPositionGroups.length === 0 ? (
+      ) : positionGroups.length === 0 ? (
         <div className="py-4 text-center text-xs text-gray-500 bg-white border border-gray-200 rounded-lg">
           No position groups found
         </div>
@@ -60,7 +55,7 @@ const PositionGroupList = ({
         <>
           {/* Card Layout */}
           <div className="space-y-2 space">
-            {filteredPositionGroups.map((group) => (
+            {positionGroups.map((group) => (
               <div
                 key={group.id}
                 className="bg-white border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50 transition-colors"
@@ -102,7 +97,7 @@ const PositionGroupList = ({
           </div>
 
           {/* Pagination */}
-          {filteredPositionGroups.length > 0 && (
+          {positionGroups.length > 0 && (
             <div>
               <Pagination
                 currentPage={currentPage}

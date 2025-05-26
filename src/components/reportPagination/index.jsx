@@ -1,77 +1,65 @@
 "use client";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-const Pagination = ({ currentPage, totalPages, onPageChange, disabled }) => {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  const showPages = pages.filter((page) => {
-    if (page === 1 || page === totalPages) return true;
-    if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-    return false;
-  });
+import React from "react";
+
+import {
+  ChevronRight,
+  ChevronLeft ,
+} from "lucide-react";
+
+
+
+// Enhanced Pagination Component
+const Pagination = ({ currentPage, totalPages, onPageChange, disabled, totalItems, itemsPerPage }) => {
+  const handlePrevious = () => {
+    if (!disabled && currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (!disabled && currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  };
+
+  if (totalPages <= 1) {
+    return <div className="h-8"></div>;
+  }
+
+  const startItem = ((currentPage - 1) * itemsPerPage) + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className="flex items-center justify-between mt-4">
-      <div className="text-sm text-gray-500">
-        {disabled
-          ? "No pages available"
-          : `Page ${currentPage} of ${totalPages}`}
+    <div className="flex items-center justify-between mt-6 p-4 bg-gray-50 rounded-lg" aria-label="Pagination navigation">
+      <div className="text-xs text-gray-600">
+        Showing {startItem} to {endItem} of {totalItems} entries
       </div>
+
       <div className="flex items-center gap-2">
         <button
-          onClick={() => onPageChange(currentPage - 1)}
+          onClick={handlePrevious}
           disabled={disabled || currentPage === 1}
-          className={`p-2 rounded-lg ${
-            disabled || currentPage === 1
-              ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-gray-100"
-          }`}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-3 h-3" />
+          
         </button>
-
-        <div className="flex gap-1">
-          {showPages.map((page, index) => {
-            // Add ellipsis
-            if (index > 0 && page - showPages[index - 1] > 1) {
-              return (
-                <span key={`ellipsis-${page}`} className="px-2 py-1">
-                  ...
-                </span>
-              );
-            }
-
-            return (
-              <button
-                key={page}
-                onClick={() => onPageChange(page)}
-                disabled={disabled}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg
-                  ${
-                    currentPage === page
-                      ? "bg-[#f2fdfc] text-[#0AAC9E]"
-                      : "hover:bg-gray-100"
-                  }
-                  ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {page}
-              </button>
-            );
-          })}
-        </div>
-
+        
+        <span className="px-3 py-1.5 text-xs text-gray-700 bg-white rounded-lg border">
+          {currentPage} of {totalPages}
+        </span>
+        
         <button
-          onClick={() => onPageChange(currentPage + 1)}
+          onClick={handleNext}
           disabled={disabled || currentPage === totalPages}
-          className={`p-2 rounded-lg ${
-            disabled || currentPage === totalPages
-              ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-gray-100"
-          }`}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronRight className="w-5 h-5" />
+          
+          <ChevronRight className="w-3 h-3" />
         </button>
       </div>
     </div>
   );
 };
 
-export default Pagination;
+export default Pagination

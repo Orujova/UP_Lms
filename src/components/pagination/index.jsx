@@ -5,7 +5,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import "./pagination.scss";
 
 export default function Pagination({ currentPage, totalPages, onPageChange }) {
   const renderPageNumbers = () => {
@@ -48,11 +47,11 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
   };
 
   return (
-    <div className="pagination-wrapper">
-      <div className="pagination-container">
+    <div className="flex justify-center items-center py-4 select-none">
+      <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow transition-all duration-300 hover:shadow-md sm:gap-2 sm:p-1.5">
         {/* Jump to First */}
         <button
-          className="pagination-button jump-button"
+          className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-transparent text-gray-400 border border-transparent cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-600 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent active:scale-95 sm:w-8 sm:h-8"
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
           title="First page"
@@ -60,8 +59,9 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
           <ChevronsLeft size={16} />
         </button>
 
+        {/* Previous */}
         <button
-          className="pagination-button nav-button"
+          className="flex items-center justify-center w-9 h-9 rounded-lg bg-transparent text-gray-500 border border-transparent cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent active:scale-95 sm:w-8 sm:h-8"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           title="Previous page"
@@ -69,17 +69,24 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
           <ChevronLeft size={16} />
         </button>
 
-        <div className="pagination-numbers">
+        {/* Page Numbers */}
+        <div className="flex items-center gap-1 mx-1">
           {renderPageNumbers().map((page, index) =>
             page === "..." ? (
-              <span key={`ellipsis-${index}`} className="ellipsis">
+              <span
+                key={`ellipsis-${index}`}
+                className="flex items-center justify-center w-9 h-9 text-gray-500 text-xs tracking-wider sm:w-8 sm:h-8"
+              >
                 •••
               </span>
             ) : (
               <button
                 key={page}
-                className={`page-number ${
-                  currentPage === page ? "active" : ""
+                className={`min-w-[34px] h-7 rounded-lg border-none text-xs font-medium cursor-pointer transition-all duration-200 
+                ${
+                  currentPage === page
+                    ? "bg-[#01dbc8] text-white font-semibold hover:bg-[#00c4b3]"
+                    : "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
                 onClick={() => onPageChange(page)}
                 disabled={currentPage === page}
@@ -92,7 +99,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
 
         {/* Next */}
         <button
-          className="pagination-button nav-button"
+          className="flex items-center justify-center w-9 h-9 rounded-lg bg-transparent text-gray-500 border border-transparent cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent active:scale-95 sm:w-8 sm:h-8"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           title="Next page"
@@ -102,7 +109,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
 
         {/* Jump to Last */}
         <button
-          className="pagination-button jump-button"
+          className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-transparent text-gray-400 border border-transparent cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-600 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent active:scale-95 sm:w-8 sm:h-8"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
           title="Last page"

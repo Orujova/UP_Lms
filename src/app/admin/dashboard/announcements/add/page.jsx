@@ -9,16 +9,15 @@ import {
 } from "@/redux/announcement/announcement";
 import { getParsedToken } from "@/authtoken/auth.js";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save, X } from "lucide-react";
 
 // Import components
 import ImageUpload from "@/components/announcement/ImageUpload";
 import BasicInfo from "@/components/announcement/BasicInfo";
 import Description from "@/components/announcement/Description";
-import PollUnitSelector from "@/components/announcement/PollUnitSelector";
-import TargetGroupSelector from "@/components/announcement/TargetGroupSelector";
+import PollUnitSelector from "@/components/polUnits";
+import TargetGroupSelector from "@/components/targetSelect";
 import Settings from "@/components/announcement/Settings";
-import FormActions from "@/components/announcement/FormActions";
 
 const NewAnnouncementPage = () => {
   const router = useRouter();
@@ -388,86 +387,119 @@ const NewAnnouncementPage = () => {
   console.log("Current loading state:", loading);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pt-12">
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex justify-between w-full">
-          <button
-            onClick={() => router.push("/admin/dashboard/announcements")}
-            className="text-gray-500 hover:text-gray-700 flex items-center gap-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
-          <h1 className="text-lg font-semibold mt-2">
+    <div className="min-h-screen bg-gray-50/50 pt-14">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12">
+        {/* Header with back button */}
+        <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
+          <h1 className="text-2xl font-semibold text-gray-800">
             Create New Announcement
           </h1>
+          <button
+            onClick={() => router.push("/admin/dashboard/announcements")}
+            className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-sm"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to announcements</span>
+          </button>
         </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+        >
+          {/* Main content area - 2/3 width */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Image Upload */}
+            <ImageUpload
+              imagePreview={imagePreview}
+              onImageChange={handleImageChange}
+              onImageRemove={handleImageRemove}
+            />
+
+            {/* Basic Information */}
+            <BasicInfo
+              title={formData.Title}
+              subtitle={formData.SubTitle}
+              onInputChange={handleInputChange}
+            />
+
+            {/* Description */}
+            <Description
+              shortDescription={formData.ShortDescription}
+              fullDescription={formData.Description}
+              onInputChange={handleInputChange}
+            />
+          </div>
+
+          {/* Sidebar - 1/3 width */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Settings */}
+            <Settings
+              priority={formData.Priority}
+              scheduledDate={formData.ScheduledDate}
+              expiryDate={formData.ExpiryDate}
+              hasNotification={formData.HasNotification}
+              onInputChange={handleInputChange}
+            />
+
+            <PollUnitSelector
+              pollUnits={pollUnits}
+              searchValue={searchPollUnit}
+              selectedPollUnitId={formData.PollUnitId}
+              showDropdown={showPollUnitDropdown}
+              onSearchChange={setSearchPollUnit}
+              onToggleDropdown={setShowPollUnitDropdown}
+              onSelect={handlePollUnitSelect}
+              onClear={handleClearPollUnit}
+            />
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <TargetGroupSelector
+                targetGroups={targetGroups}
+                searchValue={searchTargetGroup}
+                selectedTargetGroups={selectedTargetGroups}
+                showDropdown={showTargetGroupDropdown}
+                onSearchChange={setSearchTargetGroup}
+                onToggleDropdown={setShowTargetGroupDropdown}
+                onSelect={handleTargetGroupSelect}
+                onRemove={handleTargetGroupRemove}
+              />
+            </div>
+
+            {/* Action buttons in a card */}
+            <div className="bg-white rounded-lg p-5 border border-gray-200">
+              <h2 className="text-base font-medium mb-4">Actions</h2>
+              <div className="space-y-3">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#0AAC9E] text-white text-sm rounded-lg px-4 py-2.5 font-medium hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>Create Announcement</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="w-full bg-white text-gray-700 rounded-lg px-4 text-sm py-2.5 border border-gray-200 font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                >
+                  <X size={16} />
+                  <span>Cancel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Image Upload */}
-        <ImageUpload
-          imagePreview={imagePreview}
-          onImageChange={handleImageChange}
-          onImageRemove={handleImageRemove}
-        />
-
-        {/* Basic Information */}
-        <BasicInfo
-          title={formData.Title}
-          subtitle={formData.SubTitle}
-          onInputChange={handleInputChange}
-        />
-
-        {/* Description */}
-        <Description
-          shortDescription={formData.ShortDescription}
-          fullDescription={formData.Description}
-          onInputChange={handleInputChange}
-        />
-
-        {/* Poll Unit Selector */}
-        <PollUnitSelector
-          pollUnits={pollUnits}
-          searchValue={searchPollUnit}
-          selectedPollUnitId={formData.PollUnitId}
-          showDropdown={showPollUnitDropdown}
-          onSearchChange={setSearchPollUnit}
-          onToggleDropdown={setShowPollUnitDropdown}
-          onSelect={handlePollUnitSelect}
-          onClear={handleClearPollUnit}
-        />
-
-        {/* Target Group Selector */}
-        <TargetGroupSelector
-          targetGroups={targetGroups}
-          searchValue={searchTargetGroup}
-          selectedTargetGroups={selectedTargetGroups}
-          showDropdown={showTargetGroupDropdown}
-          onSearchChange={setSearchTargetGroup}
-          onToggleDropdown={setShowTargetGroupDropdown}
-          onSelect={handleTargetGroupSelect}
-          onRemove={handleTargetGroupRemove}
-        />
-
-        {/* Settings */}
-        <Settings
-          priority={formData.Priority}
-          scheduledDate={formData.ScheduledDate}
-          expiryDate={formData.ExpiryDate}
-          hasNotification={formData.HasNotification}
-          onInputChange={handleInputChange}
-        />
-
-        {/* Form Actions */}
-        <FormActions
-          isSubmitting={loading}
-          onCancel={handleCancel}
-          submitButtonText="Create Announcement"
-          loadingText="Creating..."
-        />
-      </form>
     </div>
   );
 };

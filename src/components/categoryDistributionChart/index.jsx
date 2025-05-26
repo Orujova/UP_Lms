@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   PieChart,
   Pie,
@@ -7,7 +7,11 @@ import {
   ResponsiveContainer,
   Cell,
   Sector,
+  Tooltip,
 } from "recharts";
+import { Loader, PieChart as PieChartIcon } from "lucide-react";
+
+// Enhanced color palette with better accessibility and contrast
 
 const COLORS = [
   "#7EC8E3",
@@ -16,21 +20,65 @@ const COLORS = [
   "#B5EAD7",
   "#C7CEEA",
   "#E2F0CB",
+  "#C3B1E1",
+  "#FFC8DD",
+  "#A8E6CF",
+  "#FDFFAB",
 ];
 
-const CategoryDistributionChart = ({ data }) => {
-  if (!data || data.length === 0) return null;
+const LoadingOverlay = () => (
+  <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10 rounded-lg">
+    <div className="flex flex-col items-center">
+      <div className="w-12 h-12 border-4 border-[#0AAC9E] border-t-transparent rounded-full animate-spin mb-2"></div>
+      <span className="text-sm text-gray-600">Loading chart data...</span>
+    </div>
+  </div>
+);
 
-  // Format the data for better visualization
-  const formattedData = data.map((category) => ({
-    name: category.categoryName,
-    value: category.totalNewsCount,
-    totalView: category.totalView,
-    uniqueView: category.uniqueView,
-    interestLevel: category.interestLevel,
-  }));
+const NoDataDisplay = () => (
+  <div className="h-96 flex flex-col items-center justify-center bg-gray-50 rounded-lg">
+    <PieChartIcon className="w-12 h-12 text-gray-300 mb-3" />
+    <p className="text-gray-500 font-medium">No category data available</p>
+    <p className="text-sm text-gray-400 mt-1">
+      Try adjusting filters or check back later
+    </p>
+  </div>
+);
 
-  const RADIAN = Math.PI / 180;
+const CategoryDistributionChart = ({ data, loading = false }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [chartHeight, setChartHeight] = useState(400);
+
+  // Process data with useMemo for performance optimization
+  const formattedData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
+    return data.map((category) => ({
+      name: category.categoryName,
+      value: category.totalNewsCount,
+      totalView: category.totalView || 0,
+      uniqueView: category.uniqueView || 0,
+      interestLevel: category.interestLevel || "Unknown",
+      percentage: parseFloat(category.newsCountPercentage?.toFixed(1)) || 0,
+    }));
+  }, [data]);
+
+  // Resize chart height based on window size
+  useEffect(() => {
+    const handleResize = () => {
+      setChartHeight(window.innerWidth < 768 ? 350 : 400);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const onPieEnter = (_, index) => {
+    setActiveIndex(index);
+  };
+
+  // Enhanced active shape renderer with improved readability
   const renderActiveShape = (props) => {
     const {
       cx,
@@ -44,8 +92,8 @@ const CategoryDistributionChart = ({ data }) => {
       payload,
       percent,
       value,
-      name,
     } = props;
+    const RADIAN = Math.PI / 180;
     const sin = Math.sin(-RADIAN * midAngle);
     const cos = Math.cos(-RADIAN * midAngle);
     const sx = cx + (outerRadius + 10) * cos;
@@ -56,12 +104,16 @@ const CategoryDistributionChart = ({ data }) => {
     const ey = my;
     const textAnchor = cos >= 0 ? "start" : "end";
 
-    const interest =
-      payload.interestLevel === "High"
-        ? "#48BB78"
-        : payload.interestLevel === "Normal"
-        ? "#4299E1"
-        : "#F56565";
+    // Determine interest level color with better contrast
+    const interestColors = {
+      High: "#059669", // Emerald 600
+      Normal: "#2563EB", // Blue 600
+      Low: "#DC2626", // Red 600
+      Unknown: "#6B7280", // Gray 500
+    };
+
+    const interestColor =
+      interestColors[payload.interestLevel] || interestColors.Unknown;
 
     return (
       <g>
@@ -81,12 +133,13 @@ const CategoryDistributionChart = ({ data }) => {
           endAngle={endAngle}
           innerRadius={outerRadius + 6}
           outerRadius={outerRadius + 10}
-          fill={interest}
+          fill={interestColor}
         />
         <path
           d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
           stroke={fill}
           fill="none"
+          strokeWidth={2}
         />
         <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
         <text
@@ -94,38 +147,83 @@ const CategoryDistributionChart = ({ data }) => {
           y={ey}
           textAnchor={textAnchor}
           fill="#333"
+          className="text-base font-medium"
         >
-          {name}
+          {payload.name}
         </text>
         <text
           x={ex + (cos >= 0 ? 1 : -1) * 12}
           y={ey}
-          dy={18}
+          dy={22}
           textAnchor={textAnchor}
-          fill="#999"
+          fill="#666"
+          className="text-sm"
         >
-          {`Views: ${payload.totalView}`}
+          {`${value} news items`}
         </text>
         <text
           x={ex + (cos >= 0 ? 1 : -1) * 12}
           y={ey}
-          dy={36}
+          dy={44}
           textAnchor={textAnchor}
-          fill="#999"
+          fill="#666"
+          className="text-sm"
         >
-          {`(${(percent * 100).toFixed(2)}% of total)`}
+          {`${payload.uniqueView} unique views`}
+        </text>
+        <text
+          x={ex + (cos >= 0 ? 1 : -1) * 12}
+          y={ey}
+          dy={66}
+          textAnchor={textAnchor}
+          fill="#666"
+          className="text-sm font-medium"
+          style={{ fill: interestColor }}
+        >
+          {`${(percent * 100).toFixed(1)}% of content (${
+            payload.interestLevel
+          })`}
         </text>
       </g>
     );
   };
 
-  const [activeIndex, setActiveIndex] = useState(0);
-  const onPieEnter = (_, index) => {
-    setActiveIndex(index);
+  // Enhanced legend renderer with improved layout and clarity
+  const renderCustomLegend = (props) => {
+    const { payload } = props;
+
+    return (
+      <ul className="flex flex-wrap gap-4 justify-center mt-6 px-2">
+        {payload.map((entry, index) => (
+          <li
+            key={`item-${index}`}
+            className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full transition-all duration-300 ${
+              activeIndex === index
+                ? "bg-gray-100 shadow-sm"
+                : "hover:bg-gray-50"
+            } cursor-pointer`}
+            onMouseEnter={() => setActiveIndex(index)}
+          >
+            <div
+              className="w-4 h-4 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="font-medium">{entry.value}</span>
+            <span className="text-gray-500">({entry.payload.percentage}%)</span>
+          </li>
+        ))}
+      </ul>
+    );
   };
 
+  if (!data || data.length === 0) {
+    return <NoDataDisplay />;
+  }
+
   return (
-    <div className="h-96">
+    <div className="relative" style={{ height: `${chartHeight}px` }}>
+      {loading && <LoadingOverlay />}
+
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -133,11 +231,12 @@ const CategoryDistributionChart = ({ data }) => {
             activeShape={renderActiveShape}
             data={formattedData}
             cx="50%"
-            cy="50%"
+            cy="45%"
             innerRadius={70}
             outerRadius={90}
             dataKey="value"
             onMouseEnter={onPieEnter}
+            paddingAngle={3}
           >
             {formattedData.map((entry, index) => (
               <Cell
@@ -146,9 +245,25 @@ const CategoryDistributionChart = ({ data }) => {
               />
             ))}
           </Pie>
-          <Legend />
+          <Tooltip
+            formatter={(value, name, props) => [
+              `${value} news items (${props.payload.percentage}%)`,
+              props.payload.name,
+            ]}
+            contentStyle={{
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              border: "none",
+              padding: "10px 14px",
+            }}
+          />
+          <Legend content={renderCustomLegend} />
         </PieChart>
       </ResponsiveContainer>
+
+      <div className="text-center mt-2 text-sm text-gray-500">
+        Click or hover over each category to see detailed metrics
+      </div>
     </div>
   );
 };
