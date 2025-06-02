@@ -66,11 +66,38 @@ const AlertDescription = ({ children }) => {
   return <div className="text-xs">{children}</div>;
 };
 
+// URL transformation function
+const transformImageUrl = (urlStr) => {
+  if (!urlStr) return null;
+
+  if (urlStr.includes("100.42.179.27:7198")) {
+    const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+    const fileName = urlStr.split("/").pop();
+    return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${fileName}`;
+  }
+
+  if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/brending/")) {
+    return urlStr;
+  }
+
+  if (urlStr.startsWith("brending/")) {
+    return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
+  }
+
+  if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
+    const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+    const cleanPath = urlStr.replace(/^\/+/, "");
+    return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${cleanPath}`;
+  }
+
+  return urlStr;
+};
+
 export default function AddPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [formErrors, setFormErrors] = useState({});
-
+  const [defaultNewsImage, setDefaultNewsImage] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     subtitle: "",
@@ -88,7 +115,6 @@ export default function AddPage() {
   const [searchValue, setSearchValue] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedTargetGroups, setSelectedTargetGroups] = useState([]);
-
   const [description, setDescription] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,9 +124,46 @@ export default function AddPage() {
     [];
   const newsCategory = useSelector((state) => state.newsCategory.data) || [];
 
+  // Fetch branding settings and other data
   useEffect(() => {
+    const fetchBrandingSettings = async () => {
+      try {
+        const token = getToken();
+        if (!token) {
+          console.error("No authorization token found");
+          return;
+        }
+
+        const response = await fetch(
+          "https://bravoadmin.uplms.org/api/BrendingSetting?IsNews=true",
+          {
+            method: "GET",
+            headers: {
+              accept: "*/*",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0 && data[0].newsImageUrl) {
+            const transformedUrl = transformImageUrl(data[0].newsImageUrl);
+            setDefaultNewsImage(transformedUrl);
+          } else {
+            console.warn("No news image URL found in branding settings");
+          }
+        } else {
+          console.error("Failed to fetch branding settings:", response.status);
+        }
+      } catch (error) {
+        console.error("Error fetching branding settings:", error);
+      }
+    };
+
     dispatch(getAllTargetGroupsAsync());
     dispatch(newsCategoryAsync());
+    fetchBrandingSettings();
   }, [dispatch]);
 
   // Update formData when selectedTargetGroups changes
@@ -117,13 +180,11 @@ export default function AddPage() {
       ...prevData,
       [name]: value,
     }));
-    // Clear error when field is updated
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: null }));
     }
   };
 
-  // TargetGroupSelector handlers
   const handleSearchChange = (value) => {
     setSearchValue(value);
   };
@@ -140,8 +201,6 @@ export default function AddPage() {
         selectedTargetGroups.filter((selected) => selected.id !== group.id)
       );
     }
-
-    // Clear error when field is updated
     if (formErrors.targetGroupIds) {
       setFormErrors((prev) => ({ ...prev, targetGroupIds: null }));
     }
@@ -154,7 +213,6 @@ export default function AddPage() {
   };
 
   const handleEditorChange = (value) => {
-    // Use the utility function to properly handle the EditorJS data
     handleDescriptionChange(value, setDescription);
     if (formErrors.description) {
       setFormErrors((prev) => ({ ...prev, description: null }));
@@ -176,7 +234,6 @@ export default function AddPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -186,13 +243,9 @@ export default function AddPage() {
 
     setIsSubmitting(true);
 
-    // Ensure description is properly serialized for API
     const serializedDescription = description;
-
-    // Build query parameters object
     const queryParamsObj = new URLSearchParams();
 
-    // Add basic parameters
     queryParamsObj.append("Title", formData.title);
     queryParamsObj.append("SubTitle", formData.subtitle);
     queryParamsObj.append("Description", serializedDescription);
@@ -202,20 +255,32 @@ export default function AddPage() {
     queryParamsObj.append("HasComment", formData.hasComment);
     queryParamsObj.append("HasLike", formData.hasLike);
 
-    // Add each target group ID as a separate entry with the same parameter name
     formData.targetGroupIds.forEach((id) => {
       queryParamsObj.append("TargetGroupIds", id);
     });
 
     const queryParams = queryParamsObj.toString();
-
-    // Prepare FormData for files
     const formDataToSend = new FormData();
 
-    // Add images and attachments
-    formData.newsImages.forEach((image) => {
-      formDataToSend.append("NewsImages", image.file);
-    });
+    // Add images, or use default image if none uploaded
+    if (formData.newsImages.length > 0) {
+      formData.newsImages.forEach((image) => {
+        formDataToSend.append("NewsImages", image.file);
+      });
+    } else if (defaultNewsImage) {
+      try {
+        const response = await fetch(defaultNewsImage);
+        if (!response.ok) throw new Error("Failed to fetch default image");
+        const blob = await response.blob();
+        const file = new File([blob], "default-news-image.jpg", {
+          type: blob.type,
+        });
+        formDataToSend.append("NewsImages", file);
+      } catch (error) {
+        console.error("Error fetching default image:", error);
+        toast.error("Failed to include default image");
+      }
+    }
 
     formData.attachments.forEach((attachment) => {
       formDataToSend.append("Attachments", attachment.file);
@@ -261,7 +326,6 @@ export default function AddPage() {
     router.push("/admin/dashboard/news");
   };
 
-  // Priority options
   const priorityOptions = [
     { id: "HIGH", name: "High" },
     { id: "MEDIUM", name: "Medium" },
@@ -271,7 +335,6 @@ export default function AddPage() {
   return (
     <main className="pt-16 bg-gray-50/50 min-h-screen">
       <div className="max-w-6xl mx-auto px-5 mb-16">
-        {/* Header with back button */}
         <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
           <h1 className="text-2xl font-semibold text-gray-800">Add News</h1>
           <button
@@ -295,18 +358,14 @@ export default function AddPage() {
         )}
 
         <form className="grid grid-cols-1 gap-8" onSubmit={handleSubmit}>
-          {/* Main content area with 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left column - 2/3 width */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Title and subtitle section */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center mb-2 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">
                     Basic Information
                   </h2>
                 </div>
-
                 <div className="space-y-5">
                   <InputComponent
                     text="Title"
@@ -318,7 +377,6 @@ export default function AddPage() {
                     name="title"
                     error={formErrors.title}
                   />
-
                   <InputComponent
                     text="Subtitle"
                     required
@@ -332,17 +390,20 @@ export default function AddPage() {
                 </div>
               </div>
 
-              {/* Media section */}
               <div className="bg-white rounded-lg shadow-sm px-6 py-5">
                 <div className="flex items-center mb-2 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">Media</h2>
                 </div>
-
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-medium mb-3 leading-5 text-gray-800/90">
-                      Images
-                    </h3>
+                    <div className="flex items-center mb-2">
+                      <h3 className="text-sm font-medium leading-5 text-gray-800/90">
+                        Images
+                      </h3>
+                      <span className="ml-2 text-xs text-gray-500">
+                        (Default image will be used if no images are uploaded)
+                      </span>
+                    </div>
                     <MultiImageUpload
                       images={formData.newsImages}
                       onChange={(newImages) =>
@@ -351,6 +412,7 @@ export default function AddPage() {
                           newsImages: newImages,
                         }))
                       }
+                      defaultImage={defaultNewsImage}
                     />
                     {formErrors.images && (
                       <p className="text-red-500 text-sm mt-2">
@@ -358,7 +420,6 @@ export default function AddPage() {
                       </p>
                     )}
                   </div>
-
                   <div>
                     <h3 className="text-sm font-medium mb-3 leading-5 text-gray-800/90">
                       Attachments
@@ -377,16 +438,13 @@ export default function AddPage() {
               </div>
             </div>
 
-            {/* Right sidebar - 1/3 width */}
             <div className="lg:col-span-1 space-y-8">
-              {/* Publication settings */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">
                     Publication Settings
                   </h2>
                 </div>
-
                 <div className="space-y-5">
                   <SelectComponent
                     text="Category"
@@ -397,7 +455,6 @@ export default function AddPage() {
                     options={newsCategory}
                     error={formErrors.newsCategoryId}
                   />
-
                   <SelectComponent
                     text="Priority"
                     name="priority"
@@ -406,8 +463,6 @@ export default function AddPage() {
                     onChange={handleChange}
                     options={priorityOptions}
                   />
-
-                  {/* Target groups */}
                   <div>
                     <TargetGroupSelector
                       targetGroups={targetGroups}
@@ -428,14 +483,12 @@ export default function AddPage() {
                 </div>
               </div>
 
-              {/* Interaction settings */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">
                     Interaction Settings
                   </h2>
                 </div>
-
                 <div className="space-y-5">
                   <Switch
                     checked={formData.hasNotification}
@@ -450,7 +503,6 @@ export default function AddPage() {
                     label="Push Notification"
                     description="Send push notification to users when this news is published"
                   />
-
                   <Switch
                     checked={formData.hasComment}
                     onCheckedChange={(checked) =>
@@ -461,7 +513,6 @@ export default function AddPage() {
                     label="Enable Comments"
                     description="Allow users to comment on this news"
                   />
-
                   <Switch
                     checked={formData.hasLike}
                     onCheckedChange={(checked) =>
@@ -477,12 +528,10 @@ export default function AddPage() {
             </div>
           </div>
 
-          {/* Editor section - Full Width */}
           <div className="bg-white rounded-lg shadow-sm p-6 w-full">
             <div className="flex items-center mb-5 border-b border-gray-100 pb-3">
               <h2 className="text-lg font-medium text-gray-800">Content</h2>
             </div>
-
             <div className="descriptionEditor">
               <label className="block text-sm font-medium mb-3 text-gray-800/90">
                 Body <span className="text-red-500">*</span>
@@ -498,7 +547,6 @@ export default function AddPage() {
             </div>
           </div>
 
-          {/* Action buttons - At bottom, full width */}
           <div className="bg-white rounded-lg shadow-sm p-6 w-full">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <button
@@ -518,7 +566,6 @@ export default function AddPage() {
                   </>
                 )}
               </button>
-
               <button
                 type="button"
                 className="w-full bg-white text-gray-700 rounded-lg text-sm px-4 py-3 border border-gray-200 font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2"
@@ -526,7 +573,6 @@ export default function AddPage() {
                 <Calendar size={16} />
                 Schedule
               </button>
-
               <button
                 type="button"
                 className="w-full bg-white text-gray-700 rounded-lg px-4 text-sm py-3 border border-gray-200 font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2"
@@ -534,7 +580,6 @@ export default function AddPage() {
                 <Save size={16} />
                 Save as draft
               </button>
-
               <button
                 type="button"
                 onClick={handleCancel}

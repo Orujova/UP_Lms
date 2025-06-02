@@ -80,6 +80,7 @@ const EventForm = () => {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editValue, setEditValue] = useState("");
   const [formProgress, setFormProgress] = useState(0);
+  const [brandingData, setBrandingData] = useState(null);
 
   // Target Group state
   const [searchTargetGroup, setSearchTargetGroup] = useState("");
@@ -104,6 +105,23 @@ const EventForm = () => {
     dispatch(fetchPollUnits());
   }, [dispatch]);
 
+  // Fetch branding data on component mount
+  useEffect(() => {
+    const fetchBrandingData = async () => {
+      try {
+        const response = await fetch('https://bravoadmin.uplms.org/api/BrendingSetting?IsEvent=true');
+        const data = await response.json();
+        if (data && data.length > 0) {
+          setBrandingData(data[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching branding data:', error);
+      }
+    };
+
+    fetchBrandingData();
+  }, []);
+
   // Update form progress
   useEffect(() => {
     const calculateProgress = () => {
@@ -114,13 +132,13 @@ const EventForm = () => {
       if (formData.eventDateTime) progress += 1;
       if (formData.location) progress += 1;
       if (formData.description) progress += 1;
-      if (formData.imageFile) progress += 1;
+      if (formData.imageFile || getDefaultEventImage()) progress += 1;
 
       return Math.round((progress / totalFields) * 100);
     };
 
     setFormProgress(calculateProgress());
-  }, [formData]);
+  }, [formData, brandingData]);
 
   // Handle form submission success
   useEffect(() => {
@@ -142,6 +160,44 @@ const EventForm = () => {
       toast.error("Failed to create event. Please check the form.");
     }
   }, [error]);
+
+  // Helper function to format URLs
+  const formatImageUrl = (urlStr) => {
+    if (!urlStr) return null;
+
+    if (urlStr.includes("100.42.179.27:7198")) {
+      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+      const fileName = urlStr.split("/").pop();
+      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${fileName}`;
+    }
+
+    // Already correctly formatted URLs
+    if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/brending/")) {
+      return urlStr;
+    }
+
+    // Relative paths with brending prefix
+    if (urlStr.startsWith("brending/")) {
+      return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
+    }
+
+    // Other relative paths without protocol
+    if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
+      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+      const cleanPath = urlStr.replace(/^\/+/, "");
+      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${cleanPath}`;
+    }
+
+    return urlStr;
+  };
+
+  // Get the default event image
+  const getDefaultEventImage = () => {
+    if (brandingData && brandingData.eventCoverPhotoUrl) {
+      return formatImageUrl(brandingData.eventCoverPhotoUrl);
+    }
+    return null;
+  };
 
   const resetForm = () => {
     setFormData({
@@ -541,7 +597,7 @@ const EventForm = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                {!imagePreview ? (
+                {!imagePreview && !getDefaultEventImage() ? (
                   <div className="flex flex-col items-center text-center">
                     <div className="p-2 bg-[#f2fdfc] rounded-full mb-2">
                       <Upload className="w-5 h-5 text-[#01DBC8]" />
@@ -566,24 +622,55 @@ const EventForm = () => {
                   <div className="relative">
                     <div className="h-32 flex items-center justify-center">
                       <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="h-full object-contain  rounded-lg"
+                        src={imagePreview || getDefaultEventImage()}
+                        alt="Event Preview"
+                        className="h-full object-contain rounded-lg"
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImagePreview(null);
-                        setFormData((prev) => ({ ...prev, imageFile: null }));
-                      }}
-                      className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {imagePreview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview(null);
+                          setFormData((prev) => ({ ...prev, imageFile: null }));
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    {!imagePreview && getDefaultEventImage() && (
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          Default
+                        </span>
+                      </div>
+                    )}
+                    {!imagePreview && (
+                      <div className="absolute bottom-2 right-2">
+                        <label className="px-3 py-1 bg-[#0AAC9E] text-white text-xs rounded-md cursor-pointer hover:bg-[#099b8e]">
+                          Change Image
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileChange}
+                            accept="image/jpeg,image/jpg"
+                          />
+                        </label>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+              
+              {!imagePreview && getDefaultEventImage() && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-xs text-blue-700 flex items-center gap-1">
+                    <Info size={12} />
+                    Using default event branding image. Upload your own image to customize.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -799,35 +886,37 @@ const EventForm = () => {
                 </div>
               )}
             </div>
-            <div className="md:col-span-12 p-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-3">
-              <div className="flex flex-col sm:flex-row justify-between items-center">
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="order-2 sm:order-1 px-4 py-3 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition flex items-center justify-center gap-1"
-                  >
-                    <X size={14} />
-                    <span>Cancel</span>
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading || formProgress < 60}
-                    className="order-1 sm:order-2 px-6 py-3 text-xs font-medium text-white bg-[#0AAC9E] rounded-md hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 w-full sm:w-auto"
-                  >
-                    {loading ? (
-                      <>
-                        <span className="animate-spin">⏳</span>
-                        <span>Creating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save size={14} />
-                        <span>Create Event</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+
+        
+
+            {/* Action Buttons */}
+            <div className="bg-white rounded-lg p-5 border border-gray-200">
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={loading || formProgress < 60}
+                  className="w-full px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-md hover:bg-[#099b8e] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Creating Event...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>Create Event</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="w-full px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                >
+                  <X size={16} />
+                  <span>Cancel</span>
+                </button>
               </div>
             </div>
           </div>

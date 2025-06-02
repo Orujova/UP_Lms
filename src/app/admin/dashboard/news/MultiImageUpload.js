@@ -6,7 +6,7 @@ import CropModal from "./CropModal";
 const MAX_IMAGES = 10;
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-const MultiImageUpload = ({ images, onChange }) => {
+const MultiImageUpload = ({ images, onChange, defaultImage }) => {
   const [showCropModal, setShowCropModal] = useState(false);
   const [tempImage, setTempImage] = useState(null);
   const [error, setError] = useState(null);
@@ -66,7 +66,37 @@ const MultiImageUpload = ({ images, onChange }) => {
   return (
     <div className="space-y-4">
       <div className="border-dashed border-2 border-[#0AAC9E] flex justify-center items-center py-4 flex-col gap-4 bg-white rounded-lg">
-        {images.length === 0 ? (
+        {images.length === 0 && defaultImage ? (
+          <div className="w-full px-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="relative">
+                <img
+                  src={defaultImage}
+                  alt="Default News Image"
+                  className="w-full aspect-video object-cover rounded-lg"
+                  onError={(e) => {
+                    e.target.src = "/fallback-image.jpg"; // Fallback image if default image fails to load
+                  }}
+                />
+                <div className="absolute top-2 left-2 p-1 bg-white rounded-full shadow-lg">
+                  <span className="text-xs text-gray-600">Default</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg aspect-video">
+                <label className="cursor-pointer p-4 text-center">
+                  <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                  <span className="text-sm text-gray-500">Add more</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleImageChange}
+                    accept="image/jpeg, image/png"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        ) : images.length === 0 ? (
           <div className="text-center">
             <div className="w-12 h-12 flex items-center justify-center bg-[#0AAC9E] rounded-full mx-auto mb-4">
               <Upload className="w-6 h-6 text-white" />

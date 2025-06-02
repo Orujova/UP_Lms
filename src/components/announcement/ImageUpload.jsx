@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Upload, X } from "lucide-react";
 import CropModal from "./CropModal";
 
-const ImageUpload = ({ imagePreview, onImageChange, onImageRemove }) => {
+const ImageUpload = ({ imagePreview, defaultImageUrl, onImageChange, onImageRemove }) => {
   const [showCropModal, setShowCropModal] = useState(false);
   const [tempImage, setTempImage] = useState(null);
 
@@ -17,6 +17,8 @@ const ImageUpload = ({ imagePreview, onImageChange, onImageRemove }) => {
         setShowCropModal(true);
       };
       reader.readAsDataURL(file);
+    } else {
+      console.warn("No file selected");
     }
   };
 
@@ -46,16 +48,20 @@ const ImageUpload = ({ imagePreview, onImageChange, onImageRemove }) => {
           Cover Image (9:16)
         </label>
         <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-          <div className="space-y-1 text-center">
-            {imagePreview ? (
-              <div className="relative w-full max-w-xs mx-auto">
-                <div className="h-64 flex items-center justify-center">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="h-full object-contain rounded-lg"
-                  />
-                </div>
+          <div className="space-y-4 text-center w-full">
+            <div className="relative w-full max-w-xs mx-auto">
+              <div className="h-64 flex items-center justify-center">
+                <img
+                  src={imagePreview || defaultImageUrl || "/placeholder-image.jpg"}
+                  alt="Preview"
+                  className="h-full object-contain rounded-lg"
+                  onError={(e) => {
+                    console.error("Image failed to load:", e.target.src);
+                    e.target.src = "/placeholder-image.jpg"; // Fallback image
+                  }}
+                />
+              </div>
+              {imagePreview && (
                 <button
                   type="button"
                   onClick={onImageRemove}
@@ -63,23 +69,22 @@ const ImageUpload = ({ imagePreview, onImageChange, onImageRemove }) => {
                 >
                   <X className="w-4 h-4" />
                 </button>
+              )}
+            </div>
+            <label
+              htmlFor="image-upload"
+              className="flex flex-col items-center cursor-pointer"
+            >
+              <div className="flex flex-col items-center justify-center">
+                <Upload className="w-8 h-8 text-gray-400" />
+                <p className="mt-2 text-sm text-gray-500">
+                  {imagePreview ? "Replace image" : "Upload a new image"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Image will be cropped to 9:16 ratio
+                </p>
               </div>
-            ) : (
-              <label
-                htmlFor="image-upload"
-                className="flex flex-col items-center cursor-pointer"
-              >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-12 h-12 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Image will be cropped to 9:16 ratio
-                  </p>
-                </div>
-              </label>
-            )}
+            </label>
             <input
               id="image-upload"
               type="file"

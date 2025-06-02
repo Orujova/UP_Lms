@@ -41,10 +41,9 @@ import {
 import { useRouter } from "next/navigation";
 import NewsAnalytics from "@/components/newsAnalytics";
 import StatCard from "@/components/statCard";
-import Pagination from "@/components/reportPagination";
-import Lottie from "react-lottie-player";
-import report from "../../../../animations/reports.json";
 import LoadingSpinner from "@/components/loadingSpinner";
+import Pagination from "@/components/ListPagination";
+
 // Soft color palette - even softer colors
 const SOFT_COLORS = ["#A7F3D0", "#FDE68A", "#FECACA"]; // Very soft green, yellow, red
 const CHART_COLORS = {
@@ -53,9 +52,6 @@ const CHART_COLORS = {
 };
 
 const ITEMS_PER_PAGE = 10;
-
-
-
 
 // Tab Component
 const Tab = ({ active, label, icon: Icon, onClick }) => (
@@ -95,7 +91,9 @@ const FilterBar = ({
   return (
     <div className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-semibold text-gray-900">Announcement Interest Analysis</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Announcement Interest Analysis
+        </h3>
         <button
           onClick={onExport}
           className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
@@ -110,20 +108,32 @@ const FilterBar = ({
         {/* First Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Created Date Range</label>
+            <label className="text-xs font-medium text-gray-700">
+              Created Date Range
+            </label>
             <div className="flex items-center gap-3">
               <input
                 type="date"
                 placeholder="mm/dd/yyyy"
-                value={filters.StartCreatedDate ? filters.StartCreatedDate.split('T')[0] : ""}
-                onChange={(e) => onDateChange("StartCreatedDate", e.target.value)}
+                value={
+                  filters.StartCreatedDate
+                    ? filters.StartCreatedDate.split("T")[0]
+                    : ""
+                }
+                onChange={(e) =>
+                  onDateChange("StartCreatedDate", e.target.value)
+                }
                 className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
               />
               <span className="text-gray-400 text-xs font-medium">to</span>
               <input
                 type="date"
                 placeholder="mm/dd/yyyy"
-                value={filters.EndCreatedDate ? filters.EndCreatedDate.split('T')[0] : ""}
+                value={
+                  filters.EndCreatedDate
+                    ? filters.EndCreatedDate.split("T")[0]
+                    : ""
+                }
                 onChange={(e) => onDateChange("EndCreatedDate", e.target.value)}
                 className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 focus:border-[#01DBC8]"
               />
@@ -131,7 +141,9 @@ const FilterBar = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Created By</label>
+            <label className="text-xs font-medium text-gray-700">
+              Created By
+            </label>
             <select
               value={filters.CreatedBy || ""}
               onChange={(e) => onFilterChange("CreatedBy", e.target.value)}
@@ -150,7 +162,9 @@ const FilterBar = ({
         {/* Second Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Interest Level</label>
+            <label className="text-xs font-medium text-gray-700">
+              Interest Level
+            </label>
             <select
               value={filters.InterestLevel || ""}
               onChange={(e) => onFilterChange("InterestLevel", e.target.value)}
@@ -158,7 +172,7 @@ const FilterBar = ({
             >
               <option value="">All Interest Levels</option>
               <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
+              <option value="Normal">Normal</option>
               <option value="High">High</option>
             </select>
           </div>
@@ -172,7 +186,6 @@ const FilterBar = ({
               >
                 Clear Filters
               </button>
-        
             </div>
           </div>
         </div>
@@ -180,13 +193,12 @@ const FilterBar = ({
     </div>
   );
 };
-        
 
 const NoDataMessage = ({ message, loading, isError }) => (
   <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
     {loading ? (
       <div>
-        <LoadingSpinner/>
+        <LoadingSpinner />
       </div>
     ) : (
       <>
@@ -213,10 +225,10 @@ const AnalyticsDashboard = () => {
   const [activeTab, setActiveTab] = useState("announcements");
 
   // Announcements data states
-  const [overallData, setOverallData] = useState(null);
-  const [previousData, setPreviousData] = useState(null); // For trend calculation
-  const [tableData, setTableData] = useState({ announcements: [] });
+  const [allData, setAllData] = useState(null); // All data for charts
+  const [tableData, setTableData] = useState({ announcements: [] }); // Paginated data for table
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -262,31 +274,16 @@ const AnalyticsDashboard = () => {
     return Array.from(creatorSet).sort();
   };
 
-  // Calculate trend based on comparison with previous period
-  const calculateTrend = (current, previous) => {
-    if (!previous || previous === 0) return null;
-    return ((current - previous) / previous) * 100;
-  };
-
-  // Fetch data from API
-  const fetchData = async (page = 1) => {
+  // Fetch all data for charts (without pagination)
+  const fetchAllData = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
-      // Build query parameters
       const queryParams = new URLSearchParams();
 
-      // Add pagination
-      queryParams.append("Page", page);
-      queryParams.append("ShowMore.Take", ITEMS_PER_PAGE);
-
-      // Add filters
+      // Add filters without pagination
       if (filters.InterestLevel)
         queryParams.append("InterestLevel", filters.InterestLevel);
       if (filters.CreatedBy) queryParams.append("CreatedBy", filters.CreatedBy);
 
-      // Add date filters - only if they exist
       if (filters.StartViewDate)
         queryParams.append(
           "StartViewDate",
@@ -308,7 +305,7 @@ const AnalyticsDashboard = () => {
           formatDateForApi(filters.EndCreatedDate)
         );
 
-      // Make the API request
+      // Fetch all data without pagination for charts
       const response = await fetch(
         `https://bravoadmin.uplms.org/api/Announcement/getallannouncementinterestanalysis/reporting?${queryParams}`,
         {
@@ -327,41 +324,109 @@ const AnalyticsDashboard = () => {
       const data = await response.json();
 
       if (data && Array.isArray(data) && data.length > 0) {
-        // Store previous data for trend calculation
-        if (overallData) {
-          setPreviousData(overallData);
-        }
-        
-        setOverallData(data[0]);
-        setTableData(data[0]);
+        setAllData(data[0]);
         setTotalCount(data[0].totalAnnouncementCount || 0);
 
         // Extract unique creators for dropdown
         const uniqueCreators = extractCreators(data[0]);
         setCreators(uniqueCreators);
       } else {
-        setOverallData({ totalAnnouncementCount: 0, announcements: [] });
-        setTableData({ announcements: [] });
+        setAllData({ totalAnnouncementCount: 0, announcements: [] });
         setTotalCount(0);
       }
       setError(null);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching all data:", error);
       setError(error.message);
-      setOverallData({ totalAnnouncementCount: 0, announcements: [] });
-      setTableData({ announcements: [] });
+      setAllData({ totalAnnouncementCount: 0, announcements: [] });
       setTotalCount(0);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Effect to fetch data when filters or page changes
+  // Fetch paginated data for table
+  const fetchTableData = async (page = 1) => {
+    try {
+      setTableLoading(true);
+      const queryParams = new URLSearchParams();
+
+      // Add pagination
+      queryParams.append("Page", page);
+      queryParams.append("ShowMore.Take", ITEMS_PER_PAGE);
+
+      // Add filters
+      if (filters.InterestLevel)
+        queryParams.append("InterestLevel", filters.InterestLevel);
+      if (filters.CreatedBy) queryParams.append("CreatedBy", filters.CreatedBy);
+
+      if (filters.StartViewDate)
+        queryParams.append(
+          "StartViewDate",
+          formatDateForApi(filters.StartViewDate)
+        );
+      if (filters.EndViewDate)
+        queryParams.append(
+          "EndViewDate",
+          formatDateForApi(filters.EndViewDate)
+        );
+      if (filters.StartCreatedDate)
+        queryParams.append(
+          "StartCreatedDate",
+          formatDateForApi(filters.StartCreatedDate)
+        );
+      if (filters.EndCreatedDate)
+        queryParams.append(
+          "EndCreatedDate",
+          formatDateForApi(filters.EndCreatedDate)
+        );
+
+      const response = await fetch(
+        `https://bravoadmin.uplms.org/api/Announcement/getallannouncementinterestanalysis/reporting?${queryParams}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "*/*",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data && Array.isArray(data) && data.length > 0) {
+        setTableData(data[0]);
+      } else {
+        setTableData({ announcements: [] });
+      }
+    } catch (error) {
+      console.error("Error fetching table data:", error);
+      setTableData({ announcements: [] });
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  // Initial data fetch
   useEffect(() => {
     if (activeTab === "announcements") {
-      fetchData(currentPage);
+      const fetchInitialData = async () => {
+        setLoading(true);
+        await Promise.all([fetchAllData(), fetchTableData(currentPage)]);
+        setLoading(false);
+      };
+      fetchInitialData();
     }
-  }, [activeTab, currentPage, filters]);
+  }, [activeTab, filters]);
+
+  // Fetch table data when page changes
+  useEffect(() => {
+    if (activeTab === "announcements" && !loading) {
+      fetchTableData(currentPage);
+    }
+  }, [currentPage]);
 
   const handleFilterChange = (key, value) => {
     if (key === "reset") {
@@ -390,15 +455,12 @@ const AnalyticsDashboard = () => {
 
   const handleExport = async () => {
     try {
-      // Build query parameters
       const queryParams = new URLSearchParams();
 
-      // Add filters
       if (filters.InterestLevel)
         queryParams.append("InterestLevel", filters.InterestLevel);
       if (filters.CreatedBy) queryParams.append("CreatedBy", filters.CreatedBy);
 
-      // Add date filters
       if (filters.StartViewDate)
         queryParams.append(
           "StartViewDate",
@@ -420,7 +482,6 @@ const AnalyticsDashboard = () => {
           formatDateForApi(filters.EndCreatedDate)
         );
 
-      // Make the API request
       const response = await fetch(
         `https://bravoadmin.uplms.org/api/Announcement/exportannouncementinterestanalysis/reporting?${queryParams.toString()}`,
         {
@@ -437,14 +498,12 @@ const AnalyticsDashboard = () => {
         );
       }
 
-      // Check content type
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Export failed");
       }
 
-      // Download the file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -460,121 +519,103 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  // Calculate statistics from API data with trends
-  const totalViews = overallData?.announcements?.reduce(
-    (sum, item) => sum + (item.totalView || 0),
-    0
-  ) || 0;
+  // Calculate statistics from all data (not paginated)
+  const totalViews =
+    allData?.announcements?.reduce(
+      (sum, item) => sum + (item.totalView || 0),
+      0
+    ) || 0;
 
-  const uniqueViews = overallData?.announcements?.reduce(
-    (sum, item) => sum + (item.uniqueView || 0),
-    0
-  ) || 0;
+  const uniqueViews =
+    allData?.announcements?.reduce(
+      (sum, item) => sum + (item.uniqueView || 0),
+      0
+    ) || 0;
 
-  const avgEngagement = overallData?.announcements?.length > 0
-    ? (overallData.announcements.reduce((sum, item) => sum + (item.uniqueViewPercentage || 0), 0) / overallData.announcements.length)
-    : 0;
+  const avgEngagement =
+    allData?.announcements?.length > 0
+      ? allData.announcements.reduce(
+          (sum, item) => sum + (item.uniqueViewPercentage || 0),
+          0
+        ) / allData.announcements.length
+      : 0;
 
-  const totalEmployees = overallData?.announcements?.reduce(
-    (sum, item) => sum + (item.targetGroupEmployeeCount || 0),
-    0
-  ) || 0;
+  // Create interest level distribution from all data
+  const interestLevelData =
+    allData?.announcements?.reduce((acc, item) => {
+      if (!item.interestLevel) return acc;
+      const existing = acc.find((x) => x.name === item.interestLevel);
+      if (existing) {
+        existing.value++;
+      } else {
+        acc.push({ name: item.interestLevel, value: 1 });
+      }
+      return acc;
+    }, []) || [];
 
-  // Calculate trends
-  const prevTotalViews = previousData?.announcements?.reduce(
-    (sum, item) => sum + (item.totalView || 0),
-    0
-  ) || 0;
+  // Prepare view trends data from all data
+  const viewTrendsData =
+    allData?.announcements?.length > 0
+      ? (() => {
+          const groupedByDate = allData.announcements.reduce((acc, item) => {
+            const createdDate = item.createdDate
+              ? new Date(item.createdDate)
+              : new Date();
+            const dateKey = createdDate.toDateString();
 
-  const prevAvgEngagement = previousData?.announcements?.length > 0
-    ? (previousData.announcements.reduce((sum, item) => sum + (item.uniqueViewPercentage || 0), 0) / previousData.announcements.length)
-    : 0;
+            if (!acc[dateKey]) {
+              acc[dateKey] = {
+                date: createdDate,
+                totalView: 0,
+                uniqueView: 0,
+                count: 0,
+              };
+            }
 
-  const announcementTrend = calculateTrend(
-    overallData?.totalAnnouncementCount || 0,
-    previousData?.totalAnnouncementCount || 0
-  );
-  const viewsTrend = calculateTrend(totalViews, prevTotalViews);
-  const engagementTrend = calculateTrend(avgEngagement, prevAvgEngagement);
+            acc[dateKey].totalView += item.totalView || 0;
+            acc[dateKey].uniqueView += item.uniqueView || 0;
+            acc[dateKey].count += 1;
 
-  // Create interest level distribution from API data
-  const interestLevelData = overallData?.announcements?.reduce((acc, item) => {
-    if (!item.interestLevel) return acc;
-    const existing = acc.find((x) => x.name === item.interestLevel);
-    if (existing) {
-      existing.value++;
-    } else {
-      acc.push({ name: item.interestLevel, value: 1 });
-    }
-    return acc;
-  }, []) || [];
+            return acc;
+          }, {});
 
-  // Prepare view trends data - Group announcements by date and accumulate views
-  const viewTrendsData = overallData?.announcements?.length > 0 
-    ? (() => {
-        // Group announcements by creation date
-        const groupedByDate = overallData.announcements.reduce((acc, item) => {
-          const createdDate = item.createdDate ? new Date(item.createdDate) : new Date();
-          const dateKey = createdDate.toDateString();
-          
-          if (!acc[dateKey]) {
-            acc[dateKey] = {
-              date: createdDate,
-              totalView: 0,
-              uniqueView: 0,
-              count: 0
+          const sortedData = Object.values(groupedByDate)
+            .sort((a, b) => a.date - b.date)
+            .slice(0, 7);
+
+          let cumulativeTotalViews = 0;
+          let cumulativeUniqueViews = 0;
+
+          return sortedData.map((item) => {
+            cumulativeTotalViews += item.totalView;
+            cumulativeUniqueViews += item.uniqueView;
+
+            const formattedDate = `${item.date.toLocaleDateString("en-US", {
+              month: "short",
+            })} ${String(item.date.getDate()).padStart(2, "0")}`;
+
+            return {
+              date: formattedDate,
+              totalView: cumulativeTotalViews,
+              uniqueView: cumulativeUniqueViews,
+              announcements: item.count,
             };
-          }
-          
-          acc[dateKey].totalView += item.totalView || 0;
-          acc[dateKey].uniqueView += item.uniqueView || 0;
-          acc[dateKey].count += 1;
-          
-          return acc;
-        }, {});
-
-        // Convert to array and sort by date
-        const sortedData = Object.values(groupedByDate)
-          .sort((a, b) => a.date - b.date)
-          .slice(0, 7); // Show last 7 periods
-
-        // Create cumulative trend showing how views increase as announcements are added
-        let cumulativeTotalViews = 0;
-        let cumulativeUniqueViews = 0;
-
-        return sortedData.map((item) => {
-          cumulativeTotalViews += item.totalView;
-          cumulativeUniqueViews += item.uniqueView;
-          
-          const formattedDate = `${item.date.toLocaleDateString('en-US', { month: 'short' })} ${String(item.date.getDate()).padStart(2, '0')}`;
-          
-          return {
-            date: formattedDate,
-            totalView: cumulativeTotalViews, // Cumulative total views
-            uniqueView: cumulativeUniqueViews, // Cumulative unique views
-            announcements: item.count // Number of announcements on this date
-          };
-        });
-      })()
-    : [];
+          });
+        })()
+      : [];
 
   // Render loading state
-  if (loading && !overallData) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Lottie
-          loop
-          animationData={report}
-          play
-          style={{ width: 350, height: 350 }}
-        />
+        <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50  pt-14">
-      <div >
+    <div className="min-h-screen bg-gray-50 pt-14">
+      <div>
         {/* Header section */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -629,33 +670,32 @@ const AnalyticsDashboard = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
               <StatCard
-                icon={BarChart2}
-                value={overallData?.totalAnnouncementCount || 0}
+                icon={Megaphone}
+                value={allData?.totalAnnouncementCount || 0}
                 label="Total Announcements"
-                trend={announcementTrend}
+                description="Published announcements"
                 color="blue"
-              />
-              <StatCard 
-                icon={Target} 
-                value={`${avgEngagement.toFixed(1)}%`} 
-                label="Average Interest Level"
-                description="Engagement"
-                trend={engagementTrend}
-                color="orange"
               />
               <StatCard
                 icon={Eye}
                 value={totalViews}
                 label="Total Views"
-                trend={viewsTrend}
+                description="All announcement views"
                 color="purple"
               />
               <StatCard
                 icon={Users}
+                value={uniqueViews}
+                label="Unique Views"
+                description="Individual user views"
+                color="green"
+              />
+              <StatCard
+                icon={Target}
                 value={`${avgEngagement.toFixed(1)}%`}
                 label="Engagement Rate"
-                trend={engagementTrend}
-                color="green"
+                description="Average interaction rate"
+                color="orange"
               />
             </div>
 
@@ -666,9 +706,9 @@ const AnalyticsDashboard = () => {
                 loading={false}
                 isError={true}
               />
-            ) : overallData &&
-              overallData.announcements &&
-              overallData.announcements.length > 0 ? (
+            ) : allData &&
+              allData.announcements &&
+              allData.announcements.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 <ChartCard title="Interest Level Distribution">
                   <div className="h-56">
@@ -693,18 +733,18 @@ const AnalyticsDashboard = () => {
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ 
+                          contentStyle={{
                             fontSize: "12px",
-                            backgroundColor: '#fff',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px'
+                            backgroundColor: "#fff",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
                           }}
                           formatter={(value, name) => [
                             `${value} announcements`,
                             name,
                           ]}
                         />
-                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Legend wrapperStyle={{ fontSize: "12px" }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -715,31 +755,31 @@ const AnalyticsDashboard = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={viewTrendsData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                        <XAxis 
-                          dataKey="date" 
-                          tick={{ fontSize: 11, fill: '#666' }}
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 11, fill: "#666" }}
                         />
-                        <YAxis tick={{ fontSize: 11, fill: '#666' }} />
-                        <Tooltip 
+                        <YAxis tick={{ fontSize: 11, fill: "#666" }} />
+                        <Tooltip
                           contentStyle={{
-                            backgroundColor: '#fff',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            fontSize: '11px'
+                            backgroundColor: "#fff",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            fontSize: "11px",
                           }}
                         />
-                        <Legend wrapperStyle={{ fontSize: '11px' }} />
-                        <Line 
-                          type="monotone" 
-                          dataKey="totalView" 
+                        <Legend wrapperStyle={{ fontSize: "11px" }} />
+                        <Line
+                          type="monotone"
+                          dataKey="totalView"
                           stroke={CHART_COLORS.totalViews}
                           strokeWidth={2}
                           name="Total Views"
                           dot={{ r: 3 }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="uniqueView" 
+                        <Line
+                          type="monotone"
+                          dataKey="uniqueView"
                           stroke={CHART_COLORS.uniqueViews}
                           strokeWidth={2}
                           name="Unique Views"
@@ -770,13 +810,16 @@ const AnalyticsDashboard = () => {
                     Detailed Analytics
                   </h3>
                   <div className="text-xs text-gray-500">
-                    Showing {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount} entries
+                    Showing {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)}{" "}
+                    of {totalCount} entries
                   </div>
                 </div>
               </div>
 
-              {loading ? (
-                <><LoadingSpinner/></>
+              {tableLoading ? (
+                <div className="py-8">
+                  <LoadingSpinner />
+                </div>
               ) : error ? (
                 <NoDataMessage
                   message="Unable to load table data. Please try again later."
@@ -799,16 +842,36 @@ const AnalyticsDashboard = () => {
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-100">
                       <tr>
-                        <th className="text-left font-medium text-gray-600 py-3 px-4 text-xs">ID</th>
-                        <th className="text-left font-medium text-gray-600 py-3 px-4 text-xs">Title</th>
-                        <th className="text-left font-medium text-gray-600 py-3 px-4 text-xs">Created By</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">Total View</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">Unique View</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">Target Group</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">View %</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">Interest Level</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">Created Date</th>
-                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">Actions</th>
+                        <th className="text-left font-medium text-gray-600 py-3 px-4 text-xs">
+                          ID
+                        </th>
+                        <th className="text-left font-medium text-gray-600 py-3 px-4 text-xs">
+                          Title
+                        </th>
+                        <th className="text-left font-medium text-gray-600 py-3 px-4 text-xs">
+                          Created By
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          Total View
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          Unique View
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          Target Group
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          View %
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          Interest Level
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          Created Date
+                        </th>
+                        <th className="text-center font-medium text-gray-600 py-3 px-4 text-xs">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -817,53 +880,89 @@ const AnalyticsDashboard = () => {
                           key={item.id}
                           className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                         >
-                          <td className="py-3 px-4 text-xs text-gray-900">{item.id}</td>
-                          <td className="py-3 px-4 text-xs font-medium text-gray-900">
-                            {item.title || "—"}
+                          <td className="py-3 px-4 text-xs text-gray-900">
+                            {item.id}
+                          </td>
+                          <td className="py-3 px-4 text-xs font-medium text-gray-900 max-w-xs truncate">
+                            <div className="truncate" title={item.title}>
+                              {item.title || "—"}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-xs text-gray-600">
                             <div className="flex items-center">
-                              <User className="w-3 h-3 mr-1.5 text-gray-400" />
-                              {item.createdBy || "—"}
+                              <User className="w-3 h-3 mr-1.5 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">
+                                {item.createdBy || "—"}
+                              </span>
                             </div>
                           </td>
                           <td className="py-3 px-4 text-xs text-center text-gray-900">
-                            {item.totalView || 0}
+                            <span className="font-medium">
+                              {(item.totalView || 0).toLocaleString()}
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-xs text-center text-gray-900">
-                            {item.uniqueView || 0}
+                            <span className="font-medium">
+                              {(item.uniqueView || 0).toLocaleString()}
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-xs text-center text-gray-900">
-                            {item.targetGroupEmployeeCount || 0}
+                            <span className="font-medium">
+                              {(
+                                item.targetGroupEmployeeCount || 0
+                              ).toLocaleString()}
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-xs text-center text-gray-900">
-                            {(item.uniqueViewPercentage || 0).toFixed(1)}%
+                            <span className="font-medium">
+                              {(item.uniqueViewPercentage || 0).toFixed(1)}%
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-xs text-center">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium inline-block
+                              className={`px-2 py-1 rounded-full text-xs font-medium inline-block whitespace-nowrap
                               ${
                                 item.interestLevel === "Low"
-                                  ? "bg-red-100 text-red-700"
-                                  : item.interestLevel === "Medium"
-                                  ? "bg-orange-100 text-orange-700"
+                                  ? "bg-red-100 text-red-700 border border-red-200"
+                                  : item.interestLevel === "Normal"
+                                  ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
                                   : item.interestLevel === "High"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700"
+                                  ? "bg-green-100 text-green-700 border border-green-200"
+                                  : "bg-gray-100 text-gray-700 border border-gray-200"
                               }`}
                             >
                               {item.interestLevel || "Unknown"}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-xs text-center text-gray-600">
-                            {item.createdDate
-                              ? new Date(item.createdDate).toLocaleDateString()
-                              : "—"}
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {item.createdDate
+                                  ? new Date(
+                                      item.createdDate
+                                    ).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    })
+                                  : "—"}
+                              </span>
+                              {item.createdDate && (
+                                <span className="text-gray-400 text-xs">
+                                  {new Date(
+                                    item.createdDate
+                                  ).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-xs text-center">
                             <button
                               onClick={() => navigateToDetail(item.id)}
-                              className="text-[#01DBC8] hover:text-[#01afa0] transition-colors"
+                              className="text-[#01DBC8] hover:text-[#01afa0] transition-colors p-1 rounded hover:bg-[#01DBC8]/10"
                               title="View Details"
                             >
                               <ExternalLink className="w-4 h-4" />
@@ -876,14 +975,9 @@ const AnalyticsDashboard = () => {
 
                   {totalCount > ITEMS_PER_PAGE && (
                     <Pagination
-                      currentPage={currentPage}
-                      totalPages={Math.max(
-                        1,
-                        Math.ceil(totalCount / ITEMS_PER_PAGE)
-                      )}
-                      onPageChange={setCurrentPage}
-                      disabled={loading}
                       totalItems={totalCount}
+                      currentPage={currentPage}
+                      onPageChange={setCurrentPage}
                       itemsPerPage={ITEMS_PER_PAGE}
                     />
                   )}

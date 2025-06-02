@@ -18,6 +18,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [brandingImages, setBrandingImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const router = useRouter();
   const dispatch = useDispatch();
 
@@ -30,10 +31,14 @@ export default function Page() {
   useEffect(() => {
     if (brandingImages.length > 1) {
       const interval = setInterval(() => {
-        setCurrentImageIndex((prevIndex) =>
-          prevIndex === brandingImages.length - 1 ? 0 : prevIndex + 1
-        );
-      }, 3000); // Change image every 5 seconds
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setCurrentImageIndex((prevIndex) =>
+            prevIndex === brandingImages.length - 1 ? 0 : prevIndex + 1
+          );
+          setIsTransitioning(false);
+        }, 150);
+      }, 4000);
 
       return () => clearInterval(interval);
     }
@@ -73,6 +78,16 @@ export default function Page() {
     setError("");
   };
 
+  const handleSlideClick = (index) => {
+    if (index !== currentImageIndex) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentImageIndex(index);
+        setIsTransitioning(false);
+      }, 150);
+    }
+  };
+
   async function submitCredential(e) {
     e.preventDefault();
     setIsLoading(true);
@@ -103,53 +118,61 @@ export default function Page() {
 
   return (
     <main className="flex min-h-screen">
-      {/* Left side - Background image with overlay */}
-      <div className="hidden md:block w-2/4 relative overflow-hidden">
+      {/* Left side - Modern Image Slider */}
+      <div className="hidden md:block w-2/4 relative overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
         {brandingImages.length > 0 ? (
           <>
-            <div
-              className="absolute inset-0 bg-no-repeat bg-cover bg-center transition-opacity duration-1000"
-              style={{
-                backgroundImage: `url(${brandingImages[currentImageIndex]})`,
-                opacity: 1,
-              }}
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-40 z-10" />
-
-            {/* UPLMS Brand overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-20 text-white px-8">
-              <div className="max-w-2xl text-center">
-                <h1 className="text-4xl font-bold mb-4">
-                  Learning Management System
-                </h1>
-                <p className="text-xl opacity-90">
-                  Empower your learning journey with our comprehensive education
-                  platform
-                </p>
+            {/* Main image container */}
+            <div className="relative h-full w-full">
+              <div
+                className={`absolute inset-0 transition-all duration-300 ease-out ${
+                  isTransitioning ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
+                }`}
+              >
+                <img
+                  src={brandingImages[currentImageIndex]}
+                  alt={`Slide ${currentImageIndex + 1}`}
+                  className="w-full h-full object-cover"
+                />
               </div>
+              
+              {/* Subtle gradient overlay for better contrast */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5" />
             </div>
 
-            {/* Slider indicators */}
+            {/* Modern navigation dots */}
             {brandingImages.length > 1 && (
-              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-30">
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-3 bg-white/20 backdrop-blur-md rounded-full px-6 py-3 border border-white/30">
                 {brandingImages.map((_, index) => (
                   <button
                     key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`w-3 h-3 rounded-full ${
-                      index === currentImageIndex ? "bg-white" : "bg-white/50"
+                    onClick={() => handleSlideClick(index)}
+                    className={`relative transition-all duration-300 ease-out ${
+                      index === currentImageIndex 
+                        ? "w-8 h-3 bg-white rounded-full shadow-lg" 
+                        : "w-3 h-3 bg-white/60 rounded-full hover:bg-white/80 hover:scale-110"
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
                 ))}
               </div>
             )}
+
+
+            {/* Image counter */}
+            {brandingImages.length > 1 && (
+              <div className="absolute top-6 right-6 bg-black/30 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-sm font-medium border border-white/20">
+                {currentImageIndex + 1} / {brandingImages.length}
+              </div>
+            )}
           </>
         ) : (
-          <div className="h-full w-full bg-gradient-to-r from-mainBlue2 to-mainGreen">
-            <div className="absolute inset-0 bg-black bg-opacity-20 z-10" />
-            <div className="absolute inset-0 flex items-center justify-center z-20">
-              <Image src={logo} alt="UPLMS" width={240} height={100} />
+          <div className="h-full w-full bg-gradient-to-br from-blue-600 via-blue-700 to-teal-600 relative">
+            <div className="absolute inset-0 bg-black/10" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
+                <Image src={logo} alt="UPLMS" width={240} height={100} className="opacity-90" />
+              </div>
             </div>
           </div>
         )}
@@ -159,7 +182,7 @@ export default function Page() {
       <div className="w-full md:w-2/4 flex items-center justify-center bg-white">
         <div className="w-full max-w-md px-8 py-12">
           {/* Mobile logo - only visible on mobile */}
-          <div className=" flex justify-center mb-8">
+          <div className="flex justify-center mb-8">
             <Image src={logo} alt="UPLMS" width={200} height={60} />
           </div>
 

@@ -23,7 +23,8 @@ const NewAnnouncementPage = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
-  const loadingTimeoutRef = useRef(null); // Ref for safety timeout
+  const [defaultImageUrl, setDefaultImageUrl] = useState(null);
+  const loadingTimeoutRef = useRef(null);
 
   // Redux state
   const error = useSelector((state) => state.announcement?.error);
@@ -66,7 +67,6 @@ const NewAnnouncementPage = () => {
 
   // Safety function to ensure loading state is reset
   const safelySetLoading = (isLoading) => {
-    // Clear any existing timeout
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
@@ -74,17 +74,47 @@ const NewAnnouncementPage = () => {
 
     setLoading(isLoading);
 
-    // If setting to true, set a safety timeout to force it back to false
     if (isLoading) {
       loadingTimeoutRef.current = setTimeout(() => {
         setLoading(false);
         console.log("⚠️ Safety timeout triggered to reset loading state");
-      }, 10000); // 10-second safety timeout
+      }, 10000);
     }
   };
 
+  // URL normalization function
+  const normalizeImageUrl = (urlStr) => {
+    if (!urlStr) return null;
+
+    if (urlStr.includes("100.42.179.27:7198")) {
+      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+      const fileName = urlStr.split("/").pop();
+      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${fileName}`;
+    }
+
+    if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/brending/")) {
+      return urlStr;
+    }
+
+    if (urlStr.startsWith("brending/")) {
+      return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
+    }
+
+    if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
+      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+      const cleanPath = urlStr.replace(/^\/+/, "");
+      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${cleanPath}`;
+    }
+
+    return urlStr;
+  };
+
   useEffect(() => {
-    Promise.all([fetchPollUnits(), fetchTargetGroups()]).catch((error) => {
+    Promise.all([
+      fetchPollUnits(),
+      fetchTargetGroups(),
+      fetchBrandingSettings(),
+    ]).catch((error) => {
       toast.error("Error loading data");
       console.error("Error:", error);
     });
@@ -98,12 +128,42 @@ const NewAnnouncementPage = () => {
 
     return () => {
       dispatch(resetCreateStatus());
-      // Clean up safety timeout on unmount
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
     };
   }, [dispatch]);
+
+  // Fetch branding settings
+  const fetchBrandingSettings = async () => {
+    try {
+      const response = await fetch(
+        "https://bravoadmin.uplms.org/api/BrendingSetting?IsAnnouncement=true",
+        {
+          headers: {
+            accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data[0]?.announcBGImageUrl) {
+        const normalizedUrl = normalizeImageUrl(data[0].announcBGImageUrl);
+        setDefaultImageUrl(normalizedUrl);
+        console.log("Normalized default image URL:", normalizedUrl);
+      } else {
+        console.warn("No default announcement image found in branding settings");
+        setDefaultImageUrl("/placeholder-image.jpg"); // Fallback placeholder
+      }
+    } catch (error) {
+      console.error("Error fetching branding settings:", error);
+      toast.error("Failed to load branding settings");
+      setDefaultImageUrl("/placeholder-image.jpg"); // Fallback placeholder
+    }
+  };
 
   useEffect(() => {
     if (createSuccess) {
@@ -125,7 +185,12 @@ const NewAnnouncementPage = () => {
   const fetchPollUnits = async () => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit?Page=1&ShowMore.Take=100"
+        "https://bravoadmin.uplms.org/api/PollUnit?Page=1&ShowMore.Take=100",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
       );
       const data = await response.json();
       setPollUnits(data[0].pollUnits);
@@ -139,7 +204,12 @@ const NewAnnouncementPage = () => {
   const fetchTargetGroups = async () => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100"
+        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
       );
       const data = await response.json();
       setTargetGroups(data[0].targetGroups);
@@ -162,12 +232,14 @@ const NewAnnouncementPage = () => {
   const handleImageChange = (file, preview) => {
     setFormData((prev) => ({ ...prev, ImageFile: file }));
     setImagePreview(preview);
+    console.log("New image selected, preview:", preview);
   };
 
   // Handle image removal
   const handleImageRemove = () => {
     setImagePreview(null);
     setFormData((prev) => ({ ...prev, ImageFile: null }));
+    console.log("Image removed, reverting to default image");
   };
 
   // Handle poll unit selection
@@ -188,13 +260,11 @@ const NewAnnouncementPage = () => {
 
   // Handle target group selection
   const handleTargetGroupSelect = (group) => {
-    // Check if already selected
     const isSelected = selectedTargetGroups.some(
       (item) => item.id === group.id
     );
 
     if (isSelected) {
-      // Remove from selection
       setSelectedTargetGroups((prev) =>
         prev.filter((item) => item.id !== group.id)
       );
@@ -205,7 +275,6 @@ const NewAnnouncementPage = () => {
         ),
       }));
     } else {
-      // Add to selection
       setSelectedTargetGroups((prev) => [...prev, group]);
       setFormData((prev) => ({
         ...prev,
@@ -219,7 +288,7 @@ const NewAnnouncementPage = () => {
     handleTargetGroupSelect(group);
   };
 
-  // Handle form submission - completely revamped
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     safelySetLoading(true);
@@ -265,7 +334,6 @@ const NewAnnouncementPage = () => {
       formDataToSend.append("ScheduledDate", formData.ScheduledDate);
       formDataToSend.append("ExpiryDate", formData.ExpiryDate);
       formDataToSend.append("UserId", formData.UserId);
-
       formDataToSend.append(
         "HasNotification",
         formData.HasNotification ? "true" : "false"
@@ -276,7 +344,7 @@ const NewAnnouncementPage = () => {
         formDataToSend.append("PollUnitId", formData.PollUnitId);
       }
 
-      // Add target group IDs (multiple)
+      // Add target group IDs
       formData.TargetGroupIds.forEach((groupId) => {
         formDataToSend.append("TargetGroupIds", groupId);
       });
@@ -288,11 +356,12 @@ const NewAnnouncementPage = () => {
           formData.ImageFile,
           formData.ImageFile.name
         );
+      } else if (defaultImageUrl) {
+        formDataToSend.append("ImageUrl", defaultImageUrl);
       }
 
       console.log("Form data prepared, dispatching action");
 
-      // APPROACH 1: Use dispatch with explicit promise handling
       const resultAction = await dispatch(
         createAnnouncementAsync(formDataToSend)
       );
@@ -301,8 +370,6 @@ const NewAnnouncementPage = () => {
       if (createAnnouncementAsync.fulfilled.match(resultAction)) {
         console.log("✅ Announcement created successfully via Redux");
         toast.success("Announcement created successfully");
-
-        // Force navigation directly here as well as in useEffect
         setTimeout(() => {
           console.log("Navigating to announcements page");
           router.push("/admin/dashboard/announcements");
@@ -315,8 +382,7 @@ const NewAnnouncementPage = () => {
         toast.error(resultAction.payload || "Failed to create announcement");
       }
 
-      // APPROACH 2: Bypass Redux completely and make direct API call as fallback
-      // This is a last resort if Redux is causing issues
+      // Fallback direct API call
       if (!createAnnouncementAsync.fulfilled.match(resultAction)) {
         console.log("Attempting direct API call as fallback...");
         try {
@@ -351,28 +417,26 @@ const NewAnnouncementPage = () => {
         }
       }
 
-      // Always reset loading state after all attempts, regardless of success/failure
       safelySetLoading(false);
     } catch (error) {
       console.error("❌ Unexpected error in form submission:", error);
       toast.error("An unexpected error occurred");
       safelySetLoading(false);
     } finally {
-      // Triple check that loading state is reset
       console.log("Form submission completed, ensuring loading state is reset");
       setTimeout(() => safelySetLoading(false), 100);
     }
   };
 
-  // Handle cancel and go back to announcements page
+  // Handle cancel
   const handleCancel = () => {
-    safelySetLoading(false); // Reset loading state when cancelling
+    safelySetLoading(false);
     setTimeout(() => {
       router.push("/admin/dashboard/announcements");
     }, 500);
   };
 
-  // Additional safety measure: force loading to false if navigation happens
+  // Safety measure for navigation
   useEffect(() => {
     const handleRouteChange = () => {
       safelySetLoading(false);
@@ -389,7 +453,6 @@ const NewAnnouncementPage = () => {
   return (
     <div className="min-h-screen bg-gray-50/50 pt-14">
       <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12">
-        {/* Header with back button */}
         <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
           <h1 className="text-2xl font-semibold text-gray-800">
             Create New Announcement
@@ -407,33 +470,25 @@ const NewAnnouncementPage = () => {
           onSubmit={handleSubmit}
           className="grid grid-cols-1 lg:grid-cols-3 gap-8"
         >
-          {/* Main content area - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Image Upload */}
             <ImageUpload
               imagePreview={imagePreview}
+              defaultImageUrl={defaultImageUrl}
               onImageChange={handleImageChange}
               onImageRemove={handleImageRemove}
             />
-
-            {/* Basic Information */}
             <BasicInfo
               title={formData.Title}
               subtitle={formData.SubTitle}
               onInputChange={handleInputChange}
             />
-
-            {/* Description */}
             <Description
               shortDescription={formData.ShortDescription}
               fullDescription={formData.Description}
               onInputChange={handleInputChange}
             />
           </div>
-
-          {/* Sidebar - 1/3 width */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Settings */}
             <Settings
               priority={formData.Priority}
               scheduledDate={formData.ScheduledDate}
@@ -441,7 +496,6 @@ const NewAnnouncementPage = () => {
               hasNotification={formData.HasNotification}
               onInputChange={handleInputChange}
             />
-
             <PollUnitSelector
               pollUnits={pollUnits}
               searchValue={searchPollUnit}
@@ -464,8 +518,6 @@ const NewAnnouncementPage = () => {
                 onRemove={handleTargetGroupRemove}
               />
             </div>
-
-            {/* Action buttons in a card */}
             <div className="bg-white rounded-lg p-5 border border-gray-200">
               <h2 className="text-base font-medium mb-4">Actions</h2>
               <div className="space-y-3">
@@ -486,7 +538,6 @@ const NewAnnouncementPage = () => {
                     </>
                   )}
                 </button>
-
                 <button
                   type="button"
                   onClick={handleCancel}

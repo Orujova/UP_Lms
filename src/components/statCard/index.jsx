@@ -2,57 +2,93 @@
 import React from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-const StatCard = ({ icon: Icon, value, label, trend, description, color = "#01DBC8" }) => {
-  const getColorClasses = (color) => {
-    if (color === "#01DBC8" || color === "emerald") return "bg-emerald-50 text-emerald-500";
-    if (color === "blue") return "bg-blue-50 text-blue-500";
-    if (color === "orange") return "bg-orange-50 text-orange-500";
-    if (color === "purple") return "bg-purple-50 text-purple-500";
-    if (color === "green") return "bg-green-50 text-green-500";
-    return "bg-emerald-50 text-emerald-500";
+const StatCard = ({
+  icon: Icon,
+  value,
+  label,
+  color = "blue",
+  description,
+  trend,
+}) => {
+  // Simplified color configurations
+  const colorConfig = {
+    blue: {
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+    },
+    green: {
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+    },
+    purple: {
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
+    },
+    orange: {
+      iconBg: "bg-orange-100",
+      iconColor: "text-orange-600",
+    },
+    teal: {
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-600",
+    },
   };
 
-  const trendBars = Array.from({ length: 4 }, (_, i) => (
-    <div
-      key={i}
-      className="w-0.5 rounded-full bg-emerald-200"
-      style={{ height: `${Math.random() * 10 + 4}px` }}
-    />
-  ));
+  const config = colorConfig[color] || colorConfig.blue;
+
+  // Render trend indicator
+  const renderTrend = () => {
+    if (!trend && trend !== 0) return null;
+
+    const trendValue = typeof trend === "number" ? trend : parseFloat(trend);
+    const isPositive = trendValue > 0;
+    const isNegative = trendValue < 0;
+
+    if (trendValue === 0) return null;
+
+    return (
+      <div
+        className={`flex items-center gap-1 text-xs ${
+          isPositive ? "text-green-600" : "text-red-600"
+        }`}
+      >
+        {isPositive ? (
+          <TrendingUp className="w-3 h-3" />
+        ) : (
+          <TrendingDown className="w-3 h-3" />
+        )}
+        <span>
+          {isPositive ? "+" : ""}
+          {Math.abs(trendValue).toFixed(1)}%
+        </span>
+      </div>
+    );
+  };
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
-      <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-lg ${getColorClasses(color)}`}>
-          <Icon className="w-5 h-5" />
+    <div className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow">
+      {/* Top section with icon and trend */}
+      <div className="flex items-center justify-between mb-3">
+        <div className={`${config.iconBg} p-2 rounded-lg`}>
+          <Icon className={`w-4 h-4 ${config.iconColor}`} />
         </div>
-        {trend !== undefined && trend !== null && (
-          <div className={`flex items-center text-sm font-medium ${trend >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-            {trend >= 0 ? (
-              <TrendingUp className="w-4 h-4 mr-1" />
-            ) : (
-              <TrendingDown className="w-4 h-4 mr-1" />
-            )}
-            {trend >= 0 ? "+" : ""}{Math.abs(trend).toFixed(1)}%
-          </div>
+        {renderTrend()}
+      </div>
+
+      {/* Value */}
+      <div className="mb-1">
+        <p className="text-2xl font-bold text-gray-900">
+          {typeof value === "number" ? value.toLocaleString() : value}
+        </p>
+      </div>
+
+      {/* Label */}
+      <div>
+        <p className="text-sm font-medium text-gray-600">{label}</p>
+        {description && (
+          <p className="text-xs text-gray-500 mt-1">{description}</p>
         )}
       </div>
-      
-      <div className="flex items-end justify-between">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {typeof value === "string" ? value : value.toLocaleString()}
-          </h3>
-          <p className="text-gray-600 text-sm font-medium">{label}</p>
-        </div>
-        <div className="flex items-end gap-0.5 h-5">
-          {trendBars}
-        </div>
-      </div>
-      
-      {description && (
-        <p className="text-gray-500 text-xs mt-2">{description}</p>
-      )}
     </div>
   );
 };
