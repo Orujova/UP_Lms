@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Upload, X, Clock, Award, Tag, Users, Image as ImageIcon, AlertCircle, CheckCircle, Camera } from "lucide-react";
+import { Upload, X, Clock, Award, Tag, Users, Camera, AlertCircle, CheckCircle } from "lucide-react";
 import {
   setFormData,
   setImagePreview,
@@ -10,85 +10,7 @@ import {
 import { fetchCourseCategoriesAsync } from "@/redux/courseCategory/courseCategorySlice";
 import { fetchCourseTagsAsync } from "@/redux/courseTag/courseTagSlice";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
-
-// Target Group Selector Component
-const TargetGroupSelector = ({ 
-  targetGroups, 
-  searchValue, 
-  selectedTargetGroups, 
-  showDropdown, 
-  onSearchChange, 
-  onToggleDropdown, 
-  onSelect, 
-  onRemove 
-}) => {
-  const filteredGroups = targetGroups.filter(group =>
-    group.name.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Target Groups
-        <span className="text-gray-500 font-normal ml-1">(Optional)</span>
-      </label>
-      
-      {/* Selected Groups */}
-      {selectedTargetGroups.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {selectedTargetGroups.map((group) => (
-            <div
-              key={group.id}
-              className="inline-flex items-center px-2.5 py-1 bg-[#0AAC9E]/10 text-[#0AAC9E] text-xs rounded-full border border-[#0AAC9E]/20"
-            >
-              <span>{group.name}</span>
-              <button
-                onClick={() => onRemove(group)}
-                className="ml-1.5 hover:text-[#0AAC9E]/70"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Dropdown */}
-      <div className="relative">
-        <div className="relative">
-          <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onFocus={() => onToggleDropdown(true)}
-            placeholder="Search and select target groups"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
-          />
-        </div>
-
-        {showDropdown && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-            {filteredGroups.length > 0 ? (
-              filteredGroups.map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => onSelect(group)}
-                  className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm border-b border-gray-100 last:border-b-0"
-                >
-                  <div className="font-medium text-gray-900">{group.name}</div>
-                  <div className="text-xs text-gray-500">{group.filterGroupCount || 0} users</div>
-                </button>
-              ))
-            ) : (
-              <div className="px-3 py-2 text-sm text-gray-500">No groups found</div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+import TargetGroupSelector from "@/components/targetSelect";
 
 const BasicInfoForm = () => {
   const dispatch = useDispatch();
@@ -244,7 +166,7 @@ const BasicInfoForm = () => {
   };
 
   const getFieldClassName = (field) => {
-    const baseClass = "w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E] transition-colors text-sm";
+    const baseClass = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E] transition-colors text-sm";
     
     if (touched[field] && errors[field]) {
       return `${baseClass} border-red-300 focus:border-red-500 bg-red-50`;
@@ -259,8 +181,8 @@ const BasicInfoForm = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
           Basic Information
         </h2>
         <p className="text-sm text-gray-600">
@@ -269,10 +191,10 @@ const BasicInfoForm = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6">
+        <div className="p-4">
           {/* Course Cover Image */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Course Cover Image
               <span className="text-gray-500 font-normal ml-1">(Optional)</span>
             </label>
@@ -282,14 +204,14 @@ const BasicInfoForm = () => {
                 <img
                   src={formData.imagePreview}
                   alt="Course cover"
-                  className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                  className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
                   <button
                     onClick={removeImage}
                     className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3 h-3" />
                   </button>
                 </div>
                 <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 backdrop-blur-sm px-2 py-1 rounded-lg">
@@ -300,7 +222,7 @@ const BasicInfoForm = () => {
               </div>
             ) : (
               <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
                   dragActive
                     ? "border-[#0AAC9E] bg-[#0AAC9E]/5"
                     : "border-gray-300 hover:border-[#0AAC9E] hover:bg-[#0AAC9E]/5"
@@ -313,11 +235,11 @@ const BasicInfoForm = () => {
                 onDrop={handleImageDrop}
               >
                 <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mb-3">
+                  <div className="w-8 h-8 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mb-2">
                     {dragActive ? (
-                      <Upload className="w-6 h-6 text-[#0AAC9E]" />
+                      <Upload className="w-4 h-4 text-[#0AAC9E]" />
                     ) : (
-                      <Camera className="w-6 h-6 text-[#0AAC9E]" />
+                      <Camera className="w-4 h-4 text-[#0AAC9E]" />
                     )}
                   </div>
                   <p className="text-sm text-gray-600 mb-1">
@@ -339,7 +261,7 @@ const BasicInfoForm = () => {
               </div>
             )}
             {errors.image && (
-              <p className="mt-2 text-xs text-red-600 flex items-center">
+              <p className="mt-1 text-xs text-red-600 flex items-center">
                 <AlertCircle className="w-3 h-3 mr-1" />
                 {errors.image}
               </p>
@@ -347,10 +269,10 @@ const BasicInfoForm = () => {
           </div>
 
           {/* Form Fields */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Course Name */}
             <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Course Name *
               </label>
               <div className="relative">
@@ -379,7 +301,7 @@ const BasicInfoForm = () => {
 
             {/* Course Description */}
             <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Course Description *
               </label>
               <div className="relative">
@@ -388,7 +310,7 @@ const BasicInfoForm = () => {
                   onChange={(e) => handleInputChange("description", e.target.value)}
                   onBlur={() => handleBlur("description")}
                   placeholder="Describe what students will learn in this course"
-                  rows={4}
+                  rows={3}
                   className={`${getFieldClassName("description")} resize-none`}
                 />
                 {touched.description && !errors.description && formData.description && (
@@ -408,7 +330,7 @@ const BasicInfoForm = () => {
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Course Category *
               </label>
               <div className="relative">
@@ -444,7 +366,7 @@ const BasicInfoForm = () => {
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Estimated Duration (minutes)
               </label>
               <div className="relative">
@@ -458,7 +380,7 @@ const BasicInfoForm = () => {
                   onBlur={() => handleBlur("duration")}
                   placeholder="60"
                   min="1"
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
                 />
               </div>
               {errors.duration && (
@@ -471,7 +393,7 @@ const BasicInfoForm = () => {
 
             {/* Tags */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tags
                 <span className="text-gray-500 font-normal ml-1">(Optional)</span>
               </label>
@@ -485,7 +407,7 @@ const BasicInfoForm = () => {
                       e.target.value ? [parseInt(e.target.value)] : []
                     )
                   }
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
                   disabled={tagsLoading}
                 >
                   <option value="">
@@ -502,7 +424,7 @@ const BasicInfoForm = () => {
 
             {/* Certificate */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Certificate Options
               </label>
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -542,7 +464,7 @@ const BasicInfoForm = () => {
           </div>
 
           {/* Progress Indicator */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-3 border-t border-gray-200">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${isFormValid() ? 'bg-[#0AAC9E]' : 'bg-gray-300'}`}></div>
@@ -554,9 +476,9 @@ const BasicInfoForm = () => {
                 {Object.keys(touched).length > 0 && `${Object.keys(touched).length} fields filled`}
               </div>
             </div>
-            <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+            <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
               <div 
-                className="bg-[#0AAC9E] h-1.5 rounded-full transition-all duration-300"
+                className="bg-[#0AAC9E] h-1 rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(100, (Object.keys(touched).length / 4) * 100)}%` }}
               ></div>
             </div>
@@ -564,14 +486,14 @@ const BasicInfoForm = () => {
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 flex justify-between items-center">
+        <div className="bg-gray-50 px-4 py-3 flex justify-between items-center">
           <div className="text-xs text-gray-500">
             Fill out the required fields to continue
           </div>
           <button
             onClick={handleNext}
             disabled={!isFormValid()}
-            className="px-6 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm text-sm"
+            className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm text-sm"
           >
             Next: Course Content
           </button>

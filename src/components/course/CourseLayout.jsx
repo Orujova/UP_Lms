@@ -12,7 +12,9 @@ import {
   Users,
   BookOpen,
   Target,
-  Layers
+  Layers,
+  Settings,
+  Share2
 } from "lucide-react";
 import {
   createCourseAsync,
@@ -35,7 +37,7 @@ const StepProgress = () => {
       title: "Basic Info",
       description: "Course details",
       icon: BookOpen,
-      completed: false,
+      completed: formData?.name?.trim() && formData?.description?.trim() && formData?.categoryId,
       canNavigate: true,
     },
     {
@@ -43,16 +45,16 @@ const StepProgress = () => {
       title: "Content",
       description: "Sections & materials",
       icon: Layers,
-      completed: false,
+      completed: sections.length > 0,
       canNavigate: formData?.name?.trim() && formData?.description?.trim() && formData?.categoryId,
     },
     {
       id: 3,
       title: "Publish",
-      description: "Target groups",
+      description: "Settings & publish",
       icon: Target,
       completed: false,
-      canNavigate: formData?.name?.trim() && formData?.description?.trim() && formData?.categoryId,
+      canNavigate: formData?.name?.trim() && formData?.description?.trim() && formData?.categoryId && sections.length > 0,
     },
   ];
 
@@ -90,7 +92,7 @@ const StepProgress = () => {
         };
       case "available":
         return {
-          container: "cursor-pointer hover:bg-gray-50 rounded-lg transition-colors",
+          container: "cursor-pointer hover:bg-gray-50 rounded-lg transition-colors p-1",
           circle: "bg-white text-gray-400 border-gray-300 hover:border-[#0AAC9E] hover:text-[#0AAC9E]",
           title: "text-gray-600 hover:text-[#0AAC9E]",
           description: "text-gray-400 hover:text-[#0AAC9E]/70",
@@ -108,7 +110,7 @@ const StepProgress = () => {
   };
 
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex items-center justify-center py-3">
       <div className="flex items-center space-x-6">
         {steps.map((step, index) => {
           const status = getStepStatus(step);
@@ -119,13 +121,13 @@ const StepProgress = () => {
             <div key={step.id} className="flex items-center">
               <div
                 onClick={() => handleStepClick(step.id)}
-                className={`flex items-center space-x-3 p-2 transition-all ${styles.container}`}
+                className={`flex items-center space-x-2 transition-all ${styles.container}`}
               >
-                <div className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${styles.circle}`}>
+                <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${styles.circle}`}>
                   {status === "completed" ? (
-                    <CheckCircle className="w-3.5 h-3.5" />
+                    <CheckCircle className="w-3 h-3" />
                   ) : status === "current" ? (
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-3 h-3" />
                   ) : (
                     <span className="text-xs font-semibold">{step.id}</span>
                   )}
@@ -158,7 +160,6 @@ const CourseCreateLayout = ({ children }) => {
   const router = useRouter();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   const {
     currentStep = 1,
@@ -167,26 +168,6 @@ const CourseCreateLayout = ({ children }) => {
     loading = false,
     error = null,
   } = useSelector((state) => state.course || {});
-
-  // Auto-save functionality
-  useEffect(() => {
-    if (autoSaveEnabled && formData.name) {
-      const autoSaveInterval = setInterval(() => {
-        try {
-          localStorage.setItem('course_draft', JSON.stringify({
-            formData,
-            sections,
-            currentStep,
-            timestamp: Date.now(),
-          }));
-        } catch (error) {
-          console.warn("Auto-save failed:", error);
-        }
-      }, 30000);
-
-      return () => clearInterval(autoSaveInterval);
-    }
-  }, [formData, sections, currentStep, autoSaveEnabled]);
 
   const handleBack = () => {
     if (currentStep === 1) {
@@ -217,8 +198,6 @@ const CourseCreateLayout = ({ children }) => {
       };
 
       await dispatch(createCourseAsync(courseData)).unwrap();
-      
-      localStorage.removeItem('course_draft');
       
       toast.success("Course created successfully!");
       router.push("/admin/dashboard/courses");
@@ -269,23 +248,23 @@ const CourseCreateLayout = ({ children }) => {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-12">
             {/* Left side */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={handleBack}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors group"
               >
-                <ArrowLeft className="w-4 h-4 group-hover:translate-x-[-2px] transition-transform" />
+                <ArrowLeft className="w-3.5 h-3.5 group-hover:translate-x-[-2px] transition-transform" />
                 <span className="text-sm font-medium">
                   {currentStep === 1 ? "Back to Courses" : "Back"}
                 </span>
               </button>
 
               {/* Status Indicators */}
-              <div className="hidden sm:flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-2">
                 {error && (
-                  <div className="flex items-center space-x-2 text-red-600 bg-red-50 px-2 py-1 rounded-md border border-red-200">
+                  <div className="flex items-center space-x-1 text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
                     <AlertCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">Error</span>
                     <button
@@ -298,7 +277,7 @@ const CourseCreateLayout = ({ children }) => {
                 )}
 
                 {!stepValidation.isValid && stepValidation.errors.length > 0 && (
-                  <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                  <div className="flex items-center space-x-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                     <AlertCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">
                       {stepValidation.errors.length} issue{stepValidation.errors.length > 1 ? 's' : ''}
@@ -307,7 +286,7 @@ const CourseCreateLayout = ({ children }) => {
                 )}
 
                 {stepValidation.isValid && (
-                  <div className="flex items-center space-x-2 text-[#0AAC9E] bg-[#0AAC9E]/10 px-2 py-1 rounded-md border border-[#0AAC9E]/20">
+                  <div className="flex items-center space-x-1 text-[#0AAC9E] bg-[#0AAC9E]/10 px-2 py-0.5 rounded border border-[#0AAC9E]/20">
                     <CheckCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">Step Complete</span>
                   </div>
@@ -317,7 +296,7 @@ const CourseCreateLayout = ({ children }) => {
 
             {/* Center - Course Title */}
             <div className="flex-1 text-center px-4">
-              <h1 className="text-base font-semibold text-gray-900">Create New Course</h1>
+              <h1 className="text-sm font-semibold text-gray-900">Create New Course</h1>
               {formData?.name && (
                 <p className="text-xs text-gray-500 truncate max-w-md mx-auto">
                   {formData.name}
@@ -326,18 +305,10 @@ const CourseCreateLayout = ({ children }) => {
             </div>
 
             {/* Right side */}
-            <div className="flex items-center space-x-3">
-              {/* Auto-save indicator */}
-              <div className="hidden md:flex items-center space-x-2 text-xs text-gray-500">
-                <Upload className="w-3 h-3" />
-                <span>Auto-save {autoSaveEnabled ? 'on' : 'off'}</span>
-              </div>
-
+            <div className="flex items-center space-x-2">
               {/* Preview Button */}
-              <button
-                className="flex items-center space-x-2 px-3 py-1.5 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-              >
-                <Eye className="w-3.5 h-3.5" />
+              <button className="flex items-center space-x-1 px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-xs">
+                <Eye className="w-3 h-3" />
                 <span className="hidden sm:inline">Preview</span>
               </button>
 
@@ -345,12 +316,12 @@ const CourseCreateLayout = ({ children }) => {
               <button
                 onClick={handleSave}
                 disabled={!canSave() || isSubmitting}
-                className="flex items-center space-x-2 px-4 py-1.5 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm text-sm font-medium"
+                className="flex items-center space-x-2 px-3 py-1 bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm text-xs font-medium"
               >
                 {isSubmitting ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Save className="w-3.5 h-3.5" />
+                  <Save className="w-3 h-3" />
                 )}
                 <span className="hidden sm:inline">
                   {isSubmitting ? "Creating..." : "Create Course"}
@@ -358,48 +329,46 @@ const CourseCreateLayout = ({ children }) => {
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Step Progress */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+          {/* Step Progress */}
           <StepProgress />
-        </div>
 
-        {/* Step Validation Errors */}
-        {!stepValidation.isValid && stepValidation.errors.length > 0 && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-medium text-amber-800">
-                    Please complete the following to continue:
-                  </h4>
-                  <ul className="mt-1 space-y-0.5">
-                    {stepValidation.errors.map((error, index) => (
-                      <li key={index} className="text-xs text-amber-700">
-                        • {error}
-                      </li>
-                    ))}
-                  </ul>
+          {/* Step Validation Errors */}
+          {!stepValidation.isValid && stepValidation.errors.length > 0 && (
+            <div className="pb-2">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3 h-3 text-amber-600 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-medium text-amber-800">
+                      Please complete the following to continue:
+                    </h4>
+                    <ul className="mt-1 space-y-0.5">
+                      {stepValidation.errors.map((error, index) => (
+                        <li key={index} className="text-xs text-amber-700">
+                          • {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {children}
       </main>
 
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl">
+          <div className="bg-white rounded-lg p-4 shadow-xl">
             <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#0AAC9E]"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0AAC9E]"></div>
               <span className="text-gray-700 text-sm">Creating course...</span>
             </div>
           </div>

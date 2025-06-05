@@ -14,7 +14,7 @@ import {
   getCertificatesByCertificateTypeId,
   validateCertificateData,
   validateCertificateTypeData,
-} from '@/api/certificate';
+} from '@/api/certifcate';
 
 // Async thunks for certificates
 export const fetchCertificatesAsync = createAsyncThunk(
