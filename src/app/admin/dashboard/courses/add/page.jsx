@@ -1,36 +1,38 @@
-'use client';
+'use client'
+import React from "react";
+import { useSelector } from "react-redux";
+import CourseCreateLayout from "@/components/course/CourseLayout";
+import BasicInfoForm from "@/components/course/BasicInfoForm";
+import ContentBuilderStep from "@/components/course/CourseContentForm";
+import TargetGroupsStep from "@/components/course/TargetGroupsForm";
+import ContentModal from "@/components/course/ContentModal";
+import QuizModal from "@/components/course/QuizModal";
 
-import { useSelector } from 'react-redux';
-import CoursesBasicInfo from '@/components/coursesBasicInfo';
-import CourseContent from '@/components/courseContent';
-import TargetGroups from '@/components/targetGroups';
-import TargetComponent from '@/components/targetCompenent';
-import SectionTitle from '@/components/sectionTitle';
+const CourseCreatePage = () => {
+  const { currentStep } = useSelector((state) => state.course || {});
 
-//style
-import './addCourses.scss';
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return <BasicInfoForm />;
+      case 2:
+        return <ContentBuilderStep />;
+      case 3:
+        return <TargetGroupsStep />;
+      default:
+        return <BasicInfoForm />;
+    }
+  };
 
-export default function Page() {
-    // Access state from Redux
-    const { targetPage = 'basicInfo' } = useSelector((state) => state.courseReducer);
+  return (
+    <CourseCreateLayout>
+      {renderStepContent()}
+      
+      {/* Modals */}
+      <ContentModal />
+      <QuizModal />
+    </CourseCreateLayout>
+  );
+};
 
-    const renderContent = () => {
-        if (targetPage === 'basicInfo') {
-            return <CoursesBasicInfo />
-        } else if (targetPage === 'courseContent') {
-            return <CourseContent />;
-        } else if (targetPage === 'targetGroups') {
-            return <TargetGroups />;
-        } else {
-            return null;
-        }
-    };
-
-    return (
-        <div className='addCourses'>
-            <SectionTitle isVisible={targetPage === 'courseContent'} />
-            <TargetComponent />
-            {renderContent()}
-        </div>
-    );
-}
+export default CourseCreatePage;

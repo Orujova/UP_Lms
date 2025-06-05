@@ -2,7 +2,7 @@
 
 import AdminSidebar from "@/components/adminSidebar";
 import AdminHeader from "../admin_components/admin_header";
-import CoursesSidebar from "@/components/coursesSidebar";
+// import CoursesSidebar from "@/components/coursesSidebar";
 // import UserSidebar from "@/components/userSidebar";
 import { usePathname } from "next/navigation";
 import Providers from "@/redux/providers";
@@ -23,8 +23,8 @@ export default function DashboardLayout({ children }) {
   return (
     <section className="dashboard">
       <Providers>
-        {!isCoursesPage && <AdminSidebar />}
-        {isCoursesPage && <CoursesSidebar />}
+        {<AdminSidebar />}
+        {/* {isCoursesPage && <CoursesSidebar />} */}
         {/* {isUsersPage && <UserSidebar />} */}
         <div className="pages">
           <AdminHeader />
