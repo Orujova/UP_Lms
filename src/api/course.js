@@ -1,3 +1,4 @@
+// src/api/course.js - Updated with proper image URL handling
 import axios from "axios";
 import { getToken, getUserId } from "@/authtoken/auth.js";
 
@@ -11,7 +12,19 @@ const getHeaders = () => {
   };
 };
 
-// Fetch all courses with proper error handling
+// Image URL helper function
+export const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.includes("https://100.42.179.27:7198/")) {
+    return `https://bravoadmin.uplms.org/uploads/${url.replace(
+      "https://100.42.179.27:7198/",
+      ""
+    )}`;
+  }
+  return url;
+};
+
+// Fetch all courses with proper error handling and image processing
 export const fetchCourses = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
@@ -37,27 +50,33 @@ export const fetchCourses = async (params = {}) => {
       headers: getHeaders(),
     });
 
-    // API'dən gələn cavabın strukturunu düzgün handle etmək
     const responseData = response.data;
+    let courses = [];
+    let totalCount = 0;
 
-    // Array və ya object olma vəziyyətini yoxlamaq
     if (Array.isArray(responseData) && responseData.length > 0) {
       if (responseData[0] && responseData[0].courses) {
-        return {
-          courses: responseData[0].courses,
-          totalCourseCount: responseData[0].totalCourseCount || 0,
-        };
+        courses = responseData[0].courses;
+        totalCount = responseData[0].totalCourseCount || courses.length;
+      } else {
+        courses = responseData;
+        totalCount = courses.length;
       }
-      // Əgər birbaşa courses array-i olarsa
-      return {
-        courses: responseData,
-        totalCourseCount: responseData.length,
-      };
     }
 
+    // Process image URLs
+    const processedCourses = courses.map(course => ({
+      ...course,
+      imageUrl: getImageUrl(course.imageUrl),
+      topAssignedUsers: course.topAssignedUsers?.map(user => ({
+        ...user,
+        profilePictureUrl: getImageUrl(user.profilePictureUrl)
+      })) || []
+    }));
+
     return {
-      courses: [],
-      totalCourseCount: 0,
+      courses: processedCourses,
+      totalCourseCount: totalCount,
     };
   } catch (error) {
     console.error("Error fetching courses:", error);
@@ -65,25 +84,36 @@ export const fetchCourses = async (params = {}) => {
   }
 };
 
-// Fetch single course by ID with userid parameter
+// Fetch single course by ID
 export const fetchCourseById = async (courseId) => {
   try {
-    const userId =  getUserId();
-  console.log(userId)
+    const userId = getUserId();
     const url = `${API_URL}Course/${courseId}?userid=${userId}`;
     
     const response = await axios.get(url, {
       headers: getHeaders(),
     });
-    console.log(response.data)
-    return response.data;
+
+    const course = response.data;
+    return {
+      ...course,
+      imageUrl: getImageUrl(course.imageUrl),
+      sections: course.sections?.map(section => ({
+        ...section,
+        contents: section.contents?.map(content => ({
+          ...content,
+          // Process content data based on type
+          data: content.type === 4 ? getImageUrl(content.data) : content.data
+        })) || []
+      })) || []
+    };
   } catch (error) {
     console.error("Error fetching course:", error);
     throw new Error("Failed to fetch course: " + (error.response?.data?.message || error.message));
   }
 };
 
-// Create new course using AddCourse endpoint
+// Create new course - simplified without duplication
 export const createCourse = async (courseData) => {
   try {
     const token = getToken();
@@ -95,72 +125,50 @@ export const createCourse = async (courseData) => {
 
     const formData = new FormData();
 
-    // Required fields
+    // Basic required fields
     formData.append("Name", courseData.name || "");
     formData.append("Description", courseData.description || "");
     formData.append("Duration", (courseData.duration || 200).toString());
-    formData.append("VerifiedCertificate", (courseData.verifiedCertificate || false).toString());
-    formData.append("UserId", userId);
     formData.append("CategoryId", (courseData.categoryId || "").toString());
+    formData.append("UserId", userId);
 
-    // Optional image file
+    // Optional fields
+    if (courseData.verifiedCertificate !== undefined) {
+      formData.append("VerifiedCertificate", courseData.verifiedCertificate.toString());
+    }
+
     if (courseData.imageFile && courseData.imageFile instanceof File) {
       formData.append("ImageFile", courseData.imageFile);
     }
 
-    // Target Groups - API documentation göstərir ki, bu array olaraq göndərilməlidir
+    if (courseData.certificateId) {
+      formData.append("CertificateId", courseData.certificateId.toString());
+    }
+
+    // Arrays
     if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds)) {
       courseData.targetGroupIds.forEach((id) => {
         formData.append("TargetGroupIds", id.toString());
       });
     }
 
-    // Certificate ID
-    if (courseData.certificateId) {
-      formData.append("CertificateId", courseData.certificateId.toString());
-    }
-
-    // Tags
     if (courseData.tagIds && Array.isArray(courseData.tagIds)) {
       courseData.tagIds.forEach((id) => {
         formData.append("TagIds", id.toString());
       });
     }
 
-    // Succession Rates - API documentation göstərir ki, object array olaraq göndərilir
-    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
-      courseData.successionRates.forEach((rate, index) => {
-        formData.append(`SuccessionRates[${index}].certificateId`, rate.certificateId.toString());
-        formData.append(`SuccessionRates[${index}].minRange`, rate.minRange.toString());
-        formData.append(`SuccessionRates[${index}].maxRange`, rate.maxRange.toString());
-      });
-    }
-
-    // Optional timing fields
+    // Advanced settings
     if (courseData.startDuration) {
       formData.append("StartDuration", courseData.startDuration.toString());
     }
 
     if (courseData.deadline) {
-      formData.append("DeadLine", courseData.deadline.toString()); // API-də DeadLine yazılıb, deadline deyil
+      formData.append("DeadLine", courseData.deadline.toString());
     }
 
     if (courseData.autoReassign !== undefined) {
       formData.append("AutoReassign", courseData.autoReassign.toString());
-    }
-
-    // Cluster related fields - API documentation-da bu sahələr var
-    if (courseData.clusterId) {
-      formData.append("ClusterId", courseData.clusterId.toString());
-      if (courseData.clusterOrderNumber) {
-        formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
-      }
-      if (courseData.clusterCoefficient) {
-        formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
-      }
-      if (courseData.clusterIsMandatory !== undefined) {
-        formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
-      }
     }
 
     const response = await axios.post(`${API_URL}Course/AddCourse`, formData, {
@@ -177,20 +185,20 @@ export const createCourse = async (courseData) => {
   }
 };
 
-// Update course using UpdateCourse endpoint
+// Update course
 export const updateCourse = async (courseData) => {
   try {
     const formData = new FormData();
 
-    // Required ID for update
     if (courseData.id) {
       formData.append("Id", courseData.id.toString());
     }
 
-    // Same fields as create but with ID
     if (courseData.name) formData.append("Name", courseData.name);
     if (courseData.description) formData.append("Description", courseData.description);
     if (courseData.duration) formData.append("Duration", courseData.duration.toString());
+    if (courseData.categoryId) formData.append("CategoryId", courseData.categoryId.toString());
+    
     if (courseData.verifiedCertificate !== undefined) {
       formData.append("VerifiedCertificate", courseData.verifiedCertificate.toString());
     }
@@ -203,11 +211,6 @@ export const updateCourse = async (courseData) => {
       formData.append("CertificateId", courseData.certificateId.toString());
     }
 
-    if (courseData.categoryId) {
-      formData.append("CategoryId", courseData.categoryId.toString());
-    }
-
-    // Arrays
     if (courseData.tagIds && Array.isArray(courseData.tagIds)) {
       courseData.tagIds.forEach((id) => {
         formData.append("TagIds", id.toString());
@@ -220,15 +223,6 @@ export const updateCourse = async (courseData) => {
       });
     }
 
-    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
-      courseData.successionRates.forEach((rate, index) => {
-        formData.append(`SuccessionRates[${index}].certificateId`, rate.certificateId.toString());
-        formData.append(`SuccessionRates[${index}].minRange`, rate.minRange.toString());
-        formData.append(`SuccessionRates[${index}].maxRange`, rate.maxRange.toString());
-      });
-    }
-
-    // Optional fields
     if (courseData.startDuration) {
       formData.append("StartDuration", courseData.startDuration.toString());
     }
@@ -245,26 +239,8 @@ export const updateCourse = async (courseData) => {
       formData.append("PublishCourse", courseData.publishCourse.toString());
     }
 
-    if (courseData.hasEvalution !== undefined) {
-      formData.append("HasEvalution", courseData.hasEvalution.toString());
-    }
-
     if (courseData.userId) {
       formData.append("UserId", courseData.userId.toString());
-    }
-
-    // Cluster fields for update
-    if (courseData.clusterId) {
-      formData.append("ClusterId", courseData.clusterId.toString());
-      if (courseData.clusterOrderNumber) {
-        formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
-      }
-      if (courseData.clusterCoefficient) {
-        formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
-      }
-      if (courseData.clusterIsMandatory !== undefined) {
-        formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
-      }
     }
 
     const response = await axios.put(`${API_URL}Course/UpdateCourse`, formData, {
@@ -281,7 +257,7 @@ export const updateCourse = async (courseData) => {
   }
 };
 
-// Delete course - API documentation göstərir ki, path parameter istifadə olunur
+// Delete course
 export const deleteCourse = async (courseId) => {
   try {
     const response = await axios.delete(`${API_URL}Course/${courseId}`, {
@@ -299,7 +275,7 @@ export const publishCourse = async (courseId) => {
   try {
     const response = await axios.put(
       `${API_URL}Course/publish-course`,
-      { courseId: parseInt(courseId) }, // Ensure courseId is a number
+      { courseId: parseInt(courseId) },
       {
         headers: {
           ...getHeaders(),
@@ -314,126 +290,26 @@ export const publishCourse = async (courseId) => {
   }
 };
 
-// Add section to course
-export const addSection = async (sectionData) => {
-  try {
-    const formData = new FormData();
-    formData.append("CourseId", sectionData.courseId.toString());
-    formData.append("Description", sectionData.description || "");
-    formData.append("Duration", (sectionData.duration || 0).toString());
-    formData.append("HideSection", (sectionData.hideSection || false).toString());
-    formData.append("Mandatory", (sectionData.mandatory || false).toString());
-
-    const response = await axios.post(`${API_URL}Course/AddSection`, formData, {
-      headers: {
-        ...getHeaders(),
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error adding section:", error);
-    throw new Error("Failed to add section: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Update section
-export const updateSection = async (sectionData) => {
-  try {
-    const payload = {
-      sectionId: sectionData.sectionId,
-      courseId: sectionData.courseId,
-      description: sectionData.description || "",
-      duration: sectionData.duration || 0,
-      hideSection: sectionData.hideSection || false,
-      mandatory: sectionData.mandatory || false,
-      courseContentIds: sectionData.courseContentIds || [],
-    };
-
-    const response = await axios.put(
-      `${API_URL}Course/update-section`,
-      payload,
-      {
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error updating section:", error);
-    throw new Error("Failed to update section: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Delete section - path parameter istifadə olunur
-export const deleteSection = async (sectionId) => {
-  try {
-    const response = await axios.delete(
-      `${API_URL}Course/delete-section/${sectionId}`,
-      {
-        headers: getHeaders(),
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting section:", error);
-    throw new Error("Failed to delete section: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Hide section
-export const hideSection = async (sectionId) => {
-  try {
-    const response = await axios.post(
-      `${API_URL}Course/hide-section`,
-      { sectionId: parseInt(sectionId) },
-      {
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error hiding section:", error);
-    throw new Error("Failed to hide section: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Update section duration
-export const updateSectionDuration = async (sectionId, duration) => {
-  try {
-    const response = await axios.put(
-      `${API_URL}Course/update-section-duration`,
-      { 
-        sectionId: parseInt(sectionId), 
-        duration: parseInt(duration) 
-      },
-      {
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error updating section duration:", error);
-    throw new Error("Failed to update section duration: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Get course learners with pagination
+// Get course learners
 export const getCourseLearners = async (courseId, page = 1, take = 10) => {
   try {
     const response = await axios.get(`${API_URL}Course/${courseId}/learners`, {
       params: { page, take },
       headers: getHeaders(),
     });
-    return response.data;
+    
+    const data = response.data;
+    if (data && data.learnerUsers && data.learnerUsers[0]) {
+      return {
+        totalLearnerCount: data.totalLearnerCount || 0,
+        learnerUsers: data.learnerUsers[0].learnerUsers || []
+      };
+    }
+    
+    return {
+      totalLearnerCount: 0,
+      learnerUsers: []
+    };
   } catch (error) {
     console.error("Error fetching course learners:", error);
     throw new Error("Failed to fetch course learners: " + (error.response?.data?.detail || error.message));
@@ -485,57 +361,39 @@ export const checkUserInTargetGroup = async (userId, targetGroupId) => {
   }
 };
 
-// Create course evaluation
-export const createCourseEvaluation = async (evaluationData) => {
-  try {
-    const payload = {
-      appUserId: evaluationData.appUserId,
-      courseId: evaluationData.courseId,
-      contentRichnessRating: evaluationData.contentRichnessRating || 0,
-      contentDesignRating: evaluationData.contentDesignRating || 0,
-      topicRelevanceRating: evaluationData.topicRelevanceRating || 0,
-      currentRequirementsResponseRating: evaluationData.currentRequirementsResponseRating || 0,
-    };
+// Course validation helper
+export const validateCourseData = (courseData) => {
+  const errors = [];
 
-    const response = await axios.post(
-      `${API_URL}Course/create-evalution`,
-      payload,
-      {
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error creating course evaluation:", error);
-    throw new Error("Failed to create evaluation: " + (error.response?.data?.detail || error.message));
+  if (!courseData.name?.trim()) {
+    errors.push("Course name is required");
   }
+
+  if (!courseData.description?.trim()) {
+    errors.push("Course description is required");
+  }
+
+  if (!courseData.categoryId) {
+    errors.push("Course category is required");
+  }
+
+  if (courseData.duration && (courseData.duration < 1 || courseData.duration > 10080)) {
+    errors.push("Duration must be between 1 and 10080 minutes");
+  }
+
+  return errors;
 };
 
-// Assign courses to cluster
-export const assignCoursesToCluster = async (clusterData) => {
-  try {
-    const payload = {
-      clusterId: clusterData.clusterId,
-      userId: clusterData.userId,
-      courses: clusterData.courses || [],
-    };
-
-    const response = await axios.put(
-      `${API_URL}Cluster/AssignCoursesToCluster`,
-      payload,
-      {
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error assigning courses to cluster:", error);
-    throw new Error("Failed to assign courses to cluster: " + (error.response?.data?.detail || error.message));
-  }
+export default {
+  fetchCourses,
+  fetchCourseById,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  publishCourse,
+  getCourseLearners,
+  assignUsersToCourse,
+  checkUserInTargetGroup,
+  validateCourseData,
+  getImageUrl
 };

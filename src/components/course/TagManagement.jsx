@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { 
@@ -13,7 +11,8 @@ import {
   X,
   AlertCircle,
   Filter,
-  CheckCircle
+  Grid,
+  List
 } from "lucide-react";
 import {
   fetchCourseTagsAsync,
@@ -22,9 +21,6 @@ import {
   deleteCourseTagAsync,
   courseTagActions
 } from "@/redux/courseTag/courseTagSlice";
-import LoadingSpinner from "@/components/loadingSpinner";
-import Modal from "@/components/modal";
-import InputComponent from "@/components/inputComponent";
 import { toast } from "sonner";
 
 // Create/Edit Modal Component
@@ -46,18 +42,20 @@ const TagModal = ({ isOpen, onClose, tag = null, onSave }) => {
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = "Tag adı tələb olunur";
+      newErrors.name = "Tag name is required";
     } else if (formData.name.length < 2) {
-      newErrors.name = "Tag adı ən azı 2 simvol olmalıdır";
+      newErrors.name = "Tag name must be at least 2 characters";
     } else if (formData.name.length > 50) {
-      newErrors.name = "Tag adı 50 simvoldan çox ola bilməz";
+      newErrors.name = "Tag name must be less than 50 characters";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -78,57 +76,77 @@ const TagModal = ({ isOpen, onClose, tag = null, onSave }) => {
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={tag ? "Tag-ı redaktə et" : "Yeni tag yarat"}>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tag Adı *
-          </label>
-          <div className="relative">
-            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <InputComponent
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ name: e.target.value })}
-              placeholder="Tag adını daxil edin"
-              className={`pl-10 ${errors.name ? "border-red-300 bg-red-50" : ""}`}
-            />
-          </div>
-          {errors.name && (
-            <p className="mt-1 text-xs text-red-600 flex items-center">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              {errors.name}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-gray-500">
-            Tag-lar kursları təşkil etməyə və süzməyə kömək edir
-          </p>
-        </div>
-
-        <div className="flex justify-end space-x-3 pt-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {tag ? "Edit Tag" : "Create Tag"}
+          </h3>
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Ləğv et
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center space-x-2">
-                <LoadingSpinner size="sm" />
-                <span>{tag ? "Yenilənir..." : "Yaradılır..."}</span>
-              </div>
-            ) : (
-              tag ? "Tag-ı yenilə" : "Tag yarat"
-            )}
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-4">
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tag Name *
+            </label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ name: e.target.value })}
+                placeholder="Enter tag name"
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm ${
+                  errors.name ? "border-red-300 bg-red-50" : "border-gray-300"
+                }`}
+                autoFocus
+              />
+            </div>
+            {errors.name && (
+              <p className="mt-1 text-xs text-red-600 flex items-center">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                {errors.name}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Tags help organize and filter courses
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {isSubmitting ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>{tag ? "Updating..." : "Creating..."}</span>
+                </div>
+              ) : (
+                tag ? "Update Tag" : "Create Tag"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
-    </Modal>
+    </div>
   );
 };
 
@@ -151,47 +169,49 @@ const DeleteModal = ({ isOpen, onClose, tag, onConfirm }) => {
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tag-ı sil">
-      <div className="space-y-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-5 h-5 text-red-600" />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="p-4">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Tag</h3>
+              <p className="text-sm text-gray-600">This action cannot be undone</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Tag-ı silin</h3>
-            <p className="text-sm text-gray-600">Bu əməliyyat geri qaytarıla bilməz</p>
+
+          <p className="text-sm text-gray-700 mb-6">
+            Are you sure you want to delete the tag "#{tag?.name}"? 
+            This tag will be removed from all related courses.
+          </p>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {isDeleting ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                "Delete Tag"
+              )}
+            </button>
           </div>
-        </div>
-
-        <p className="text-sm text-gray-700">
-          "#{tag?.name}" tag-ını silmək istədiyinizdən əminsiniz? 
-          Bu tag bütün əlaqəli kurslardan silinəcək.
-        </p>
-
-        <div className="flex justify-end space-x-3 pt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-          >
-            Ləğv et
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            {isDeleting ? (
-              <div className="flex items-center space-x-2">
-                <LoadingSpinner size="sm" />
-                <span>Silinir...</span>
-              </div>
-            ) : (
-              "Tag-ı sil"
-            )}
-          </button>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 
@@ -214,6 +234,7 @@ const getTagColor = (index) => {
 const CourseTagManagement = () => {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -239,9 +260,9 @@ const CourseTagManagement = () => {
   const handleCreateTag = async (tagData) => {
     try {
       await dispatch(createCourseTagAsync(tagData)).unwrap();
-      toast.success("Tag uğurla yaradıldı!");
+      toast.success("Tag created successfully!");
     } catch (error) {
-      toast.error("Tag yaratmaq mümkün olmadı: " + error.message);
+      toast.error("Failed to create tag: " + error.message);
       throw error;
     }
   };
@@ -249,9 +270,9 @@ const CourseTagManagement = () => {
   const handleUpdateTag = async (tagData) => {
     try {
       await dispatch(updateCourseTagAsync(tagData)).unwrap();
-      toast.success("Tag uğurla yeniləndi!");
+      toast.success("Tag updated successfully!");
     } catch (error) {
-      toast.error("Tag yeniləmək mümkün olmadı: " + error.message);
+      toast.error("Failed to update tag: " + error.message);
       throw error;
     }
   };
@@ -259,9 +280,9 @@ const CourseTagManagement = () => {
   const handleDeleteTag = async () => {
     try {
       await dispatch(deleteCourseTagAsync(selectedTag.id)).unwrap();
-      toast.success("Tag uğurla silindi!");
+      toast.success("Tag deleted successfully!");
     } catch (error) {
-      toast.error("Tag silmək mümkün olmadı: " + error.message);
+      toast.error("Failed to delete tag: " + error.message);
       throw error;
     }
   };
@@ -283,50 +304,80 @@ const CourseTagManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto p-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kurs Tag-ları</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Kursları təşkil etmək və süzmək üçün tag-lar yaradın və idarə edin ({totalTagCount} ədəd)
-          </p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Course Tags</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Create and manage tags to organize and filter courses ({totalTagCount} total)
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Tag</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tag əlavə et</span>
-        </button>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tag-ları axtarın..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
-            />
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search tags..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Filter className="w-4 h-4" />
+              <span>{filteredTags.length} tags</span>
+            </div>
           </div>
-          <div className="flex items-center text-sm text-gray-500">
-            <Filter className="w-4 h-4 mr-1" />
-            <span>{filteredTags.length} tag</span>
+
+          <div className="flex items-center space-x-2">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === "grid" 
+                    ? "bg-white text-[#0AAC9E] shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === "list" 
+                    ? "bg-white text-[#0AAC9E] shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Tags Display */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <LoadingSpinner />
-            <span className="ml-3 text-gray-600">Tag-lar yüklənir...</span>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0AAC9E]"></div>
+            <span className="ml-3 text-gray-600">Loading tags...</span>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center py-12">
@@ -337,7 +388,7 @@ const CourseTagManagement = () => {
                 onClick={() => dispatch(fetchCourseTagsAsync())}
                 className="mt-2 px-3 py-1 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
               >
-                Yenidən cəhd et
+                Try again
               </button>
             </div>
           </div>
@@ -345,12 +396,12 @@ const CourseTagManagement = () => {
           <div className="flex flex-col items-center justify-center py-12">
             <Hash className="w-12 h-12 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm ? "Tag tapılmadı" : "Hələ tag yoxdur"}
+              {searchTerm ? "No tags found" : "No tags yet"}
             </h3>
             <p className="text-gray-500 text-center mb-6">
               {searchTerm 
-                ? `"${searchTerm}" üçün heç bir tag tapılmadı`
-                : "Kursları təşkil etmək və süzmək üçün ilk tag-ınızı yaradın"
+                ? `No tags match "${searchTerm}"`
+                : "Create your first tag to organize and filter courses"
               }
             </p>
             {!searchTerm && (
@@ -358,20 +409,23 @@ const CourseTagManagement = () => {
                 onClick={() => setShowCreateModal(true)}
                 className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 transition-colors text-sm"
               >
-                İlk tag-ı yarat
+                Create First Tag
               </button>
             )}
           </div>
         ) : (
           <div className="p-4">
             {/* Tags Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className={viewMode === "grid" 
+              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3"
+              : "space-y-3"
+            }>
               {filteredTags.map((tag, index) => (
                 <div
                   key={tag.id}
-                  className="group relative"
+                  className={`group relative ${viewMode === "list" ? "flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-[#0AAC9E]/30" : ""}`}
                 >
-                  <div className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-sm ${getTagColor(index)}`}>
+                  <div className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-sm ${getTagColor(index)} ${viewMode === "list" ? "flex-1 border-0" : ""}`}>
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                       <Hash className="w-3 h-3 flex-shrink-0" />
                       <span className="text-sm font-medium truncate">
@@ -395,14 +449,14 @@ const CourseTagManagement = () => {
                             className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 rounded-t-lg"
                           >
                             <Edit3 className="w-3 h-3" />
-                            <span>Redaktə et</span>
+                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => openDeleteModal(tag)}
                             className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-b-lg"
                           >
                             <Trash2 className="w-3 h-3" />
-                            <span>Sil</span>
+                            <span>Delete</span>
                           </button>
                         </div>
                       )}
@@ -411,7 +465,7 @@ const CourseTagManagement = () => {
 
                   {/* Tag Usage Count */}
                   <div className="mt-1 text-xs text-gray-500 text-center">
-                    {tag.courseCount || 0} kurs
+                    {tag.courseCount || 0} courses
                   </div>
                 </div>
               ))}
@@ -420,13 +474,13 @@ const CourseTagManagement = () => {
             {/* Summary */}
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>Ümumi: {filteredTags.length} tag</span>
+                <span>Total: {filteredTags.length} tags</span>
                 <span>
-                  Ən çox istifadə olunan: {filteredTags.length > 0 
+                  Most used: {filteredTags.length > 0 
                     ? filteredTags.reduce((prev, current) => 
                         (prev.courseCount || 0) > (current.courseCount || 0) ? prev : current
                       ).name
-                    : "Yoxdur"
+                    : "None"
                   }
                 </span>
               </div>

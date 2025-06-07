@@ -5,7 +5,6 @@ import {
   ArrowLeft, 
   Save, 
   Eye, 
-  Upload, 
   AlertCircle, 
   CheckCircle,
   Clock,
@@ -77,7 +76,7 @@ const StepProgress = () => {
       case "completed":
         return {
           container: "cursor-pointer",
-          circle: "bg-[#0AAC9E] text-white border-[#0AAC9E]",
+          circle: "bg-[#0AAC9E] text-white border-[#0AAC9E] shadow-sm",
           title: "text-[#0AAC9E] font-medium",
           description: "text-[#0AAC9E]/70",
           connector: "bg-[#0AAC9E]",
@@ -85,15 +84,15 @@ const StepProgress = () => {
       case "current":
         return {
           container: "cursor-pointer",
-          circle: "bg-[#0AAC9E]/10 text-[#0AAC9E] border-[#0AAC9E] border-2 ring-2 ring-[#0AAC9E]/20",
-          title: "text-[#0AAC9E] font-medium",
-          description: "text-[#0AAC9E]/70",
+          circle: "bg-white text-[#0AAC9E] border-[#0AAC9E] border-2 ring-4 ring-[#0AAC9E]/10 shadow-sm",
+          title: "text-[#0AAC9E] font-semibold",
+          description: "text-[#0AAC9E]/80",
           connector: "bg-gray-200",
         };
       case "available":
         return {
-          container: "cursor-pointer hover:bg-gray-50 rounded-lg transition-colors p-1",
-          circle: "bg-white text-gray-400 border-gray-300 hover:border-[#0AAC9E] hover:text-[#0AAC9E]",
+          container: "cursor-pointer hover:bg-gray-50 rounded-lg transition-colors p-2 -m-2",
+          circle: "bg-white text-gray-400 border-gray-300 hover:border-[#0AAC9E] hover:text-[#0AAC9E] shadow-sm",
           title: "text-gray-600 hover:text-[#0AAC9E]",
           description: "text-gray-400 hover:text-[#0AAC9E]/70",
           connector: "bg-gray-200",
@@ -110,8 +109,8 @@ const StepProgress = () => {
   };
 
   return (
-    <div className="flex items-center justify-center py-3">
-      <div className="flex items-center space-x-6">
+    <div className="flex items-center justify-center py-6 bg-white border-b border-gray-100">
+      <div className="flex items-center space-x-8">
         {steps.map((step, index) => {
           const status = getStepStatus(step);
           const styles = getStepStyles(status);
@@ -121,20 +120,20 @@ const StepProgress = () => {
             <div key={step.id} className="flex items-center">
               <div
                 onClick={() => handleStepClick(step.id)}
-                className={`flex items-center space-x-2 transition-all ${styles.container}`}
+                className={`flex items-center space-x-3 transition-all ${styles.container}`}
               >
-                <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${styles.circle}`}>
+                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${styles.circle}`}>
                   {status === "completed" ? (
-                    <CheckCircle className="w-3 h-3" />
+                    <CheckCircle className="w-4 h-4" />
                   ) : status === "current" ? (
-                    <Icon className="w-3 h-3" />
+                    <Icon className="w-4 h-4" />
                   ) : (
-                    <span className="text-xs font-semibold">{step.id}</span>
+                    <span className="text-sm font-semibold">{step.id}</span>
                   )}
                 </div>
 
                 <div className="text-left">
-                  <div className={`text-xs font-medium transition-all ${styles.title}`}>
+                  <div className={`text-sm font-medium transition-all ${styles.title}`}>
                     {step.title}
                   </div>
                   <div className={`text-xs transition-all ${styles.description}`}>
@@ -144,7 +143,7 @@ const StepProgress = () => {
               </div>
 
               {index < steps.length - 1 && (
-                <div className={`w-8 h-0.5 mx-3 transition-all ${styles.connector}`} />
+                <div className={`w-12 h-0.5 mx-4 transition-all ${styles.connector}`} />
               )}
             </div>
           );
@@ -248,23 +247,23 @@ const CourseCreateLayout = ({ children }) => {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-12">
+          <div className="flex items-center justify-between h-16">
             {/* Left side */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-4">
               <button
                 onClick={handleBack}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors group"
               >
-                <ArrowLeft className="w-3.5 h-3.5 group-hover:translate-x-[-2px] transition-transform" />
+                <ArrowLeft className="w-4 h-4 group-hover:translate-x-[-2px] transition-transform" />
                 <span className="text-sm font-medium">
-                  {currentStep === 1 ? "Back to Courses" : "Back"}
+                  {currentStep === 1 ? "Back to Courses" : "Previous Step"}
                 </span>
               </button>
 
               {/* Status Indicators */}
               <div className="hidden sm:flex items-center space-x-2">
                 {error && (
-                  <div className="flex items-center space-x-1 text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                  <div className="flex items-center space-x-1 text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
                     <AlertCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">Error</span>
                     <button
@@ -277,7 +276,7 @@ const CourseCreateLayout = ({ children }) => {
                 )}
 
                 {!stepValidation.isValid && stepValidation.errors.length > 0 && (
-                  <div className="flex items-center space-x-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  <div className="flex items-center space-x-1 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
                     <AlertCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">
                       {stepValidation.errors.length} issue{stepValidation.errors.length > 1 ? 's' : ''}
@@ -286,7 +285,7 @@ const CourseCreateLayout = ({ children }) => {
                 )}
 
                 {stepValidation.isValid && (
-                  <div className="flex items-center space-x-1 text-[#0AAC9E] bg-[#0AAC9E]/10 px-2 py-0.5 rounded border border-[#0AAC9E]/20">
+                  <div className="flex items-center space-x-1 text-[#0AAC9E] bg-[#0AAC9E]/10 px-3 py-1 rounded-full border border-[#0AAC9E]/20">
                     <CheckCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">Step Complete</span>
                   </div>
@@ -296,19 +295,19 @@ const CourseCreateLayout = ({ children }) => {
 
             {/* Center - Course Title */}
             <div className="flex-1 text-center px-4">
-              <h1 className="text-sm font-semibold text-gray-900">Create New Course</h1>
+              <h1 className="text-lg font-bold text-gray-900">Create New Course</h1>
               {formData?.name && (
-                <p className="text-xs text-gray-500 truncate max-w-md mx-auto">
+                <p className="text-xs text-gray-500 truncate max-w-md mx-auto mt-1">
                   {formData.name}
                 </p>
               )}
             </div>
 
             {/* Right side */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               {/* Preview Button */}
-              <button className="flex items-center space-x-1 px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-xs">
-                <Eye className="w-3 h-3" />
+              <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">Preview</span>
               </button>
 
@@ -316,12 +315,12 @@ const CourseCreateLayout = ({ children }) => {
               <button
                 onClick={handleSave}
                 disabled={!canSave() || isSubmitting}
-                className="flex items-center space-x-2 px-3 py-1 bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm text-xs font-medium"
+                className="flex items-center space-x-2 px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm text-sm font-medium"
               >
                 {isSubmitting ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Save className="w-3 h-3" />
+                  <Save className="w-4 h-4" />
                 )}
                 <span className="hidden sm:inline">
                   {isSubmitting ? "Creating..." : "Create Course"}
@@ -329,47 +328,47 @@ const CourseCreateLayout = ({ children }) => {
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Step Progress */}
-          <StepProgress />
+        {/* Step Progress */}
+        <StepProgress />
 
-          {/* Step Validation Errors */}
-          {!stepValidation.isValid && stepValidation.errors.length > 0 && (
-            <div className="pb-2">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3 h-3 text-amber-600 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-medium text-amber-800">
-                      Please complete the following to continue:
-                    </h4>
-                    <ul className="mt-1 space-y-0.5">
-                      {stepValidation.errors.map((error, index) => (
-                        <li key={index} className="text-xs text-amber-700">
-                          • {error}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+        {/* Step Validation Errors */}
+        {!stepValidation.isValid && stepValidation.errors.length > 0 && (
+          <div className="border-t border-gray-100 bg-amber-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="text-sm font-medium text-amber-800">
+                    Please complete the following to continue:
+                  </h4>
+                  <ul className="mt-1 space-y-1">
+                    {stepValidation.errors.map((error, index) => (
+                      <li key={index} className="text-sm text-amber-700">
+                        • {error}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
 
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 shadow-xl">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0AAC9E]"></div>
-              <span className="text-gray-700 text-sm">Creating course...</span>
+          <div className="bg-white rounded-xl p-6 shadow-2xl">
+            <div className="flex items-center space-x-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0AAC9E]"></div>
+              <span className="text-gray-700 font-medium">Creating course...</span>
             </div>
           </div>
         </div>

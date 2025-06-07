@@ -10,7 +10,11 @@ import {
   MoreVertical,
   X,
   Check,
-  AlertCircle
+  AlertCircle,
+  Filter,
+  Grid,
+  List,
+  TrendingUp
 } from "lucide-react";
 import {
   fetchCourseCategoriesAsync,
@@ -90,7 +94,7 @@ const CategoryModal = ({ isOpen, onClose, category = null, onSave }) => {
         </div>
 
         {/* Form */}
-        <div className="p-4">
+        <form onSubmit={handleSubmit} className="p-4">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Category Name *
@@ -99,12 +103,6 @@ const CategoryModal = ({ isOpen, onClose, category = null, onSave }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ name: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
               placeholder="Enter category name"
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm ${
                 errors.name ? "border-red-300 bg-red-50" : "border-gray-300"
@@ -128,7 +126,7 @@ const CategoryModal = ({ isOpen, onClose, category = null, onSave }) => {
               Cancel
             </button>
             <button
-              onClick={handleSubmit}
+              type="submit"
               disabled={isSubmitting}
               className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
             >
@@ -142,7 +140,7 @@ const CategoryModal = ({ isOpen, onClose, category = null, onSave }) => {
               )}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
@@ -217,6 +215,7 @@ const DeleteModal = ({ isOpen, onClose, category, onConfirm }) => {
 const CourseCategoryManagement = () => {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -286,7 +285,7 @@ const CourseCategoryManagement = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-4">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -308,21 +307,53 @@ const CourseCategoryManagement = () => {
 
       {/* Search and Filters */}
       <div className="mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search categories..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
-            />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search categories..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Filter className="w-4 h-4" />
+              <span>{filteredCategories.length} categories</span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === "grid" 
+                    ? "bg-white text-[#0AAC9E] shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === "list" 
+                    ? "bg-white text-[#0AAC9E] shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Categories Grid */}
+      {/* Categories Display */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -359,65 +390,64 @@ const CourseCategoryManagement = () => {
           </div>
         ) : (
           <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={viewMode === "grid" 
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              : "space-y-3"
+            }>
               {filteredCategories.map((category) => (
                 <div
                   key={category.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-[#0AAC9E]/30 hover:shadow-sm transition-all group"
+                  className={`border border-gray-200 rounded-lg p-4 hover:border-[#0AAC9E]/30 hover:shadow-sm transition-all group ${
+                    viewMode === "list" ? "flex items-center justify-between" : ""
+                  }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1">
-                      <div className="w-10 h-10 bg-[#0AAC9E]/10 rounded-lg flex items-center justify-center">
-                        <FolderOpen className="w-5 h-5 text-[#0AAC9E]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {category.name}
-                        </h3>
-                        <div className="flex items-center space-x-3 mt-1">
-                          <span className="text-xs text-gray-500 flex items-center">
-                            <BookOpen className="w-3 h-3 mr-1" />
-                            {category.courseCount || 0} courses
-                          </span>
-                        </div>
-                      </div>
+                  <div className={`flex items-start space-x-3 ${viewMode === "list" ? "flex-1" : ""}`}>
+                    <div className="w-10 h-10 bg-[#0AAC9E]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <FolderOpen className="w-5 h-5 text-[#0AAC9E]" />
                     </div>
-
-                    {/* Actions Dropdown */}
-                    <div className="relative">
-                      <button
-                        onClick={() => toggleDropdown(category.id)}
-                        className="p-1 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreVertical className="w-4 h-4 text-gray-400" />
-                      </button>
-
-                      {activeDropdown === category.id && (
-                        <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                          <button
-                            onClick={() => openEditModal(category)}
-                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => openDeleteModal(category)}
-                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {category.name}
+                      </h3>
+                      <div className="flex items-center space-x-3 mt-1">
+                        <span className="text-xs text-gray-500 flex items-center">
+                          <BookOpen className="w-3 h-3 mr-1" />
+                          {category.courseCount || 0} courses
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          Created: {new Date(category.createdDate || Date.now()).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Category Stats */}
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="text-xs text-gray-500">
-                      Created: {new Date(category.createdDate || Date.now()).toLocaleDateString()}
-                    </div>
+                  {/* Actions Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => toggleDropdown(category.id)}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <MoreVertical className="w-4 h-4 text-gray-400" />
+                    </button>
+
+                    {activeDropdown === category.id && (
+                      <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <button
+                          onClick={() => openEditModal(category)}
+                          className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(category)}
+                          className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

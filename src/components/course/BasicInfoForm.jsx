@@ -10,6 +10,7 @@ import {
 import { fetchCourseCategoriesAsync } from "@/redux/courseCategory/courseCategorySlice";
 import { fetchCourseTagsAsync } from "@/redux/courseTag/courseTagSlice";
 import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
+import { fetchCertificatesAsync } from "@/redux/certificate/certificateSlice";
 import TargetGroupSelector from "@/components/targetSelect";
 
 const BasicInfoForm = () => {
@@ -23,12 +24,14 @@ const BasicInfoForm = () => {
   const { formData = {} } = useSelector((state) => state.course || {});
   const { categories = [], loading: categoriesLoading } = useSelector((state) => state.courseCategory);
   const { tags = [], loading: tagsLoading } = useSelector((state) => state.courseTag);
+  const { certificates = [], loading: certificatesLoading } = useSelector((state) => state.certificate);
   const targetGroups = useSelector((state) => state.getAllTargetGroups.data?.[0]?.targetGroups) || [];
 
   useEffect(() => {
     dispatch(fetchCourseCategoriesAsync());
     dispatch(fetchCourseTagsAsync());
     dispatch(getAllTargetGroupsAsync());
+    dispatch(fetchCertificatesAsync());
   }, [dispatch]);
 
   // Get selected target groups data
@@ -166,7 +169,7 @@ const BasicInfoForm = () => {
   };
 
   const getFieldClassName = (field) => {
-    const baseClass = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E] transition-colors text-sm";
+    const baseClass = "w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#0AAC9E] transition-colors text-sm";
     
     if (touched[field] && errors[field]) {
       return `${baseClass} border-red-300 focus:border-red-500 bg-red-50`;
@@ -181,20 +184,20 @@ const BasicInfoForm = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Basic Information
         </h2>
-        <p className="text-sm text-gray-600">
-          Set up the fundamental details of your course
+        <p className="text-gray-600">
+          Set up the fundamental details of your course to get started
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-8">
           {/* Course Cover Image */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mb-8">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
               Course Cover Image
               <span className="text-gray-500 font-normal ml-1">(Optional)</span>
             </label>
@@ -204,25 +207,25 @@ const BasicInfoForm = () => {
                 <img
                   src={formData.imagePreview}
                   alt="Course cover"
-                  className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                  className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
                   <button
                     onClick={removeImage}
-                    className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                    className="bg-red-500 text-white p-3 rounded-full hover:bg-red-600 transition-colors shadow-lg"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 backdrop-blur-sm px-2 py-1 rounded-lg">
-                  <span className="text-xs font-medium text-gray-700">
+                <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 backdrop-blur-sm px-3 py-2 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">
                     {formData.imageFile?.name}
                   </span>
                 </div>
               </div>
             ) : (
               <div
-                className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
                   dragActive
                     ? "border-[#0AAC9E] bg-[#0AAC9E]/5"
                     : "border-gray-300 hover:border-[#0AAC9E] hover:bg-[#0AAC9E]/5"
@@ -235,16 +238,16 @@ const BasicInfoForm = () => {
                 onDrop={handleImageDrop}
               >
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mb-2">
+                  <div className="w-12 h-12 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mb-4">
                     {dragActive ? (
-                      <Upload className="w-4 h-4 text-[#0AAC9E]" />
+                      <Upload className="w-6 h-6 text-[#0AAC9E]" />
                     ) : (
-                      <Camera className="w-4 h-4 text-[#0AAC9E]" />
+                      <Camera className="w-6 h-6 text-[#0AAC9E]" />
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-base text-gray-600 mb-2">
                     Drag and drop your course cover image here, or{" "}
-                    <label className="text-[#0AAC9E] hover:text-[#0AAC9E]/80 cursor-pointer font-medium">
+                    <label className="text-[#0AAC9E] hover:text-[#0AAC9E]/80 cursor-pointer font-semibold">
                       browse files
                       <input
                         type="file"
@@ -254,25 +257,25 @@ const BasicInfoForm = () => {
                       />
                     </label>
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-sm text-gray-400">
                     PNG, JPG, GIF up to 10MB (1280x720 recommended)
                   </p>
                 </div>
               </div>
             )}
             {errors.image && (
-              <p className="mt-1 text-xs text-red-600 flex items-center">
-                <AlertCircle className="w-3 h-3 mr-1" />
+              <p className="mt-2 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
                 {errors.image}
               </p>
             )}
           </div>
 
           {/* Form Fields */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Course Name */}
             <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Course Name *
               </label>
               <div className="relative">
@@ -285,23 +288,23 @@ const BasicInfoForm = () => {
                   className={getFieldClassName("name")}
                 />
                 {touched.name && !errors.name && formData.name && (
-                  <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#0AAC9E]" />
+                  <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#0AAC9E]" />
                 )}
               </div>
               {touched.name && errors.name && (
-                <p className="mt-1 text-xs text-red-600 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.name}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-sm text-gray-500">
                 {formData.name?.length || 0}/100 characters
               </p>
             </div>
 
             {/* Course Description */}
             <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Course Description *
               </label>
               <div className="relative">
@@ -310,27 +313,27 @@ const BasicInfoForm = () => {
                   onChange={(e) => handleInputChange("description", e.target.value)}
                   onBlur={() => handleBlur("description")}
                   placeholder="Describe what students will learn in this course"
-                  rows={3}
+                  rows={4}
                   className={`${getFieldClassName("description")} resize-none`}
                 />
                 {touched.description && !errors.description && formData.description && (
-                  <CheckCircle className="absolute right-3 top-3 w-4 h-4 text-[#0AAC9E]" />
+                  <CheckCircle className="absolute right-4 top-4 w-5 h-5 text-[#0AAC9E]" />
                 )}
               </div>
               {touched.description && errors.description && (
-                <p className="mt-1 text-xs text-red-600 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.description}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-sm text-gray-500">
                 {formData.description?.length || 0}/1000 characters
               </p>
             </div>
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Course Category *
               </label>
               <div className="relative">
@@ -353,12 +356,12 @@ const BasicInfoForm = () => {
                   ))}
                 </select>
                 {touched.categoryId && !errors.categoryId && formData.categoryId && (
-                  <CheckCircle className="absolute right-8 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#0AAC9E]" />
+                  <CheckCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#0AAC9E]" />
                 )}
               </div>
               {touched.categoryId && errors.categoryId && (
-                <p className="mt-1 text-xs text-red-600 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.categoryId}
                 </p>
               )}
@@ -366,11 +369,11 @@ const BasicInfoForm = () => {
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Estimated Duration (minutes)
               </label>
               <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Clock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="number"
                   value={formData.duration || ""}
@@ -380,12 +383,12 @@ const BasicInfoForm = () => {
                   onBlur={() => handleBlur("duration")}
                   placeholder="60"
                   min="1"
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
                 />
               </div>
               {errors.duration && (
-                <p className="mt-1 text-xs text-red-600 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.duration}
                 </p>
               )}
@@ -393,12 +396,12 @@ const BasicInfoForm = () => {
 
             {/* Tags */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Tags
                 <span className="text-gray-500 font-normal ml-1">(Optional)</span>
               </label>
               <div className="relative">
-                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Tag className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <select
                   value={formData?.tagIds?.[0] || ""}
                   onChange={(e) =>
@@ -407,7 +410,7 @@ const BasicInfoForm = () => {
                       e.target.value ? [parseInt(e.target.value)] : []
                     )
                   }
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
                   disabled={tagsLoading}
                 >
                   <option value="">
@@ -424,28 +427,56 @@ const BasicInfoForm = () => {
 
             {/* Certificate */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Certificate Options
               </label>
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <Award className="text-[#0AAC9E] w-4 h-4 flex-shrink-0" />
-                <label className="flex items-center cursor-pointer flex-1">
-                  <input
-                    type="checkbox"
-                    checked={formData?.verifiedCertificate || false}
-                    onChange={(e) =>
-                      handleInputChange("verifiedCertificate", e.target.checked)
-                    }
-                    className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    Provide verified certificate upon completion
-                  </span>
-                </label>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <Award className="text-[#0AAC9E] w-5 h-5 flex-shrink-0" />
+                  <label className="flex items-center cursor-pointer flex-1">
+                    <input
+                      type="checkbox"
+                      checked={formData?.verifiedCertificate || false}
+                      onChange={(e) =>
+                        handleInputChange("verifiedCertificate", e.target.checked)
+                      }
+                      className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                    />
+                    <span className="ml-3 text-sm text-gray-700 font-medium">
+                      Provide verified certificate upon completion
+                    </span>
+                  </label>
+                </div>
+                
+                {formData?.verifiedCertificate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Certificate Template
+                    </label>
+                    <select
+                      value={formData.certificateId || ""}
+                      onChange={(e) =>
+                        handleInputChange("certificateId", parseInt(e.target.value) || null)
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                      disabled={certificatesLoading}
+                    >
+                      <option value="">
+                        {certificatesLoading ? "Loading certificates..." : "Select a certificate template"}
+                      </option>
+                      {certificates.map((cert) => (
+                        <option key={cert.id} value={cert.id}>
+                          {cert.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-500">
+                  Learners will receive a certificate when they complete this course
+                </p>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Learners will receive a certificate when they complete this course
-              </p>
             </div>
 
             {/* Target Groups */}
@@ -461,39 +492,97 @@ const BasicInfoForm = () => {
                 onRemove={handleTargetGroupRemove}
               />
             </div>
+
+            {/* Advanced Settings */}
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Advanced Settings
+                <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              </label>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    Start Duration (days)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.startDuration || ""}
+                    onChange={(e) =>
+                      handleInputChange("startDuration", parseInt(e.target.value) || null)
+                    }
+                    placeholder="Optional"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    Deadline (days)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.deadline || ""}
+                    onChange={(e) =>
+                      handleInputChange("deadline", parseInt(e.target.value) || null)
+                    }
+                    placeholder="Optional"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData?.autoReassign || false}
+                      onChange={(e) =>
+                        handleInputChange("autoReassign", e.target.checked)
+                      }
+                      className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                    />
+                    <span className="text-xs text-gray-700">
+                      Auto reassign on completion
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Progress Indicator */}
-          <div className="mt-4 pt-3 border-t border-gray-200">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isFormValid() ? 'bg-[#0AAC9E]' : 'bg-gray-300'}`}></div>
-                <span className="text-gray-600">
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${isFormValid() ? 'bg-[#0AAC9E]' : 'bg-gray-300'}`}></div>
+                <span className="text-gray-600 font-medium">
                   Step 1 of 3: Basic Information
                 </span>
               </div>
               <div className="text-gray-500">
-                {Object.keys(touched).length > 0 && `${Object.keys(touched).length} fields filled`}
+                {Object.keys(touched).length > 0 && `${Object.keys(touched).length} fields completed`}
               </div>
             </div>
-            <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-[#0AAC9E] h-1 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min(100, (Object.keys(touched).length / 4) * 100)}%` }}
+                className="bg-[#0AAC9E] h-2 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, (Object.keys(touched).length / 6) * 100)}%` }}
               ></div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-4 py-3 flex justify-between items-center">
-          <div className="text-xs text-gray-500">
-            Fill out the required fields to continue
+        <div className="bg-gray-50 px-8 py-6 flex justify-between items-center border-t border-gray-200">
+          <div className="text-sm text-gray-500">
+            Fill out the required fields to continue to course content
           </div>
           <button
             onClick={handleNext}
             disabled={!isFormValid()}
-            className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm text-sm"
+            className="px-6 py-3 bg-[#0AAC9E] text-white rounded-xl hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold shadow-sm"
           >
             Next: Course Content
           </button>
