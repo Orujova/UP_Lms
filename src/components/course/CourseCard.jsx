@@ -1,6 +1,5 @@
-// src/components/course/CourseCard.jsx - Modern clean design
+// src/components/course/CourseCard.jsx - Clean and modern design
 import React from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   Clock, 
   Users, 
@@ -12,7 +11,11 @@ import {
   Trash2,
   MoreVertical,
   Calendar,
-  User
+  User,
+  Globe,
+  ChevronRight,
+  Upload,
+  Video
 } from 'lucide-react';
 
 const CourseCard = ({ 
@@ -20,27 +23,11 @@ const CourseCard = ({
   viewMode = "grid", 
   onEdit, 
   onView, 
-  onDelete, 
+  onDelete,
+  onPublish,
   activeDropdown, 
   onToggleDropdown 
 }) => {
-  const router = useRouter();
-
-  const getStatusBadge = () => {
-    if (course.publishCourse) {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#0AAC9E]/10 text-[#0AAC9E] border border-[#0AAC9E]/20">
-          Published
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-        Draft
-      </span>
-    );
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return 'No date';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -50,17 +37,36 @@ const CourseCard = ({
     });
   };
 
+  const formatDuration = (minutes) => {
+    if (!minutes) return '0min';
+    if (minutes < 60) return `${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+  };
+
   const getLearnerAvatars = () => {
     const learners = course.topAssignedUsers || [];
     const maxShow = 3;
     
+    if (learners.length === 0) {
+      return (
+        <div className="flex items-center space-x-2">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
+            <User className="w-3.5 h-3.5 text-gray-500" />
+          </div>
+          <span className="text-gray-600 text-xs font-medium">No learners</span>
+        </div>
+      );
+    }
+    
     return (
-      <div className="flex items-center">
+      <div className="flex items-center space-x-2">
         <div className="flex -space-x-1.5">
           {learners.slice(0, maxShow).map((learner, index) => (
             <div 
               key={index} 
-              className="w-6 h-6 rounded-full border-2 border-white bg-[#0AAC9E]/10 flex items-center justify-center overflow-hidden"
+              className="w-7 h-7 rounded-full border-2 border-white bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-sm hover:scale-110 transition-transform duration-200"
               title={learner.fullName}
             >
               {learner.profilePictureUrl ? (
@@ -70,127 +76,135 @@ const CourseCard = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <User className="w-3 h-3 text-[#0AAC9E]" />
+                <User className="w-3.5 h-3.5 text-gray-500" />
               )}
             </div>
           ))}
           {learners.length > maxShow && (
-            <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center">
-              <span className="text-xs font-medium text-gray-600">
-                +{learners.length - maxShow}
-              </span>
+            <div className="w-7 h-7 rounded-full border-2 border-white bg-gradient-to-br from-[#0AAC9E] to-[#089a8c] flex items-center justify-center text-xs font-semibold text-white shadow-sm">
+              +{learners.length - maxShow}
             </div>
           )}
         </div>
-        {learners.length > 0 && (
-          <span className="ml-2 text-xs text-gray-500">
-            {learners.length} learner{learners.length !== 1 ? 's' : ''}
-          </span>
-        )}
+        <span className="text-gray-600 text-xs font-medium">{learners.length} learners</span>
       </div>
     );
   };
 
   if (viewMode === "list") {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 group">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl hover:bg-white hover:border-[#0AAC9E]/40 transition-all duration-300 group">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
             {/* Course Image */}
             <div 
-              className="w-12 h-12 bg-gradient-to-br from-[#0AAC9E]/10 to-[#0AAC9E]/20 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden flex-shrink-0"
+              className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center cursor-pointer overflow-hidden flex-shrink-0 relative shadow-sm hover:shadow-md transition-all duration-200"
               onClick={() => onView(course.id)}
             >
               {course.imageUrl ? (
                 <img 
                   src={course.imageUrl} 
                   alt={course.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                 />
               ) : (
-                <BookOpen className="w-5 h-5 text-[#0AAC9E]" />
+                <BookOpen className="w-6 h-6 text-gray-500" />
               )}
             </div>
             
             {/* Course Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2 mb-1">
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center space-x-3">
                 <h3 
-                  className="font-medium text-gray-900 truncate cursor-pointer hover:text-[#0AAC9E] transition-colors"
+                  className="font-semibold text-gray-800 truncate cursor-pointer hover:text-[#0AAC9E] transition-colors text-lg"
                   onClick={() => onView(course.id)}
                 >
                   {course.name}
                 </h3>
-                {getStatusBadge()}
-              </div>
-              
-              <p className="text-sm text-gray-500 line-clamp-1 mb-2">{course.description}</p>
-              
-              <div className="flex items-center space-x-4 text-xs text-gray-500">
-                <span className="flex items-center">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {course.duration || 60}min
-                </span>
-                <span className="flex items-center">
-                  <Users className="w-3 h-3 mr-1" />
-                  {course.topAssignedUsers?.length || 0}
-                </span>
-                <span className="flex items-center">
-                  <Calendar className="w-3 h-3 mr-1" />
-                  {formatDate(course.createdDate)}
-                </span>
-                {course.verifiedCertificate && (
-                  <span className="flex items-center text-[#0AAC9E]">
-                    <Award className="w-3 h-3 mr-1" />
-                    Certificate
+                {course.publishCourse ? (
+                  <span className="px-2.5 py-1 bg-gradient-to-r from-[#0AAC9E] to-[#089a8c] text-white text-xs font-medium rounded-full shadow-sm">
+                    Published
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium rounded-full shadow-sm">
+                    Draft
                   </span>
                 )}
+              </div>
+              
+              <p className="text-sm text-gray-600 line-clamp-1">{course.description}</p>
+              
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-1">
+                  <BookOpen className="w-4 h-4" />
+                  <span>{course.totalSection || 0} sections</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{formatDuration(course.duration)}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{formatDate(course.createdDate)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions Menu */}
           <div className="relative ml-4">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleDropdown(course.id);
               }}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+              className="p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200"
             >
-              <MoreVertical className="w-4 h-4 text-gray-400" />
+              <MoreVertical className="w-4 h-4 text-gray-500" />
             </button>
 
             {activeDropdown === course.id && (
-              <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onView(course.id);
                   }}
-                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  <Eye className="w-3 h-3" />
-                  <span>View Details</span>
+                  <Eye className="w-4 h-4" />
+                  <span>View</span>
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(course.id);
                   }}
-                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  <Edit3 className="w-3 h-3" />
-                  <span>Edit Course</span>
+                  <Edit3 className="w-4 h-4" />
+                  <span>Edit</span>
                 </button>
+                {!course.publishCourse && onPublish && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPublish(course.id);
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-[#0AAC9E] hover:bg-[#0AAC9E]/10 transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Publish</span>
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(course.id);
                   }}
-                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4" />
                   <span>Delete</span>
                 </button>
               </div>
@@ -201,137 +215,176 @@ const CourseCard = ({
     );
   }
 
-  // Grid view - Following the design from the image
+  // Grid View - Clean and modern design
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#0AAC9E]/30 transition-all duration-300 group relative">
-      {/* Status Badge - Top Left */}
-      <div className="absolute top-3 left-3 z-10">
-        {getStatusBadge()}
-      </div>
-
-      {/* Actions Dropdown - Top Right */}
-      <div className="absolute top-3 right-3 z-10">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleDropdown(course.id);
-          }}
-          className="p-1.5 bg-white/80 hover:bg-white rounded-lg transition-colors opacity-0 group-hover:opacity-100 shadow-sm"
-        >
-          <MoreVertical className="w-4 h-4 text-gray-600" />
-        </button>
-
-        {activeDropdown === course.id && (
-          <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-30">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onView(course.id);
-              }}
-              className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 rounded-t-lg"
-            >
-              <Eye className="w-3 h-3" />
-              <span>View Details</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(course.id);
-              }}
-              className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-            >
-              <Edit3 className="w-3 h-3" />
-              <span>Edit</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(course.id);
-              }}
-              className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-b-lg"
-            >
-              <Trash2 className="w-3 h-3" />
-              <span>Delete</span>
-            </button>
-          </div>
-        )}
-      </div>
-
+    <div className="bg-white rounded-2xl border border-gray-200 hover:shadow-2xl hover:border-[#0AAC9E]/50 transition-all duration-500 group overflow-hidden">
       {/* Course Image */}
       <div 
-        className="h-32 bg-gradient-to-br from-[#0AAC9E]/10 to-[#0AAC9E]/20 flex items-center justify-center cursor-pointer relative overflow-hidden"
+        className="h-52 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center cursor-pointer relative overflow-hidden"
         onClick={() => onView(course.id)}
       >
         {course.imageUrl ? (
           <img 
             src={course.imageUrl} 
             alt={course.name}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <BookOpen className="w-10 h-10 text-[#0AAC9E]/60" />
+          <BookOpen className="w-14 h-14 text-gray-400 group-hover:text-gray-500 transition-colors" />
         )}
         
-        {/* Play overlay on hover */}
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <PlayCircle className="w-8 h-8 text-white" />
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Status Badge */}
+        <div className="absolute top-4 left-4">
+          {course.publishCourse ? (
+            <span className="px-3 py-1.5 bg-[#0AAC9E]/90 text-white text-xs font-semibold rounded-full shadow-lg">
+              Published
+            </span>
+          ) : (
+            <span className="px-3 py-1.5 bg-amber-500/90 text-white text-xs font-semibold rounded-full shadow-lg">
+              Draft
+            </span>
+          )}
+        </div>
+
+        {/* Actions Button */}
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleDropdown(course.id);
+            }}
+            className="p-2 bg-white/80 hover:bg-white/90 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-lg"
+          >
+            <MoreVertical className="w-4 h-4 text-gray-600" />
+          </button>
+
+          {activeDropdown === course.id && (
+            <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView(course.id);
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>View</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(course.id);
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+              {!course.publishCourse && onPublish && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPublish(course.id);
+                  }}
+                  className="w-full flex items-center space-x-2 px-3 py-2.5 text-sm text-[#0AAC9E] hover:bg-[#0AAC9E]/10 transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Publish</span>
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(course.id);
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
       
       {/* Course Content */}
-      <div className="p-4">
-        <div className="mb-2">
-          <h3 
-            className="font-medium text-gray-900 line-clamp-2 mb-1 cursor-pointer hover:text-[#0AAC9E] transition-colors text-sm leading-relaxed"
-            onClick={() => onView(course.id)}
-          >
-            {course.name}
-          </h3>
-          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-            {course.description}
-          </p>
-        </div>
+      <div className="p-5 space-y-4">
+        {/* Course Title */}
+        <h3 
+          className="font-bold text-gray-800 text-lg cursor-pointer hover:text-[#0AAC9E] transition-colors line-clamp-2 leading-tight"
+          onClick={() => onView(course.id)}
+        >
+          {course.name || 'Course Title'}
+        </h3>
         
-        {/* Course Stats */}
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-          <div className="flex items-center space-x-3">
-            <span className="flex items-center">
-              <Clock className="w-3 h-3 mr-1" />
-              {course.duration || 60}min
-            </span>
-            <span className="flex items-center">
-              <Users className="w-3 h-3 mr-1" />
-              {course.topAssignedUsers?.length || 0}
-            </span>
+        {/* Course Description */}
+        <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">
+          {course.description || 'Course description not available'}
+        </p>
+        
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gradient-to-br from-[#0AAC9E]/10 to-[#089a8c]/10 rounded-xl p-3 text-center border border-[#0AAC9E]/20">
+            <div className="text-xl font-bold text-gray-800">{course.totalSection || 0}</div>
+            <div className="text-xs text-gray-600 font-medium">Sections</div>
           </div>
-          
+          <div className="bg-gradient-to-br from-[#0AAC9E]/10 to-[#089a8c]/10 rounded-xl p-3 text-center border border-[#0AAC9E]/20">
+            <div className="text-xl font-bold text-gray-800">{course.totalContent || 0}</div>
+            <div className="text-xs text-gray-600 font-medium">Content</div>
+          </div>
+        </div>
+
+        {/* Duration and Video Count */}
+        <div className="flex justify-between items-center bg-gray-50 rounded-xl p-3">
+          <div className="flex items-center space-x-2 text-gray-600">
+            <Video className="w-4 h-4" />
+            <span className="text-sm font-medium">{course.totalContent || 0} videos</span>
+          </div>
+          <div className="flex items-center space-x-2 text-gray-600">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-medium">{formatDuration(course.duration)}</span>
+          </div>
+        </div>
+
+        {/* Category and Certificate */}
+        <div className="flex justify-between items-center">
+          <span className="px-3 py-1.5 bg-gradient-to-r from-[#0AAC9E] to-[#089a8c] text-white text-xs font-semibold rounded-full shadow-sm">
+            {course.courseCategoryName || 'Category'}
+          </span>
           {course.verifiedCertificate && (
-            <Award className="w-4 h-4 text-[#0AAC9E]" />
+            <div className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-200/50">
+              <Award className="w-3.5 h-3.5" />
+              <span>Certificate</span>
+            </div>
           )}
         </div>
 
-        {/* Creation Date */}
-        <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
-          <span className="flex items-center">
-            <Calendar className="w-3 h-3 mr-1" />
-            {formatDate(course.createdDate)}
-          </span>
-          <span>by {course.createdBy || 'Unknown'}</span>
+        {/* Learners and Creator */}
+        <div className="flex justify-between items-center">
+          {getLearnerAvatars()}
+          <div className="text-right">
+            <div className="text-gray-500 text-xs">by</div>
+            <div className="font-semibold text-gray-800 text-sm">{course.createdBy || 'Nuran Ruslan'}</div>
+          </div>
         </div>
 
-        {/* Learners Section */}
-        {course.publishCourse && course.topAssignedUsers && course.topAssignedUsers.length > 0 ? (
-          <div className="pt-3 border-t border-gray-100">
-            {getLearnerAvatars()}
+        {/* Footer with Date */}
+        <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-gray-500">
+            <Calendar className="w-4 h-4" />
+            <span className="text-sm">{formatDate(course.createdDate)}</span>
           </div>
-        ) : !course.publishCourse ? (
-          <div className="pt-3 border-t border-gray-100">
-            <div className="flex items-center justify-center text-xs text-gray-400">
-              <Users className="w-3 h-3 mr-1" />
-              <span>No learners assigned yet</span>
-            </div>
-          </div>
-        ):null}
+          <button 
+            onClick={() => onView(course.id)}
+            className="flex items-center space-x-1 text-[#0AAC9E] hover:text-[#089a8c] transition-colors group/btn"
+          >
+            <span className="text-sm font-medium">View Details</span>
+            <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
       </div>
     </div>
   );

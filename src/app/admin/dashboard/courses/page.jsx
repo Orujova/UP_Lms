@@ -18,9 +18,11 @@ import {
   Users,
   Tag,
   Folder,
-  MoreHorizontal
+  MoreHorizontal,
+  SlidersHorizontal,
+  RefreshCw
 } from "lucide-react";
-import { fetchCoursesAsync, deleteCourseAsync } from "@/redux/course/courseSlice";
+import { fetchCoursesAsync, deleteCourseAsync, publishCourseAsync } from "@/redux/course/courseSlice";
 import { fetchCourseCategoriesAsync } from "@/redux/courseCategory/courseCategorySlice";
 import { fetchCourseTagsAsync } from "@/redux/courseTag/courseTagSlice";
 import CourseCard from "@/components/course/CourseCard";
@@ -45,7 +47,9 @@ const CourseHomepage = () => {
     tagId: "",
     hasCertificate: "",
     status: "",
-    sortBy: "recent"
+    sortBy: "recent",
+    minDuration: "",
+    maxDuration: ""
   });
 
   // Redux state
@@ -70,10 +74,23 @@ const CourseHomepage = () => {
     const params = {};
     
     if (filters.search) params.search = filters.search;
-    if (filters.categoryId) params.courseCategoryId = filters.categoryId;
-    if (filters.tagId) params.tagId = filters.tagId;
+    if (filters.categoryId) {
+      const category = categories.find(c => c.id.toString() === filters.categoryId);
+      if (category) params.courseCategoryName = category.name;
+    }
+    if (filters.tagId) params.tagId = parseInt(filters.tagId);
     if (filters.hasCertificate !== "") params.hasCertificate = filters.hasCertificate === "true";
-    if (filters.sortBy) params.orderBy = filters.sortBy;
+    if (filters.minDuration) params.minDuration = parseInt(filters.minDuration);
+    if (filters.maxDuration) params.maxDuration = parseInt(filters.maxDuration);
+    
+    // Map sortBy to API orderBy
+    const sortMapping = {
+      recent: "CreatedDate",
+      name: "Name", 
+      duration: "Duration"
+    };
+    
+    if (filters.sortBy) params.orderBy = sortMapping[filters.sortBy] || "CreatedDate";
     
     return params;
   };
@@ -95,7 +112,7 @@ const CourseHomepage = () => {
   const getFilteredCourses = () => {
     let filtered = [...courses];
     
-    // Status filter
+    // Status filter (client-side since API doesn't support this)
     if (filters.status === "published") {
       filtered = filtered.filter(course => course.publishCourse);
     } else if (filters.status === "draft") {
@@ -132,6 +149,16 @@ const CourseHomepage = () => {
     setActiveDropdown(null);
   };
 
+  const handlePublishCourse = async (courseId) => {
+    try {
+      await dispatch(publishCourseAsync(courseId)).unwrap();
+      toast.success("Course published successfully!");
+      setActiveDropdown(null);
+    } catch (error) {
+      toast.error("Failed to publish course: " + error.message);
+    }
+  };
+
   const confirmDelete = async () => {
     try {
       await dispatch(deleteCourseAsync(deleteModal.courseId)).unwrap();
@@ -153,12 +180,14 @@ const CourseHomepage = () => {
       tagId: "",
       hasCertificate: "",
       status: "",
-      sortBy: "recent"
+      sortBy: "recent",
+      minDuration: "",
+      maxDuration: ""
     });
   };
 
   const getFilterCount = () => {
-    return Object.values(filters).filter(value => value !== "").length;
+    return Object.values(filters).filter(value => value !== "" && value !== "recent").length;
   };
 
   const getCourseStats = () => {
@@ -171,15 +200,19 @@ const CourseHomepage = () => {
 
   const stats = getCourseStats();
 
+  const handleRefresh = () => {
+    dispatch(fetchCoursesAsync(buildApiParams()));
+  };
+
   if (loading && courses.length === 0) {
     return <LoadingSpinner />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/50 pt-14">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-white border-b rounded-lg border-gray-200 sticky top-0 z-10">
+        <div className="p-4" >
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
@@ -194,6 +227,8 @@ const CourseHomepage = () => {
             </div>
 
             <div className="flex items-center space-x-3">
+            
+
               <button
                 onClick={() => router.push('/admin/dashboard/courses/settings')}
                 className="flex items-center space-x-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
@@ -214,7 +249,7 @@ const CourseHomepage = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className=" py-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow">
@@ -266,7 +301,7 @@ const CourseHomepage = () => {
           </div>
         </div>
 
-        {/* Filters and Search */}
+        {/* Enhanced Filters and Search */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex items-center space-x-4 flex-1">
@@ -278,7 +313,7 @@ const CourseHomepage = () => {
                   value={filters.search}
                   onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   placeholder="Search courses..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className="w-full pl-10 pr-4 py-2 border outline-0 border-gray-300 rounded-lg focus:ring-0 focus:border-[#01DBC8] text-sm"
                 />
                 {filters.search && (
                   <button
@@ -290,7 +325,7 @@ const CourseHomepage = () => {
                 )}
               </div>
 
-              {/* Filter Toggle */}
+              {/* Enhanced Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center space-x-2 px-3 py-2 border rounded-lg transition-colors text-sm ${
@@ -299,7 +334,7 @@ const CourseHomepage = () => {
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <Filter className="w-4 h-4" />
+                <SlidersHorizontal className="w-4 h-4" />
                 <span>Filters</span>
                 {getFilterCount() > 0 && (
                   <span className="bg-[#0AAC9E] text-white text-xs px-1.5 py-0.5 rounded-full min-w-[1.25rem] h-5 flex items-center justify-center">
@@ -310,8 +345,23 @@ const CourseHomepage = () => {
               </button>
             </div>
 
-            {/* View Controls */}
+            {/* View Controls and Sort */}
             <div className="flex items-center space-x-3">
+              {/* Sort Dropdown */}
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <span>Sort:</span>
+                <select
+                  value={filters.sortBy}
+                  onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                  className="border border-gray-300 outline-0 rounded px-2 py-1 text-sm focus:ring-0 focus:border-[#01DBC8]"
+                >
+                  <option value="recent">Most Recent</option>
+                  <option value="name">Name A-Z</option>
+                  <option value="duration">Duration</option>
+                </select>
+              </div>
+
+              {/* View Mode Toggle */}
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -341,10 +391,10 @@ const CourseHomepage = () => {
             </div>
           </div>
 
-          {/* Expanded Filters */}
+          {/* Expanded Filters Panel */}
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 {/* Category Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -353,7 +403,7 @@ const CourseHomepage = () => {
                     <select
                       value={filters.categoryId}
                       onChange={(e) => setFilters(prev => ({ ...prev, categoryId: e.target.value }))}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                      className="w-full pl-10 pr-4 py-2 outline-0 border border-gray-300 rounded-lg focus:ring-0 focus:border-[#01DBC8] text-sm"
                     >
                       <option value="">All Categories</option>
                       {categories.map((category) => (
@@ -373,7 +423,7 @@ const CourseHomepage = () => {
                     <select
                       value={filters.tagId}
                       onChange={(e) => setFilters(prev => ({ ...prev, tagId: e.target.value }))}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                      className="w-full pl-10 pr-4 py-2 outline-0 border border-gray-300 rounded-lg focus:ring-0 focus:border-[#01DBC8] text-sm"
                     >
                       <option value="">All Tags</option>
                       {tags.map((tag) => (
@@ -393,7 +443,7 @@ const CourseHomepage = () => {
                     <select
                       value={filters.hasCertificate}
                       onChange={(e) => setFilters(prev => ({ ...prev, hasCertificate: e.target.value }))}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                      className="w-full pl-10 pr-4 py-2 outline-0 border border-gray-300 rounded-lg focus:ring-0 focus:border-[#01DBC8] text-sm"
                     >
                       <option value="">All Courses</option>
                       <option value="true">With Certificate</option>
@@ -408,36 +458,58 @@ const CourseHomepage = () => {
                   <select
                     value={filters.status}
                     onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                    className="w-full px-3 py-2 outline-0 border border-gray-300 rounded-lg focus:ring-0 focus:border-[#01DBC8] text-sm"
                   >
                     <option value="">All Status</option>
                     <option value="published">Published</option>
                     <option value="draft">Draft</option>
                   </select>
                 </div>
+
+                {/* Duration Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={filters.minDuration}
+                      onChange={(e) => setFilters(prev => ({ ...prev, minDuration: e.target.value }))}
+                      className="w-full px-3 py-2 outline-0 border border-gray-300 rounded-lg focus:ring-0 focus:border-[#01DBC8] text-sm"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={filters.maxDuration}
+                      onChange={(e) => setFilters(prev => ({ ...prev, maxDuration: e.target.value }))}
+                      className="w-full px-3 py-2 outline-0 border border-gray-300 rounded-lg  focus:ring-0 focus:border-[#01DBC8] text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Filter Actions */}
-              <div className="flex items-center justify-between mt-4">
-                <button
-                  onClick={resetFilters}
-                  className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  Clear all filters
-                </button>
-                
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <span>Sort by:</span>
-                  <select
-                    value={filters.sortBy}
-                    onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E]"
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={resetFilters}
+                    className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
                   >
-                    <option value="recent">Most Recent</option>
-                    <option value="name">Name A-Z</option>
-                    <option value="duration">Duration</option>
-                  </select>
+                    Clear all filters
+                  </button>
+                  {getFilterCount() > 0 && (
+                    <span className="text-sm text-gray-500">
+                      {getFilterCount()} filter{getFilterCount() !== 1 ? 's' : ''} applied
+                    </span>
+                  )}
                 </div>
+                
+                <button
+                  onClick={applyFilters}
+                  className="px-4 py-2 bg-[#0AAC9E] text-white text-sm rounded-lg hover:bg-[#0AAC9E]/90 transition-colors"
+                >
+                  Apply Filters
+                </button>
               </div>
             </div>
           )}
@@ -448,7 +520,7 @@ const CourseHomepage = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <div className="text-red-600 mb-4">{error}</div>
             <button
-              onClick={() => dispatch(fetchCoursesAsync())}
+              onClick={handleRefresh}
               className="px-4 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 transition-colors"
             >
               Try Again
@@ -456,7 +528,7 @@ const CourseHomepage = () => {
           </div>
         ) : filteredCourses.length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <div className="max-w-md mx-auto">
+            <div >
               <div className="w-16 h-16 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BookOpen className="w-8 h-8 text-[#0AAC9E]" />
               </div>
@@ -488,7 +560,7 @@ const CourseHomepage = () => {
           </div>
         ) : (
           <div className={viewMode === "grid" 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6" 
             : "space-y-4"
           }>
             {filteredCourses.map((course) => (
@@ -499,6 +571,7 @@ const CourseHomepage = () => {
                 onEdit={() => handleEditCourse(course.id)}
                 onView={() => handleViewCourse(course.id)}
                 onDelete={() => handleDeleteCourse(course.id)}
+                onPublish={() => handlePublishCourse(course.id)}
                 activeDropdown={activeDropdown}
                 onToggleDropdown={() => toggleDropdown(course.id)}
               />

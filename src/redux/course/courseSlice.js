@@ -6,9 +6,6 @@ import {
   updateCourse as apiUpdateCourse,
   deleteCourse as apiDeleteCourse,
   publishCourse as apiPublishCourse,
-  addSection as apiAddSection,
-  updateSection as apiUpdateSection,
-  deleteSection as apiDeleteSection,
   getCourseLearners,
   assignUsersToCourse,
 } from "@/api/course";
@@ -115,42 +112,6 @@ export const publishCourseAsync = createAsyncThunk(
       return { courseId, ...response };
     } catch (error) {
       return rejectWithValue(error.message || "Failed to publish course");
-    }
-  }
-);
-
-export const addSectionAsync = createAsyncThunk(
-  "course/addSection",
-  async (sectionData, { rejectWithValue }) => {
-    try {
-      const response = await apiAddSection(sectionData);
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message || "Failed to add section");
-    }
-  }
-);
-
-export const updateSectionAsync = createAsyncThunk(
-  "course/updateSection",
-  async (sectionData, { rejectWithValue }) => {
-    try {
-      const response = await apiUpdateSection(sectionData);
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message || "Failed to update section");
-    }
-  }
-);
-
-export const deleteSectionAsync = createAsyncThunk(
-  "course/deleteSection",
-  async (sectionId, { rejectWithValue }) => {
-    try {
-      await apiDeleteSection(sectionId);
-      return sectionId;
-    } catch (error) {
-      return rejectWithValue(error.message || "Failed to delete section");
     }
   }
 );
@@ -692,46 +653,16 @@ const courseSlice = createSlice({
       .addCase(fetchCourseLearnersAsync.fulfilled, (state, action) => {
         state.courseLearners.loading = false;
         if (action.payload && action.payload.learnerUsers) {
-          state.courseLearners.data = action.payload.learnerUsers[0]?.learnerUsers || [];
+          state.courseLearners.data = action.payload.learnerUsers || [];
           state.courseLearners.totalCount = action.payload.totalLearnerCount || 0;
+        } else {
+          state.courseLearners.data = [];
+          state.courseLearners.totalCount = 0;
         }
       })
       .addCase(fetchCourseLearnersAsync.rejected, (state, action) => {
         state.courseLearners.loading = false;
         state.courseLearners.error = action.payload || action.error.message;
-      })
-
-      // Add section
-      .addCase(addSectionAsync.fulfilled, (state, action) => {
-        const tempSectionIndex = state.sections.findIndex((s) => s.isTemp);
-        if (tempSectionIndex !== -1) {
-          state.sections[tempSectionIndex] = {
-            ...action.payload,
-            contents: state.sections[tempSectionIndex].contents,
-          };
-        }
-      })
-
-      // Update section
-      .addCase(updateSectionAsync.fulfilled, (state, action) => {
-        const sectionIndex = state.sections.findIndex(
-          (s) => s.id === action.payload.id
-        );
-        if (sectionIndex !== -1) {
-          state.sections[sectionIndex] = {
-            ...state.sections[sectionIndex],
-            ...action.payload,
-          };
-        }
-      })
-
-      // Delete section
-      .addCase(deleteSectionAsync.fulfilled, (state, action) => {
-        state.sections = state.sections.filter((s) => s.id !== action.payload);
-        if (state.activeSection === action.payload) {
-          state.activeSection =
-            state.sections.length > 0 ? state.sections[0].id : null;
-        }
       })
 
       // Add content

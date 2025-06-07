@@ -1,4 +1,4 @@
-// src/api/course.js - Updated with proper image URL handling
+// src/api/course.js - Updated fetchCourseById to match API response structure
 import axios from "axios";
 import { getToken, getUserId } from "@/authtoken/auth.js";
 
@@ -84,26 +84,30 @@ export const fetchCourses = async (params = {}) => {
   }
 };
 
-// Fetch single course by ID
-export const fetchCourseById = async (courseId) => {
+// FIXED: Fetch single course by ID - Updated to match API response structure
+export const fetchCourseById = async (courseId, userId = null) => {
   try {
-    const userId = getUserId();
-    const url = `${API_URL}Course/${courseId}?userid=${userId}`;
+    const userIdParam = userId || getUserId();
+    const url = `${API_URL}Course/${courseId}${userIdParam ? `?userid=${userIdParam}` : ''}`;
     
     const response = await axios.get(url, {
       headers: getHeaders(),
     });
 
     const course = response.data;
+    
+    // Process the course data according to the actual API response structure
     return {
       ...course,
       imageUrl: getImageUrl(course.imageUrl),
+      // Map sections with their contents and quizzes
       sections: course.sections?.map(section => ({
         ...section,
         contents: section.contents?.map(content => ({
           ...content,
           // Process content data based on type
-          data: content.type === 4 ? getImageUrl(content.data) : content.data
+          data: content.type === 5 ? getImageUrl(content.data) : content.data, // Type 5 is file
+          quizzes: content.quizzes || []
         })) || []
       })) || []
     };
@@ -113,7 +117,7 @@ export const fetchCourseById = async (courseId) => {
   }
 };
 
-// Create new course - simplified without duplication
+// Rest of the functions remain the same...
 export const createCourse = async (courseData) => {
   try {
     const token = getToken();
