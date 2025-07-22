@@ -216,9 +216,7 @@ const CourseHomepage = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-[#0AAC9E]/10 rounded-xl">
-                  <BookOpen className="w-5 h-5 text-[#0AAC9E]" />
-                </div>
+             
                 <div>
                   <h1 className="text-lg font-bold text-gray-900">Courses</h1>
                   <p className="text-sm text-gray-500">{totalCourseCount} total courses</p>

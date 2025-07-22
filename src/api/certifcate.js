@@ -11,6 +11,8 @@ const getHeaders = () => {
   };
 };
 
+// ======================== CERTIFICATE ENDPOINTS ========================
+
 // Fetch all certificates with pagination
 export const fetchCertificates = async (params = {}) => {
   try {
@@ -126,6 +128,8 @@ export const deleteCertificate = async (certificateId) => {
   }
 };
 
+// ======================== CERTIFICATE TYPE ENDPOINTS ========================
+
 // Fetch all certificate types
 export const fetchCertificateTypes = async (params = {}) => {
   try {
@@ -227,7 +231,7 @@ export const deleteCertificateType = async (typeId) => {
   }
 };
 
-// Get certificates by certificate type ID - API documentation göstərir ki, bu endpoint error verir
+// Get certificates by certificate type ID
 export const getCertificatesByCertificateTypeId = async (certificateTypeId) => {
   try {
     const response = await axios.get(`${API_URL}CertificateType/GetCertificateByCertificateTypeId`, {
@@ -245,6 +249,8 @@ export const getCertificatesByCertificateTypeId = async (certificateTypeId) => {
     throw new Error("Failed to fetch certificates by type: " + (error.response?.data?.detail || error.message));
   }
 };
+
+// ======================== VALIDATION HELPERS ========================
 
 // Validate certificate data
 export const validateCertificateData = (certificateData) => {
@@ -278,4 +284,71 @@ export const validateCertificateTypeData = (typeData) => {
   }
 
   return errors;
+};
+
+// ======================== HELPER FUNCTIONS ========================
+
+// Get certificate status
+export const getCertificateStatus = (certificate) => {
+  if (!certificate) return 'unknown';
+  
+  if (certificate.templateFilePath) {
+    return 'active';
+  }
+  
+  return 'draft';
+};
+
+// Format certificate for display
+export const formatCertificateForDisplay = (certificate) => {
+  if (!certificate) return null;
+
+  return {
+    ...certificate,
+    status: getCertificateStatus(certificate),
+    hasTemplate: Boolean(certificate.templateFilePath),
+    templateUrl: certificate.templateFilePath || null,
+    formattedName: certificate.name || 'Unnamed Certificate',
+  };
+};
+
+// Get certificate type statistics
+export const getCertificateTypeStats = async (typeId) => {
+  try {
+    const certificates = await getCertificatesByCertificateTypeId(typeId);
+    return {
+      total: certificates.length,
+      active: certificates.filter(cert => cert.templateFilePath).length,
+      draft: certificates.filter(cert => !cert.templateFilePath).length,
+    };
+  } catch (error) {
+    console.warn('Could not fetch certificate type stats:', error.message);
+    return { total: 0, active: 0, draft: 0 };
+  }
+};
+
+export default {
+  // Certificate operations
+  fetchCertificates,
+  fetchCertificateById,
+  createCertificate,
+  updateCertificate,
+  deleteCertificate,
+  
+  // Certificate type operations
+  fetchCertificateTypes,
+  fetchCertificateTypeById,
+  createCertificateType,
+  updateCertificateType,
+  deleteCertificateType,
+  getCertificatesByCertificateTypeId,
+  
+  // Validation
+  validateCertificateData,
+  validateCertificateTypeData,
+  
+  // Helpers
+  getCertificateStatus,
+  formatCertificateForDisplay,
+  getCertificateTypeStats,
 };

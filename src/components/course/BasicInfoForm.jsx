@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Upload, X, Clock, Award, Tag, Users, Camera, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, X, Clock, Award, Tag, Camera, AlertCircle, CheckCircle, Info } from "lucide-react";
 import {
   setFormData,
   setImagePreview,
@@ -9,57 +9,43 @@ import {
 } from "@/redux/course/courseSlice";
 import { fetchCourseCategoriesAsync } from "@/redux/courseCategory/courseCategorySlice";
 import { fetchCourseTagsAsync } from "@/redux/courseTag/courseTagSlice";
-import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
 import { fetchCertificatesAsync } from "@/redux/certificate/certificateSlice";
-import TargetGroupSelector from "@/components/targetSelect";
 
 const BasicInfoForm = () => {
   const dispatch = useDispatch();
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [showTargetGroupDropdown, setShowTargetGroupDropdown] = useState(false);
-  const [targetGroupSearch, setTargetGroupSearch] = useState("");
 
   const { formData = {} } = useSelector((state) => state.course || {});
   const { categories = [], loading: categoriesLoading } = useSelector((state) => state.courseCategory);
   const { tags = [], loading: tagsLoading } = useSelector((state) => state.courseTag);
   const { certificates = [], loading: certificatesLoading } = useSelector((state) => state.certificate);
-  const targetGroups = useSelector((state) => state.getAllTargetGroups.data?.[0]?.targetGroups) || [];
 
   useEffect(() => {
     dispatch(fetchCourseCategoriesAsync());
     dispatch(fetchCourseTagsAsync());
-    dispatch(getAllTargetGroupsAsync());
     dispatch(fetchCertificatesAsync());
   }, [dispatch]);
 
-  // Get selected target groups data
-  const selectedTargetGroups = React.useMemo(() => {
-    return targetGroups.filter(group => 
-      (formData.targetGroupIds || []).includes(group.id)
-    );
-  }, [targetGroups, formData.targetGroupIds]);
-
-  // Validation logic
   const validateField = (field, value) => {
     switch (field) {
       case 'name':
         if (!value?.trim()) return "Course name is required";
-        if (value.length < 3) return "Course name must be at least 3 characters";
-        if (value.length > 100) return "Course name must be less than 100 characters";
+        if (value.length < 3) return "Must be at least 3 characters";
+        if (value.length > 100) return "Must be less than 100 characters";
         return "";
       case 'description':
-        if (!value?.trim()) return "Course description is required";
-        if (value.length < 10) return "Description must be at least 10 characters";
-        if (value.length > 1000) return "Description must be less than 1000 characters";
+        if (!value?.trim()) return "Description is required";
+        if (value.length < 10) return "Must be at least 10 characters";
+        if (value.length > 1000) return "Must be less than 1000 characters";
         return "";
       case 'categoryId':
-        if (!value) return "Course category is required";
+        if (!value) return "Please select a category";
         return "";
       case 'duration':
         if (!value || value < 1) return "Duration must be at least 1 minute";
-        if (value > 10080) return "Duration cannot exceed 1 week (10080 minutes)";
+        if (value > 10080) return "Duration cannot exceed 1 week";
         return "";
       default:
         return "";
@@ -68,9 +54,7 @@ const BasicInfoForm = () => {
 
   const handleInputChange = (field, value) => {
     dispatch(setFormData({ [field]: value }));
-    
     setTouched(prev => ({ ...prev, [field]: true }));
-    
     const error = validateField(field, value);
     setErrors(prev => ({ ...prev, [field]: error }));
   };
@@ -84,7 +68,6 @@ const BasicInfoForm = () => {
   const handleImageDrop = (e) => {
     e.preventDefault();
     setDragActive(false);
-
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
       handleImageFile(file);
@@ -125,107 +108,161 @@ const BasicInfoForm = () => {
     setErrors(prev => ({ ...prev, image: "" }));
   };
 
-  // Target Group handlers
-  const handleTargetGroupSelect = (group) => {
-    const currentIds = formData.targetGroupIds || [];
-    if (!currentIds.includes(group.id)) {
-      handleInputChange('targetGroupIds', [...currentIds, group.id]);
-    }
-    setShowTargetGroupDropdown(false);
-    setTargetGroupSearch("");
-  };
-
-  const handleTargetGroupRemove = (group) => {
-    const currentIds = formData.targetGroupIds || [];
-    handleInputChange('targetGroupIds', currentIds.filter(id => id !== group.id));
-  };
-
-  const handleNext = () => {
-    const requiredFields = ['name', 'description', 'categoryId'];
-    const newErrors = {};
-    
-    requiredFields.forEach(field => {
-      const error = validateField(field, formData[field]);
-      if (error) newErrors[field] = error;
-    });
-
-    const newTouched = {};
-    requiredFields.forEach(field => {
-      newTouched[field] = true;
-    });
-    setTouched(prev => ({ ...prev, ...newTouched }));
-    setErrors(prev => ({ ...prev, ...newErrors }));
-
-    if (Object.keys(newErrors).length === 0) {
-      dispatch(nextStep());
-    }
-  };
-
-  const isFormValid = () => {
-    return formData?.name?.trim() && 
-           formData?.description?.trim() && 
-           formData?.categoryId &&
-           Object.values(errors).every(error => !error);
-  };
-
   const getFieldClassName = (field) => {
-    const baseClass = "w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#0AAC9E] transition-colors text-sm";
+    const baseClass = "w-full px-3 py-2 border rounded-lg text-xs transition-all duration-200 focus:outline-none";
     
     if (touched[field] && errors[field]) {
-      return `${baseClass} border-red-300 focus:border-red-500 bg-red-50`;
+      return `${baseClass} border-red-300 focus:border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100`;
     }
     
     if (touched[field] && !errors[field] && formData[field]) {
-      return `${baseClass} border-[#0AAC9E] focus:border-[#0AAC9E] bg-[#0AAC9E]/5`;
+      return `${baseClass} border-[#0AAC9E] focus:border-[#0AAC9E] bg-[#0AAC9E]/5 focus:ring-2 focus:ring-[#0AAC9E]/10`;
     }
     
-    return `${baseClass} border-gray-300 focus:border-[#0AAC9E]`;
+    return `${baseClass} border-gray-300 focus:border-[#0AAC9E] hover:border-gray-400 focus:ring-2 focus:ring-[#0AAC9E]/10`;
+  };
+
+  const getCompletionPercentage = () => {
+    const requiredFields = ['name', 'description', 'categoryId'];
+    const completedFields = requiredFields.filter(field => 
+      formData[field] && !errors[field]
+    ).length;
+    return Math.round((completedFields / requiredFields.length) * 100);
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="p-4">
+      {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Basic Information
-        </h2>
-        <p className="text-gray-600">
-          Set up the fundamental details of your course to get started
-        </p>
+        <h1 className="text-lg font-bold text-gray-900 mb-1">Course Information</h1>
+        <p className="text-xs text-gray-600">Set up your course details</p>
+        
+     
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-8">
-          {/* Course Cover Image */}
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Course Cover Image
-              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
-            </label>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-4">
+          
+          {/* Course Details */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Course Details</h2>
+            
+            <div className="space-y-3">
+              {/* Course Name */}
+              <div>
+                <label className="block text-xs font-medium text-gray-900 mb-1">
+                  Course Title <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.name || ""}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    onBlur={() => handleBlur("name")}
+                    placeholder="Enter course title"
+                    className={getFieldClassName("name")}
+                  />
+                  {touched.name && !errors.name && formData.name && (
+                    <div>
+
+                      <CheckCircle className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#0AAC9E]" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex justify-between items-center mt-1">
+                  {touched.name && errors.name ? (
+                    <div className="flex items-center gap-1 text-xs text-red-600">
+                      <div>
+
+                      <AlertCircle className="w-4 h-3" />
+                      </div>
+                      <span>{errors.name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">Make it clear and engaging</span>
+                  )}
+                  <span className="text-xs text-gray-400">{formData.name?.length || 0}/100</span>
+                </div>
+              </div>
+
+              {/* Course Description */}
+              <div>
+                <label className="block text-xs font-medium text-gray-900 mb-1">
+                  Description <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <textarea
+                    value={formData.description || ""}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    onBlur={() => handleBlur("description")}
+                    placeholder="Describe what students will learn"
+                    rows={3}
+                    className={`${getFieldClassName("description")} resize-none`}
+                  />
+                  {touched.description && !errors.description && formData.description && (
+                    <CheckCircle className="absolute right-2 top-2 w-4 h-4 text-[#0AAC9E]" />
+                  )}
+                </div>
+                
+                <div className="flex justify-between items-center mt-1">
+                  {touched.description && errors.description ? (
+                    <div className="flex items-center gap-1 text-xs text-red-600">
+
+                    <div>
+
+                      <AlertCircle className="w-4 h-3" />
+                      </div>
+                      <span>{errors.description}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">Help learners understand the value</span>
+                  )}
+                  <span className="text-xs text-gray-400">{formData.description?.length || 0}/1000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Course Cover */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Camera className="w-4 h-4 text-[#0AAC9E]" />
+              <h2 className="text-sm font-semibold text-gray-900">Course Cover</h2>
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">Optional</span>
+            </div>
 
             {formData?.imagePreview ? (
               <div className="relative group">
-                <img
-                  src={formData.imagePreview}
-                  alt="Course cover"
-                  className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                  <button
-                    onClick={removeImage}
-                    className="bg-red-500 text-white p-3 rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                <div className="relative overflow-hidden rounded-lg border border-gray-200">
+                  <img
+                    src={formData.imagePreview}
+                    alt="Course cover"
+                    className="w-full h-32 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
+                    <button
+                      onClick={removeImage}
+                      className="opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-all duration-200"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 backdrop-blur-sm px-3 py-2 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">
-                    {formData.imageFile?.name}
-                  </span>
-                </div>
+                
+                {formData.imageFile && (
+                  <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-700 font-medium truncate">{formData.imageFile.name}</span>
+                      <span className="text-gray-500 ml-2">{(formData.imageFile.size / 1024 / 1024).toFixed(1)}MB</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 cursor-pointer ${
                   dragActive
                     ? "border-[#0AAC9E] bg-[#0AAC9E]/5"
                     : "border-gray-300 hover:border-[#0AAC9E] hover:bg-[#0AAC9E]/5"
@@ -238,16 +275,19 @@ const BasicInfoForm = () => {
                 onDrop={handleImageDrop}
               >
                 <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mb-4">
-                    {dragActive ? (
-                      <Upload className="w-6 h-6 text-[#0AAC9E]" />
-                    ) : (
-                      <Camera className="w-6 h-6 text-[#0AAC9E]" />
-                    )}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-200 ${
+                    dragActive ? "bg-[#0AAC9E] text-white" : "bg-[#0AAC9E]/10 text-[#0AAC9E]"
+                  }`}>
+                    <Upload className="w-5 h-5" />
                   </div>
-                  <p className="text-base text-gray-600 mb-2">
-                    Drag and drop your course cover image here, or{" "}
-                    <label className="text-[#0AAC9E] hover:text-[#0AAC9E]/80 cursor-pointer font-semibold">
+                  
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">
+                    {dragActive ? "Drop image here" : "Upload Cover"}
+                  </h3>
+                  
+                  <p className="text-xs text-gray-600 mb-2">
+                    Drag and drop, or{" "}
+                    <label className="text-[#0AAC9E] hover:text-[#0AAC9E]/80 cursor-pointer font-medium underline">
                       browse files
                       <input
                         type="file"
@@ -257,151 +297,108 @@ const BasicInfoForm = () => {
                       />
                     </label>
                   </p>
-                  <p className="text-sm text-gray-400">
-                    PNG, JPG, GIF up to 10MB (1280x720 recommended)
-                  </p>
+                  
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <div>
+                      <Info className="w-4 h-3" />  
+                    </div>
+                  
+                    <span>PNG, JPG up to 10MB</span>
+                  </div>
                 </div>
               </div>
             )}
+            
             {errors.image && (
-              <p className="mt-2 text-sm text-red-600 flex items-center">
-                <AlertCircle className="w-4 h-4 mr-1" />
-                {errors.image}
-              </p>
+              <div className="mt-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 p-2 rounded">
+                <div>
+
+                      <AlertCircle className="w-4 h-3" />
+                      </div>
+                <span>{errors.image}</span>
+              </div>
             )}
           </div>
+        </div>
 
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Course Name */}
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Course Name *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.name || ""}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  onBlur={() => handleBlur("name")}
-                  placeholder="Enter an engaging course title"
-                  className={getFieldClassName("name")}
-                />
-                {touched.name && !errors.name && formData.name && (
-                  <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#0AAC9E]" />
-                )}
-              </div>
-              {touched.name && errors.name && (
-                <p className="mt-2 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.name}
-                </p>
-              )}
-              <p className="mt-1 text-sm text-gray-500">
-                {formData.name?.length || 0}/100 characters
-              </p>
-            </div>
-
-            {/* Course Description */}
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Course Description *
-              </label>
-              <div className="relative">
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  onBlur={() => handleBlur("description")}
-                  placeholder="Describe what students will learn in this course"
-                  rows={4}
-                  className={`${getFieldClassName("description")} resize-none`}
-                />
-                {touched.description && !errors.description && formData.description && (
-                  <CheckCircle className="absolute right-4 top-4 w-5 h-5 text-[#0AAC9E]" />
-                )}
-              </div>
-              {touched.description && errors.description && (
-                <p className="mt-2 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.description}
-                </p>
-              )}
-              <p className="mt-1 text-sm text-gray-500">
-                {formData.description?.length || 0}/1000 characters
-              </p>
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Course Category *
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.categoryId || ""}
-                  onChange={(e) =>
-                    handleInputChange("categoryId", parseInt(e.target.value) || "")
-                  }
-                  onBlur={() => handleBlur("categoryId")}
-                  className={getFieldClassName("categoryId")}
-                  disabled={categoriesLoading}
-                >
-                  <option value="">
-                    {categoriesLoading ? "Loading categories..." : "Select a category"}
-                  </option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+        {/* Sidebar */}
+        <div className="space-y-4">
+          
+          {/* Settings */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Settings</h2>
+            
+            <div className="space-y-3">
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-medium text-gray-900 mb-1">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={formData.categoryId || ""}
+                    onChange={(e) => handleInputChange("categoryId", parseInt(e.target.value) || "")}
+                    onBlur={() => handleBlur("categoryId")}
+                    className={getFieldClassName("categoryId")}
+                    disabled={categoriesLoading}
+                  >
+                    <option value="">
+                      {categoriesLoading ? "Loading..." : "Select category"}
                     </option>
-                  ))}
-                </select>
-                {touched.categoryId && !errors.categoryId && formData.categoryId && (
-                  <CheckCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#0AAC9E]" />
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  {touched.categoryId && !errors.categoryId && formData.categoryId && (
+                    <CheckCircle className="absolute right-6 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#0AAC9E]" />
+                  )}
+                </div>
+                {touched.categoryId && errors.categoryId && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                   <div>
+
+                      <AlertCircle className="w-4 h-3" />
+                      </div>
+                    <span>{errors.categoryId}</span>
+                  </div>
                 )}
               </div>
-              {touched.categoryId && errors.categoryId && (
-                <p className="mt-2 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.categoryId}
-                </p>
-              )}
-            </div>
 
-            {/* Duration */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Estimated Duration (minutes)
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              {/* Duration */}
+              <div>
+                <div className="text-xs font-medium text-gray-900 mb-1 flex items-center gap-1 ">
+
+         <div>
+          <Clock className="w-4 h-3 text-[#0AAC9E]" />
+         </div>
+                  
+                
+                 <label>Duration (minutes)</label> 
+                </div>
                 <input
                   type="number"
                   value={formData.duration || ""}
-                  onChange={(e) =>
-                    handleInputChange("duration", parseInt(e.target.value) || "")
-                  }
+                  onChange={(e) => handleInputChange("duration", parseInt(e.target.value) || "")}
                   onBlur={() => handleBlur("duration")}
                   placeholder="60"
                   min="1"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className={getFieldClassName("duration")}
                 />
+                {errors.duration && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                   <div><AlertCircle className="w-4 h-3" /></div> 
+                    <span>{errors.duration}</span>
+                  </div>
+                )}
               </div>
-              {errors.duration && (
-                <p className="mt-2 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.duration}
-                </p>
-              )}
-            </div>
 
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Tags
-                <span className="text-gray-500 font-normal ml-1">(Optional)</span>
-              </label>
-              <div className="relative">
-                <Tag className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              {/* Tags */}
+              <div>
+                <label className="block text-xs font-medium text-gray-900 mb-1">
+                  Tags <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">Optional</span>
+                </label>
                 <select
                   value={formData?.tagIds?.[0] || ""}
                   onChange={(e) =>
@@ -410,11 +407,11 @@ const BasicInfoForm = () => {
                       e.target.value ? [parseInt(e.target.value)] : []
                     )
                   }
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
+                  className={getFieldClassName("tags")}
                   disabled={tagsLoading}
                 >
                   <option value="">
-                    {tagsLoading ? "Loading tags..." : "Select tags (optional)"}
+                    {tagsLoading ? "Loading..." : "Select tags"}
                   </option>
                   {tags.map((tag) => (
                     <option key={tag.id} value={tag.id}>
@@ -424,178 +421,65 @@ const BasicInfoForm = () => {
                 </select>
               </div>
             </div>
+          </div>
 
-            {/* Certificate */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Certificate Options
-              </label>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <Award className="text-[#0AAC9E] w-5 h-5 flex-shrink-0" />
-                  <label className="flex items-center cursor-pointer flex-1">
-                    <input
-                      type="checkbox"
-                      checked={formData?.verifiedCertificate || false}
-                      onChange={(e) =>
-                        handleInputChange("verifiedCertificate", e.target.checked)
-                      }
-                      className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-                    />
-                    <span className="ml-3 text-sm text-gray-700 font-medium">
-                      Provide verified certificate upon completion
-                    </span>
-                  </label>
-                </div>
-                
-                {formData?.verifiedCertificate && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Certificate Template
-                    </label>
-                    <select
-                      value={formData.certificateId || ""}
-                      onChange={(e) =>
-                        handleInputChange("certificateId", parseInt(e.target.value) || null)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
-                      disabled={certificatesLoading}
-                    >
-                      <option value="">
-                        {certificatesLoading ? "Loading certificates..." : "Select a certificate template"}
-                      </option>
-                      {certificates.map((cert) => (
-                        <option key={cert.id} value={cert.id}>
-                          {cert.name}
-                        </option>
-                      ))}
-                    </select>
+          {/* Certificate */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Award className="w-4 h-4 text-[#0AAC9E]" />
+              <h2 className="text-sm font-semibold text-gray-900">Certificate</h2>
+            </div>
+            
+            <div className="bg-[#0AAC9E]/5 rounded-lg p-3 border border-[#0AAC9E]/20">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData?.verifiedCertificate || false}
+                  onChange={(e) =>
+                    handleInputChange("verifiedCertificate", e.target.checked)
+                  }
+                  className="w-4 h-4 rounded border-2 border-gray-300 text-[#0AAC9E] focus:ring-[#0AAC9E] focus:ring-2 focus:ring-offset-0 bg-white checked:bg-[#0AAC9E] checked:border-[#0AAC9E] mt-0.5"
+                />
+                <div>
+                  <div className="text-xs font-medium text-gray-900 mb-1">
+                    Provide Certificate
                   </div>
-                )}
-                
-                <p className="text-xs text-gray-500">
-                  Learners will receive a certificate when they complete this course
-                </p>
-              </div>
-            </div>
-
-            {/* Target Groups */}
-            <div className="lg:col-span-2">
-              <TargetGroupSelector
-                targetGroups={targetGroups}
-                searchValue={targetGroupSearch}
-                selectedTargetGroups={selectedTargetGroups}
-                showDropdown={showTargetGroupDropdown}
-                onSearchChange={setTargetGroupSearch}
-                onToggleDropdown={setShowTargetGroupDropdown}
-                onSelect={handleTargetGroupSelect}
-                onRemove={handleTargetGroupRemove}
-              />
-            </div>
-
-            {/* Advanced Settings */}
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Advanced Settings
-                <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+                  <p className="text-xs text-gray-600">
+                    Award learners with verified certificate
+                  </p>
+                </div>
               </label>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">
-                    Start Duration (days)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.startDuration || ""}
-                    onChange={(e) =>
-                      handleInputChange("startDuration", parseInt(e.target.value) || null)
-                    }
-                    placeholder="Optional"
-                    min="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">
-                    Deadline (days)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.deadline || ""}
-                    onChange={(e) =>
-                      handleInputChange("deadline", parseInt(e.target.value) || null)
-                    }
-                    placeholder="Optional"
-                    min="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E] focus:border-[#0AAC9E] text-sm"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData?.autoReassign || false}
-                      onChange={(e) =>
-                        handleInputChange("autoReassign", e.target.checked)
-                      }
-                      className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-                    />
-                    <span className="text-xs text-gray-700">
-                      Auto reassign on completion
-                    </span>
-                  </label>
-                </div>
-              </div>
             </div>
+            
+            {formData?.verifiedCertificate && (
+              <div className="mt-3 pl-3 border-l-2 border-[#0AAC9E]/30">
+                <label className="block text-xs font-medium text-gray-900 mb-1">
+                  Certificate Template
+                </label>
+                <select
+                  value={formData.certificateId || ""}
+                  onChange={(e) =>
+                    handleInputChange("certificateId", parseInt(e.target.value) || null)
+                  }
+                  className={getFieldClassName("certificate")}
+                  disabled={certificatesLoading}
+                >
+                  <option value="">
+                    {certificatesLoading ? "Loading..." : "Select template"}
+                  </option>
+                  {certificates.map((cert) => (
+                    <option key={cert.id} value={cert.id}>
+                      {cert.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Progress Indicator */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${isFormValid() ? 'bg-[#0AAC9E]' : 'bg-gray-300'}`}></div>
-                <span className="text-gray-600 font-medium">
-                  Step 1 of 3: Basic Information
-                </span>
-              </div>
-              <div className="text-gray-500">
-                {Object.keys(touched).length > 0 && `${Object.keys(touched).length} fields completed`}
-              </div>
-            </div>
-            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-[#0AAC9E] h-2 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (Object.keys(touched).length / 6) * 100)}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="bg-gray-50 px-8 py-6 flex justify-between items-center border-t border-gray-200">
-          <div className="text-sm text-gray-500">
-            Fill out the required fields to continue to course content
-          </div>
-          <button
-            onClick={handleNext}
-            disabled={!isFormValid()}
-            className="px-6 py-3 bg-[#0AAC9E] text-white rounded-xl hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold shadow-sm"
-          >
-            Next: Course Content
-          </button>
+      
         </div>
       </div>
-
-      {/* Click outside to close dropdown */}
-      {showTargetGroupDropdown && (
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => setShowTargetGroupDropdown(false)}
-        />
-      )}
     </div>
   );
 };

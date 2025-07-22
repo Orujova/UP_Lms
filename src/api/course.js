@@ -1,4 +1,3 @@
-// src/api/course.js - Updated fetchCourseById to match API response structure
 import axios from "axios";
 import { getToken, getUserId } from "@/authtoken/auth.js";
 
@@ -12,7 +11,8 @@ const getHeaders = () => {
   };
 };
 
-// Image URL helper function
+// ======================== IMAGE URL HELPER ========================
+
 export const getImageUrl = (url) => {
   if (!url) return null;
   if (url.includes("https://100.42.179.27:7198/")) {
@@ -24,7 +24,9 @@ export const getImageUrl = (url) => {
   return url;
 };
 
-// Fetch all courses with proper error handling and image processing
+// ======================== COURSE ENDPOINTS ========================
+
+// Fetch all courses
 export const fetchCourses = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
@@ -84,7 +86,7 @@ export const fetchCourses = async (params = {}) => {
   }
 };
 
-// FIXED: Fetch single course by ID - Updated to match API response structure
+// Fetch single course by ID
 export const fetchCourseById = async (courseId, userId = null) => {
   try {
     const userIdParam = userId || getUserId();
@@ -100,13 +102,13 @@ export const fetchCourseById = async (courseId, userId = null) => {
     return {
       ...course,
       imageUrl: getImageUrl(course.imageUrl),
-      // Map sections with their contents and quizzes
+      // Map sections with their contents
       sections: course.sections?.map(section => ({
         ...section,
         contents: section.contents?.map(content => ({
           ...content,
           // Process content data based on type
-          data: content.type === 5 ? getImageUrl(content.data) : content.data, // Type 5 is file
+          contentString: content.data, // API returns data field as contentString
           quizzes: content.quizzes || []
         })) || []
       })) || []
@@ -117,7 +119,7 @@ export const fetchCourseById = async (courseId, userId = null) => {
   }
 };
 
-// Rest of the functions remain the same...
+// Create course using AddCourse endpoint
 export const createCourse = async (courseData) => {
   try {
     const token = getToken();
@@ -129,7 +131,7 @@ export const createCourse = async (courseData) => {
 
     const formData = new FormData();
 
-    // Basic required fields
+    // Required fields
     formData.append("Name", courseData.name || "");
     formData.append("Description", courseData.description || "");
     formData.append("Duration", (courseData.duration || 200).toString());
@@ -149,13 +151,14 @@ export const createCourse = async (courseData) => {
       formData.append("CertificateId", courseData.certificateId.toString());
     }
 
-    // Arrays
+    // Arrays - Target Groups
     if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds)) {
       courseData.targetGroupIds.forEach((id) => {
         formData.append("TargetGroupIds", id.toString());
       });
     }
 
+    // Arrays - Tags
     if (courseData.tagIds && Array.isArray(courseData.tagIds)) {
       courseData.tagIds.forEach((id) => {
         formData.append("TagIds", id.toString());
@@ -175,6 +178,31 @@ export const createCourse = async (courseData) => {
       formData.append("AutoReassign", courseData.autoReassign.toString());
     }
 
+    // Cluster settings
+    if (courseData.clusterId) {
+      formData.append("ClusterId", courseData.clusterId.toString());
+    }
+
+    if (courseData.clusterOrderNumber) {
+      formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
+    }
+
+    if (courseData.clusterCoefficient) {
+      formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
+    }
+
+    if (courseData.clusterIsMandatory !== undefined) {
+      formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
+    }
+
+    // Succession rates
+    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
+      courseData.successionRates.forEach((rate, index) => {
+        formData.append(`SuccessionRates[${index}].Rate`, rate.rate.toString());
+        formData.append(`SuccessionRates[${index}].Description`, rate.description || "");
+      });
+    }
+
     const response = await axios.post(`${API_URL}Course/AddCourse`, formData, {
       headers: {
         ...getHeaders(),
@@ -189,11 +217,12 @@ export const createCourse = async (courseData) => {
   }
 };
 
-// Update course
+// Update course using UpdateCourse endpoint
 export const updateCourse = async (courseData) => {
   try {
     const formData = new FormData();
 
+    // Required for update
     if (courseData.id) {
       formData.append("Id", courseData.id.toString());
     }
@@ -243,8 +272,37 @@ export const updateCourse = async (courseData) => {
       formData.append("PublishCourse", courseData.publishCourse.toString());
     }
 
+    if (courseData.hasEvalution !== undefined) {
+      formData.append("HasEvalution", courseData.hasEvalution.toString());
+    }
+
     if (courseData.userId) {
       formData.append("UserId", courseData.userId.toString());
+    }
+
+    // Cluster settings
+    if (courseData.clusterId) {
+      formData.append("ClusterId", courseData.clusterId.toString());
+    }
+
+    if (courseData.clusterOrderNumber) {
+      formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
+    }
+
+    if (courseData.clusterCoefficient) {
+      formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
+    }
+
+    if (courseData.clusterIsMandatory !== undefined) {
+      formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
+    }
+
+    // Succession rates
+    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
+      courseData.successionRates.forEach((rate, index) => {
+        formData.append(`SuccessionRates[${index}].Rate`, rate.rate.toString());
+        formData.append(`SuccessionRates[${index}].Description`, rate.description || "");
+      });
     }
 
     const response = await axios.put(`${API_URL}Course/UpdateCourse`, formData, {
@@ -293,6 +351,145 @@ export const publishCourse = async (courseId) => {
     throw new Error("Failed to publish course: " + (error.response?.data?.detail || error.message));
   }
 };
+
+// ======================== SECTION MANAGEMENT ========================
+
+// Add section to course
+export const addSection = async (sectionData) => {
+  try {
+    const formData = new FormData();
+    formData.append("CourseId", sectionData.courseId.toString());
+    formData.append("Description", sectionData.description || "");
+    formData.append("Duration", (sectionData.duration || 0).toString());
+    formData.append("HideSection", (sectionData.hideSection || false).toString());
+    formData.append("Mandatory", (sectionData.mandatory || false).toString());
+
+    const response = await axios.post(`${API_URL}Course/AddSection`, formData, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error adding section:", error);
+    throw new Error("Failed to add section: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// Update section
+export const updateSection = async (sectionData) => {
+  try {
+    const payload = {
+      sectionId: sectionData.sectionId,
+      courseId: sectionData.courseId,
+      description: sectionData.description || "",
+      duration: sectionData.duration || 0,
+      hideSection: sectionData.hideSection || false,
+      mandatory: sectionData.mandatory || false,
+      courseContentIds: sectionData.courseContentIds || []
+    };
+
+    const response = await axios.put(`${API_URL}Course/update-section`, payload, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "application/json",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error updating section:", error);
+    throw new Error("Failed to update section: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// Delete section
+export const deleteSection = async (sectionId) => {
+  try {
+    const response = await axios.delete(`${API_URL}Course/delete-section/${sectionId}`, {
+      headers: getHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting section:", error);
+    throw new Error("Failed to delete section: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// Hide section
+export const hideSection = async (sectionId) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}Course/hide-section`,
+      { sectionId: parseInt(sectionId) },
+      {
+        headers: {
+          ...getHeaders(),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error hiding section:", error);
+    throw new Error("Failed to hide section: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// Update section duration
+export const updateSectionDuration = async (sectionId, duration) => {
+  try {
+    const response = await axios.put(
+      `${API_URL}Course/update-section-duration`,
+      { 
+        sectionId: parseInt(sectionId),
+        duration: parseInt(duration)
+      },
+      {
+        headers: {
+          ...getHeaders(),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating section duration:", error);
+    throw new Error("Failed to update section duration: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// Get sections by course ID
+export const getSectionsByCourseId = async (courseId) => {
+  try {
+    const response = await axios.get(`${API_URL}Course/by-course/getsections`, {
+      params: { CourseId: parseInt(courseId) },
+      headers: getHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching sections:", error);
+    throw new Error("Failed to fetch sections: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// Get course syllabus
+export const getCourseSyllabus = async (courseId) => {
+  try {
+    const response = await axios.get(`${API_URL}Course/syllabus`, {
+      params: { CourseId: parseInt(courseId) },
+      headers: getHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching course syllabus:", error);
+    throw new Error("Failed to fetch course syllabus: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// ======================== USER MANAGEMENT ========================
 
 // Get course learners
 export const getCourseLearners = async (courseId, page = 1, take = 10) => {
@@ -348,22 +545,65 @@ export const assignUsersToCourse = async (assignmentData) => {
 // Check if user is in target group
 export const checkUserInTargetGroup = async (userId, targetGroupId) => {
   try {
-    const response = await axios.get(
-      `${API_URL}Course/check-user-in-target-group`,
-      {
-        params: { 
-          UserId: parseInt(userId), 
-          TargetGroupId: parseInt(targetGroupId) 
-        },
-        headers: getHeaders(),
-      }
-    );
+    const response = await axios.get(`${API_URL}Course/check-user-in-target-group`, {
+      params: { 
+        UserId: parseInt(userId),
+        TargetGroupId: parseInt(targetGroupId)
+      },
+      headers: getHeaders(),
+    });
     return response.data;
   } catch (error) {
     console.error("Error checking user in target group:", error);
     throw new Error("Failed to check user in target group: " + (error.response?.data?.detail || error.message));
   }
 };
+
+// ======================== QUIZ MANAGEMENT ========================
+
+// Get quizzes by content ID
+export const getQuizzesByContentId = async (courseContentId) => {
+  try {
+    const response = await axios.get(`${API_URL}Course/by-content/getquizzes`, {
+      params: { CourseContentId: parseInt(courseContentId) },
+      headers: getHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching quizzes:", error);
+    throw new Error("Failed to fetch quizzes: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// ======================== EVALUATION ========================
+
+// Create course evaluation
+export const createCourseEvaluation = async (evaluationData) => {
+  try {
+    const payload = {
+      appUserId: evaluationData.appUserId,
+      courseId: evaluationData.courseId,
+      contentRichnessRating: evaluationData.contentRichnessRating || 0,
+      contentDesignRating: evaluationData.contentDesignRating || 0,
+      topicRelevanceRating: evaluationData.topicRelevanceRating || 0,
+      currentRequirementsResponseRating: evaluationData.currentRequirementsResponseRating || 0,
+    };
+
+    const response = await axios.post(`${API_URL}Course/create-evalution`, payload, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "application/json",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error creating course evaluation:", error);
+    throw new Error("Failed to create course evaluation: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// ======================== VALIDATION HELPERS ========================
 
 // Course validation helper
 export const validateCourseData = (courseData) => {
@@ -385,19 +625,133 @@ export const validateCourseData = (courseData) => {
     errors.push("Duration must be between 1 and 10080 minutes");
   }
 
+  if (courseData.startDuration && courseData.deadline && courseData.startDuration >= courseData.deadline) {
+    errors.push("Start duration must be less than deadline");
+  }
+
   return errors;
 };
 
+// Section validation helper
+export const validateSectionData = (sectionData) => {
+  const errors = [];
+
+  if (!sectionData.courseId) {
+    errors.push("Course ID is required");
+  }
+
+  if (!sectionData.description?.trim()) {
+    errors.push("Section description is required");
+  }
+
+  if (sectionData.duration && sectionData.duration < 0) {
+    errors.push("Duration cannot be negative");
+  }
+
+  return errors;
+};
+
+// ======================== HELPER FUNCTIONS ========================
+
+// Format course for display
+export const formatCourseForDisplay = (course) => {
+  if (!course) return null;
+
+  return {
+    ...course,
+    imageUrl: getImageUrl(course.imageUrl),
+    formattedDuration: formatDuration(course.duration),
+    formattedCreatedDate: new Date(course.createdDate).toLocaleDateString(),
+    isPublished: course.publishCourse,
+    hasEvaluation: course.hasEvalution,
+    sectionsCount: course.totalSection || 0,
+    contentsCount: course.totalContent || 0,
+    videosCount: course.totalVideos || 0,
+    quizzesCount: course.totalQuizzes || 0,
+    completionRate: course.courseProgress || 0,
+  };
+};
+
+// Format duration to readable string
+export const formatDuration = (minutes) => {
+  if (!minutes) return "0 min";
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (hours > 0) {
+    return `${hours}h ${remainingMinutes}min`;
+  }
+  
+  return `${remainingMinutes}min`;
+};
+
+// Get course difficulty based on content count and duration
+export const getCourseDifficulty = (course) => {
+  if (!course) return 'unknown';
+  
+  const contentCount = course.totalContent || 0;
+  const duration = course.duration || 0;
+  
+  if (contentCount <= 5 && duration <= 60) {
+    return 'beginner';
+  } else if (contentCount <= 15 && duration <= 300) {
+    return 'intermediate';
+  } else {
+    return 'advanced';
+  }
+};
+
+// Calculate course completion percentage
+export const calculateCourseCompletion = (course) => {
+  if (!course || !course.sections) return 0;
+  
+  const totalContent = course.sections.reduce((sum, section) => 
+    sum + (section.contents?.length || 0), 0);
+  
+  const completedContent = course.sections.reduce((sum, section) => 
+    sum + (section.contents?.filter(content => content.isContentCompleted).length || 0), 0);
+  
+  return totalContent > 0 ? Math.round((completedContent / totalContent) * 100) : 0;
+};
+
 export default {
+  // Core operations
   fetchCourses,
   fetchCourseById,
   createCourse,
   updateCourse,
   deleteCourse,
   publishCourse,
+  
+  // Section management
+  addSection,
+  updateSection,
+  deleteSection,
+  hideSection,
+  updateSectionDuration,
+  getSectionsByCourseId,
+  getCourseSyllabus,
+  
+  // User management
   getCourseLearners,
   assignUsersToCourse,
   checkUserInTargetGroup,
+  
+  // Quiz management
+  getQuizzesByContentId,
+  
+  // Evaluation
+  createCourseEvaluation,
+  
+  // Validation
   validateCourseData,
-  getImageUrl
+  validateSectionData,
+  
+  // Helpers
+  getImageUrl,
+  formatCourseForDisplay,
+  formatDuration,
+  getCourseDifficulty,
+  calculateCourseCompletion,
 };

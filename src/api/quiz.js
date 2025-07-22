@@ -11,13 +11,15 @@ const getHeaders = () => {
   };
 };
 
+// ======================== QUIZ MANAGEMENT ========================
+
 // Add quiz to content - multipart/form-data format
 export const addQuiz = async (quizData) => {
   try {
     const formData = new FormData();
     formData.append("ContentId", quizData.contentId.toString());
     
-    // Duration object with ticks - API documentation göstərir ki, object formatında olmalıdır
+    // Duration object with ticks - API documentation shows it should be object format
     const durationObject = {
       ticks: parseDurationToTicks(quizData.duration || 60)
     };
@@ -40,7 +42,7 @@ export const addQuiz = async (quizData) => {
 // Add questions to quiz - application/json format
 export const addQuestions = async (questionsData) => {
   try {
-    // API documentation göstərir ki, questions array formatında göndərilməlidir
+    // API documentation shows questions should be sent as array
     const payload = {
       questions: questionsData.questions.map(question => ({
         quizId: question.quizId,
@@ -105,10 +107,12 @@ export const addOptions = async (optionsData) => {
   }
 };
 
+// ======================== COMPLETE QUIZ CREATION ========================
+
 // Create complete quiz with questions and options
 export const createCompleteQuiz = async (quizData) => {
   try {
-    // 1. Əvvəlcə quiz yaradırıq
+    // 1. First create the quiz
     const quiz = await addQuiz({
       contentId: quizData.contentId,
       duration: quizData.duration,
@@ -119,7 +123,7 @@ export const createCompleteQuiz = async (quizData) => {
       throw new Error("Quiz creation failed - no quiz ID returned");
     }
 
-    // 2. Sonra sualları əlavə edirik
+    // 2. Then add questions
     if (quizData.questions && quizData.questions.length > 0) {
       const questionsPayload = {
         questions: quizData.questions.map((question) => ({
@@ -139,7 +143,7 @@ export const createCompleteQuiz = async (quizData) => {
 
       const questionsResult = await addQuestions(questionsPayload);
 
-      // 3. Hər sual üçün seçimləri əlavə edirik
+      // 3. Add options for each question
       if (questionsResult && questionsResult.length > 0) {
         for (let i = 0; i < questionsResult.length; i++) {
           const questionId = questionsResult[i].id;
@@ -174,6 +178,8 @@ export const createCompleteQuiz = async (quizData) => {
     throw new Error("Failed to create complete quiz: " + error.message);
   }
 };
+
+// ======================== HELPER FUNCTIONS ========================
 
 // Helper function to get question type ID
 const getQuestionTypeId = (type) => {
@@ -307,14 +313,7 @@ export const ticksToReadableDuration = (ticks) => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-// Question type constants
-export const QUESTION_TYPES = {
-  SINGLE_CHOICE: 1,
-  MULTIPLE_CHOICE: 2,
-  REORDER: 3,
-  FILL_GAP: 4,
-  CATEGORIZE: 5,
-};
+// ======================== VALIDATION FUNCTIONS ========================
 
 // Quiz validation helper
 export const validateQuizData = (quizData) => {
@@ -328,10 +327,22 @@ export const validateQuizData = (quizData) => {
     errors.push("At least one question is required");
   }
 
+  if (quizData.duration && (quizData.duration < 1 || quizData.duration > 7200)) {
+    errors.push("Quiz duration must be between 1 and 7200 seconds");
+  }
+
   if (quizData.questions) {
     quizData.questions.forEach((question, index) => {
       if (!question.text && !question.questionText) {
         errors.push(`Question ${index + 1}: Question text is required`);
+      }
+
+      if (question.duration && (question.duration < 1 || question.duration > 600)) {
+        errors.push(`Question ${index + 1}: Question duration must be between 1 and 600 seconds`);
+      }
+
+      if (question.questionRate && (question.questionRate < 1 || question.questionRate > 100)) {
+        errors.push(`Question ${index + 1}: Question rate must be between 1 and 100`);
       }
 
       switch (question.type) {
@@ -342,6 +353,9 @@ export const validateQuizData = (quizData) => {
           }
           if (!question.content?.correctAnswers || question.content.correctAnswers.length === 0) {
             errors.push(`Question ${index + 1}: At least one correct answer required`);
+          }
+          if (question.type === "choice" && question.content?.correctAnswers?.length > 1) {
+            errors.push(`Question ${index + 1}: Single choice questions can have only one correct answer`);
           }
           break;
 
@@ -355,6 +369,14 @@ export const validateQuizData = (quizData) => {
           if (!question.content?.categories || question.content.categories.length === 0) {
             errors.push(`Question ${index + 1}: At least one category required`);
           }
+          question.content.categories?.forEach((category, catIndex) => {
+            if (!category.name?.trim()) {
+              errors.push(`Question ${index + 1}, Category ${catIndex + 1}: Category name is required`);
+            }
+            if (!category.answers || category.answers.length === 0) {
+              errors.push(`Question ${index + 1}, Category ${catIndex + 1}: At least one answer required`);
+            }
+          });
           break;
 
         case "reorder":
@@ -362,12 +384,67 @@ export const validateQuizData = (quizData) => {
             errors.push(`Question ${index + 1}: At least 2 items required for reordering`);
           }
           break;
+
+        default:
+          errors.push(`Question ${index + 1}: Invalid question type`);
       }
     });
   }
 
   return errors;
 };
+
+// Validate question data
+export const validateQuestionData = (questionData) => {
+  const errors = [];
+
+  if (!questionData.quizId) {
+    errors.push("Quiz ID is required");
+  }
+
+  if (!questionData.text?.trim()) {
+    errors.push("Question text is required");
+  }
+
+  if (questionData.text && questionData.text.length > 1000) {
+    errors.push("Question text must be less than 1000 characters");
+  }
+
+  if (questionData.questionRate && (questionData.questionRate < 1 || questionData.questionRate > 100)) {
+    errors.push("Question rate must be between 1 and 100");
+  }
+
+  if (!questionData.questionType || ![1, 2, 3, 4, 5].includes(questionData.questionType)) {
+    errors.push("Valid question type is required");
+  }
+
+  return errors;
+};
+
+// Validate option data
+export const validateOptionData = (optionData) => {
+  const errors = [];
+
+  if (!optionData.questionId) {
+    errors.push("Question ID is required");
+  }
+
+  if (!optionData.text?.trim()) {
+    errors.push("Option text is required");
+  }
+
+  if (optionData.text && optionData.text.length > 500) {
+    errors.push("Option text must be less than 500 characters");
+  }
+
+  if (optionData.order && optionData.order < 1) {
+    errors.push("Option order must be at least 1");
+  }
+
+  return errors;
+};
+
+// ======================== FORMATTING FUNCTIONS ========================
 
 // Format quiz data for API submission
 export const formatQuizForAPI = (quizFormData) => {
@@ -387,4 +464,230 @@ export const formatQuizForAPI = (quizFormData) => {
       options: formatOptionsForAPI(question),
     })),
   };
+};
+
+// Format quiz response for display
+export const formatQuizForDisplay = (quiz) => {
+  if (!quiz) return null;
+
+  return {
+    ...quiz,
+    formattedDuration: ticksToReadableDuration(quiz.duration?.ticks || 0),
+    durationInSeconds: ticksToSeconds(quiz.duration?.ticks || 0),
+    questionsCount: quiz.questions?.length || 0,
+    totalPoints: quiz.questions?.reduce((sum, q) => sum + (q.questionRate || 0), 0) || 0,
+    averageQuestionDuration: quiz.questions?.length > 0 
+      ? Math.round(quiz.questions.reduce((sum, q) => sum + ticksToSeconds(q.duration?.ticks || 0), 0) / quiz.questions.length)
+      : 0,
+  };
+};
+
+// Format question for display
+export const formatQuestionForDisplay = (question) => {
+  if (!question) return null;
+
+  return {
+    ...question,
+    formattedDuration: ticksToReadableDuration(question.duration?.ticks || 0),
+    durationInSeconds: ticksToSeconds(question.duration?.ticks || 0),
+    typeName: getQuestionTypeName(question.questionType),
+    optionsCount: question.options?.length || 0,
+    correctOptionsCount: question.options?.filter(opt => opt.isCorrect).length || 0,
+  };
+};
+
+// Get question type name
+export const getQuestionTypeName = (questionType) => {
+  const typeMap = {
+    1: "Single Choice",
+    2: "Multiple Choice", 
+    3: "Reorder",
+    4: "Fill in the Gap",
+    5: "Categorize"
+  };
+  return typeMap[questionType] || "Unknown";
+};
+
+// ======================== QUIZ STATISTICS ========================
+
+// Calculate quiz statistics
+export const calculateQuizStats = (quiz) => {
+  if (!quiz || !quiz.questions) {
+    return {
+      totalQuestions: 0,
+      totalDuration: 0,
+      totalPoints: 0,
+      averageQuestionDuration: 0,
+      questionTypes: {},
+      difficultyLevel: 'unknown'
+    };
+  }
+
+  const questions = quiz.questions;
+  const totalDuration = questions.reduce((sum, q) => sum + ticksToSeconds(q.duration?.ticks || 0), 0);
+  const totalPoints = questions.reduce((sum, q) => sum + (q.questionRate || 0), 0);
+  
+  // Count question types
+  const questionTypes = questions.reduce((counts, q) => {
+    const typeName = getQuestionTypeName(q.questionType);
+    counts[typeName] = (counts[typeName] || 0) + 1;
+    return counts;
+  }, {});
+
+  // Determine difficulty level
+  let difficultyLevel = 'easy';
+  if (questions.length > 10 || totalDuration > 300) {
+    difficultyLevel = 'medium';
+  }
+  if (questions.length > 20 || totalDuration > 600 || totalPoints > 100) {
+    difficultyLevel = 'hard';
+  }
+
+  return {
+    totalQuestions: questions.length,
+    totalDuration,
+    totalPoints,
+    averageQuestionDuration: questions.length > 0 ? Math.round(totalDuration / questions.length) : 0,
+    questionTypes,
+    difficultyLevel
+  };
+};
+
+// ======================== QUIZ TEMPLATES ========================
+
+// Get question templates for different types
+export const getQuestionTemplates = () => {
+  return {
+    choice: {
+      type: 'choice',
+      text: '',
+      title: '',
+      questionRate: 1,
+      duration: 30,
+      hasDuration: true,
+      canSkip: false,
+      content: {
+        question: '',
+        multipleAnswers: false,
+        answers: ['', ''],
+        correctAnswers: [],
+      },
+    },
+    multiple: {
+      type: 'multiple',
+      text: '',
+      title: '',
+      questionRate: 1,
+      duration: 45,
+      hasDuration: true,
+      canSkip: false,
+      content: {
+        question: '',
+        multipleAnswers: true,
+        answers: ['', '', ''],
+        correctAnswers: [],
+      },
+    },
+    fillgap: {
+      type: 'fillgap',
+      text: '',
+      title: '',
+      questionRate: 1,
+      duration: 30,
+      hasDuration: true,
+      canSkip: false,
+      content: {
+        questionText: '',
+        correctAnswers: [],
+        incorrectAnswers: [],
+      },
+    },
+    categorize: {
+      type: 'categorize',
+      text: '',
+      title: '',
+      questionRate: 2,
+      duration: 60,
+      hasDuration: true,
+      canSkip: false,
+      content: {
+        categories: [
+          {
+            name: '',
+            answers: [''],
+          },
+        ],
+      },
+    },
+    reorder: {
+      type: 'reorder',
+      text: '',
+      title: '',
+      questionRate: 1,
+      duration: 45,
+      hasDuration: true,
+      canSkip: false,
+      content: {
+        question: '',
+        answers: ['', ''],
+      },
+    },
+  };
+};
+
+// ======================== CONSTANTS ========================
+
+// Question type constants
+export const QUESTION_TYPES = {
+  SINGLE_CHOICE: 1,
+  MULTIPLE_CHOICE: 2,
+  REORDER: 3,
+  FILL_GAP: 4,
+  CATEGORIZE: 5,
+};
+
+// Quiz difficulty levels
+export const DIFFICULTY_LEVELS = {
+  EASY: 'easy',
+  MEDIUM: 'medium', 
+  HARD: 'hard'
+};
+
+// Default quiz settings
+export const DEFAULT_QUIZ_SETTINGS = {
+  duration: 60, // seconds
+  canSkip: false,
+  questionDuration: 30, // seconds
+  questionRate: 1,
+  hasDuration: true,
+};
+
+export default {
+  // Core quiz operations
+  addQuiz,
+  addQuestions,
+  addOptions,
+  createCompleteQuiz,
+  
+  // Validation functions
+  validateQuizData,
+  validateQuestionData,
+  validateOptionData,
+  
+  // Formatting functions
+  formatQuizForAPI,
+  formatQuizForDisplay,
+  formatQuestionForDisplay,
+  
+  // Helper functions
+  ticksToSeconds,
+  ticksToReadableDuration,
+  getQuestionTypeName,
+  calculateQuizStats,
+  getQuestionTemplates,
+  
+  // Constants
+  QUESTION_TYPES,
+  DIFFICULTY_LEVELS,
+  DEFAULT_QUIZ_SETTINGS,
 };

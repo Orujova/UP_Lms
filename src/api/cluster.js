@@ -11,6 +11,8 @@ const getHeaders = () => {
   };
 };
 
+// ======================== CLUSTER ENDPOINTS ========================
+
 // Fetch all clusters with pagination and search
 export const fetchClusters = async (params = {}) => {
   try {
@@ -50,30 +52,47 @@ export const fetchClusterById = async (clusterId, userId = null) => {
   }
 };
 
-// Create new cluster
+// Create new cluster - multipart/form-data format based on API docs
 export const createCluster = async (clusterData) => {
   try {
-    const payload = {
-      userId: clusterData.userId || getUserId(),
-      subject: clusterData.subject || "",
-      description: clusterData.description || "",
-      imageFile: clusterData.imageFile || "", // Base64 string
-      targetGroupIds: clusterData.targetGroupIds || [],
-      hasNotification: clusterData.hasNotification || false,
-      paralel: clusterData.paralel || false, // API documentation uses "paralel"
-      orderly: clusterData.orderly || false,
-      courses: (clusterData.courses || []).map(course => ({
-        courseId: course.courseId,
-        isMandatory: course.isMandatory || false,
-        orderNumber: course.orderNumber || 0,
-        coefficient: course.coefficient || 0,
-      })),
-    };
+    const formData = new FormData();
 
-    const response = await axios.post(`${API_URL}Cluster`, payload, {
+    // Required fields
+    formData.append("UserId", (clusterData.userId || getUserId()).toString());
+    formData.append("Subject", clusterData.subject || "");
+    formData.append("Description", clusterData.description || "");
+
+    // Image file
+    if (clusterData.imageFile && clusterData.imageFile instanceof File) {
+      formData.append("ImageFile", clusterData.imageFile);
+    }
+
+    // Target groups
+    if (clusterData.targetGroupIds && Array.isArray(clusterData.targetGroupIds)) {
+      clusterData.targetGroupIds.forEach((id) => {
+        formData.append("TargetGroupIds", id.toString());
+      });
+    }
+
+    // Boolean fields
+    formData.append("HasNotification", (clusterData.hasNotification || false).toString());
+    formData.append("Paralel", (clusterData.paralel || false).toString()); // API uses "Paralel" not "Parallel"
+    formData.append("Orderly", (clusterData.orderly || false).toString());
+
+    // Courses - complex object array
+    if (clusterData.courses && Array.isArray(clusterData.courses)) {
+      clusterData.courses.forEach((course, index) => {
+        formData.append(`Courses[${index}].CourseId`, course.courseId.toString());
+        formData.append(`Courses[${index}].IsMandatory`, (course.isMandatory || false).toString());
+        formData.append(`Courses[${index}].OrderNumber`, (course.orderNumber || index + 1).toString());
+        formData.append(`Courses[${index}].Coefficient`, (course.coefficient || 0).toString());
+      });
+    }
+
+    const response = await axios.post(`${API_URL}Cluster`, formData, {
       headers: {
         ...getHeaders(),
-        'Content-Type': 'application/json',
+        'Content-Type': 'multipart/form-data',
       },
     });
 
@@ -134,10 +153,10 @@ export const updateCluster = async (clusterData) => {
     // Courses
     if (clusterData.courses && Array.isArray(clusterData.courses)) {
       clusterData.courses.forEach((course, index) => {
-        formData.append(`Courses[${index}].courseId`, course.courseId.toString());
-        formData.append(`Courses[${index}].isMandatory`, course.isMandatory.toString());
-        formData.append(`Courses[${index}].orderNumber`, course.orderNumber.toString());
-        formData.append(`Courses[${index}].coefficient`, course.coefficient.toString());
+        formData.append(`Courses[${index}].CourseId`, course.courseId.toString());
+        formData.append(`Courses[${index}].IsMandatory`, (course.isMandatory || false).toString());
+        formData.append(`Courses[${index}].OrderNumber`, (course.orderNumber || index + 1).toString());
+        formData.append(`Courses[${index}].Coefficient`, (course.coefficient || 0).toString());
       });
     }
 
@@ -200,6 +219,8 @@ export const assignCoursesToCluster = async (assignmentData) => {
   }
 };
 
+// ======================== VALIDATION HELPERS ========================
+
 // Validate cluster data
 export const validateClusterData = (clusterData) => {
   const errors = [];
@@ -239,6 +260,39 @@ export const validateClusterData = (clusterData) => {
   return errors;
 };
 
+// Validate course assignment data
+export const validateCourseAssignmentData = (assignmentData) => {
+  const errors = [];
+
+  if (!assignmentData.clusterId) {
+    errors.push("Cluster ID is required");
+  }
+
+  if (!assignmentData.courses || assignmentData.courses.length === 0) {
+    errors.push("At least one course is required");
+  }
+
+  if (assignmentData.courses) {
+    assignmentData.courses.forEach((course, index) => {
+      if (!course.courseId) {
+        errors.push(`Course ${index + 1}: Course ID is required`);
+      }
+      
+      if (course.coefficient < 0 || course.coefficient > 100) {
+        errors.push(`Course ${index + 1}: Coefficient must be between 0 and 100`);
+      }
+      
+      if (course.orderNumber < 1) {
+        errors.push(`Course ${index + 1}: Order number must be at least 1`);
+      }
+    });
+  }
+
+  return errors;
+};
+
+// ======================== HELPER FUNCTIONS ========================
+
 // Get cluster statistics
 export const getClusterStatistics = (cluster) => {
   if (!cluster) return null;
@@ -250,20 +304,22 @@ export const getClusterStatistics = (cluster) => {
     targetGroups: cluster.targetGroups?.length || 0,
     averageCoefficient: 0,
     totalDuration: 0,
+    isParallel: cluster.paralel,
+    isOrderly: cluster.orderly,
   };
 
   if (cluster.courses && cluster.courses.length > 0) {
     const totalCoefficient = cluster.courses.reduce((sum, course) => sum + (course.coefficient || 0), 0);
     stats.averageCoefficient = Math.round(totalCoefficient / cluster.courses.length);
     
-    // Estimate total duration based on course count
-    stats.totalDuration = cluster.courses.length * 60; // Assume 60 minutes per course average
+    // Estimate total duration based on course count (assuming average 60 minutes per course)
+    stats.totalDuration = cluster.courses.length * 60;
   }
 
   return stats;
 };
 
-// Helper function to format cluster for display
+// Format cluster for display
 export const formatClusterForDisplay = (cluster) => {
   if (!cluster) return null;
 
@@ -273,5 +329,142 @@ export const formatClusterForDisplay = (cluster) => {
     isParallel: cluster.paralel, // Fix the typo in API
     isOrderly: cluster.orderly,
     statistics: getClusterStatistics(cluster),
+    imageUrl: cluster.imageUrl || null,
+    coursesCount: cluster.courses?.length || 0,
+    learnersCount: cluster.topAssignedUsers?.length || 0,
   };
+};
+
+// Get cluster type based on settings
+export const getClusterType = (cluster) => {
+  if (!cluster) return 'unknown';
+  
+  if (cluster.paralel && cluster.orderly) {
+    return 'mixed'; // Both parallel and ordered
+  } else if (cluster.paralel) {
+    return 'parallel';
+  } else if (cluster.orderly) {
+    return 'sequential';
+  }
+  
+  return 'flexible';
+};
+
+// Calculate cluster completion requirements
+export const getClusterCompletionRequirements = (cluster) => {
+  if (!cluster || !cluster.courses) {
+    return { required: 0, optional: 0, total: 0 };
+  }
+
+  const mandatory = cluster.courses.filter(c => c.isMandatory);
+  const optional = cluster.courses.filter(c => !c.isMandatory);
+
+  return {
+    required: mandatory.length,
+    optional: optional.length,
+    total: cluster.courses.length,
+    mandatoryCoefficient: mandatory.reduce((sum, c) => sum + (c.coefficient || 0), 0),
+    optionalCoefficient: optional.reduce((sum, c) => sum + (c.coefficient || 0), 0),
+  };
+};
+
+// Sort clusters by different criteria
+export const sortClusters = (clusters, sortBy = 'createdDate', order = 'desc') => {
+  if (!Array.isArray(clusters)) return [];
+
+  return [...clusters].sort((a, b) => {
+    let valueA, valueB;
+
+    switch (sortBy) {
+      case 'subject':
+        valueA = a.subject?.toLowerCase() || '';
+        valueB = b.subject?.toLowerCase() || '';
+        break;
+      case 'createdDate':
+        valueA = new Date(a.createdDate);
+        valueB = new Date(b.createdDate);
+        break;
+      case 'coursesCount':
+        valueA = a.courses?.length || 0;
+        valueB = b.courses?.length || 0;
+        break;
+      case 'learnersCount':
+        valueA = a.topAssignedUsers?.length || 0;
+        valueB = b.topAssignedUsers?.length || 0;
+        break;
+      default:
+        valueA = a.id;
+        valueB = b.id;
+    }
+
+    if (order === 'asc') {
+      return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+    } else {
+      return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
+    }
+  });
+};
+
+// Filter clusters by criteria
+export const filterClusters = (clusters, filters = {}) => {
+  if (!Array.isArray(clusters)) return [];
+
+  return clusters.filter(cluster => {
+    // Search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      const matchesSearch = 
+        cluster.subject?.toLowerCase().includes(searchTerm) ||
+        cluster.description?.toLowerCase().includes(searchTerm) ||
+        cluster.targetGroups?.some(group => group.toLowerCase().includes(searchTerm));
+      
+      if (!matchesSearch) return false;
+    }
+
+    // Type filter
+    if (filters.type) {
+      const clusterType = getClusterType(cluster);
+      if (clusterType !== filters.type) return false;
+    }
+
+    // Course count filter
+    if (filters.minCourses && (cluster.courses?.length || 0) < filters.minCourses) {
+      return false;
+    }
+
+    if (filters.maxCourses && (cluster.courses?.length || 0) > filters.maxCourses) {
+      return false;
+    }
+
+    // Target group filter
+    if (filters.targetGroupId) {
+      if (!cluster.targetGroupIds?.includes(filters.targetGroupId)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+};
+
+export default {
+  // Core operations
+  fetchClusters,
+  fetchClusterById,
+  createCluster,
+  updateCluster,
+  deleteCluster,
+  assignCoursesToCluster,
+  
+  // Validation
+  validateClusterData,
+  validateCourseAssignmentData,
+  
+  // Helper functions
+  getClusterStatistics,
+  formatClusterForDisplay,
+  getClusterType,
+  getClusterCompletionRequirements,
+  sortClusters,
+  filterClusters,
 };

@@ -10,6 +10,8 @@ import ContentBuilderStep from "@/components/course/CourseContentForm";
 import TargetGroupsStep from "@/components/course/TargetGroupsForm";
 import ContentModal from "@/components/course/ContentModal";
 import QuizModal from "@/components/course/QuizModal";
+import LoadingSpinner from "@/components/loadingSpinner";
+
 const CourseEditPage = () => {
   const dispatch = useDispatch();
   const { courseId } = useParams();
@@ -33,14 +35,14 @@ const CourseEditPage = () => {
       dispatch(setFormData({
         name: currentCourse.name || "",
         description: currentCourse.description || "",
-        categoryId: currentCourse.categoryId || "",
+        categoryId: currentCourse.courseCategoryId || "",
         duration: currentCourse.duration || 60,
         verifiedCertificate: currentCourse.verifiedCertificate || false,
         targetGroupIds: currentCourse.targetGroupIds || [],
-        certificateId: currentCourse.certificateId || null,
+        certificateId: currentCourse.courseCertificateId || null,
         tagIds: currentCourse.tagIds || [],
         startDuration: currentCourse.startDuration || null,
-        deadline: currentCourse.deadline || null,
+        deadline: currentCourse.deadLine || null,
         autoReassign: currentCourse.autoReassign || false,
       }));
     }
@@ -53,21 +55,14 @@ const CourseEditPage = () => {
       case 2:
         return <ContentBuilderStep />;
       case 3:
-        return <TargetGroupsStep />;
+        return <TargetGroupsStep isEditing={true} />;
       default:
         return <BasicInfoForm />;
     }
   };
 
   if (courseLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0AAC9E] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading course data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (courseError || !currentCourse) {
@@ -87,7 +82,7 @@ const CourseEditPage = () => {
   }
 
   return (
-    <CourseCreateLayout>
+    <CourseCreateLayout isEditing={true}>
       {renderStepContent()}
       
       {/* Modals */}

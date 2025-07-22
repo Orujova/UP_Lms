@@ -255,111 +255,97 @@ export default function EditAnnouncement({ params }) {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSaving(true);
 
-    try {
-      const token = getToken();
-      const userId = getUserId();
-      const formDataToSend = new FormData();
+  try {
+    const token = getToken();
+    const userId = getUserId();
+    const formDataToSend = new FormData();
 
-      // Add all form fields to FormData with exactly the right casing
-      // Use the exact field names from the API documentation
-      formDataToSend.append("AnnouncementId", formData.id);
-      formDataToSend.append("Title", formData.Title);
-      formDataToSend.append("SubTitle", formData.SubTitle);
-      formDataToSend.append("Description", formData.Description);
-      formDataToSend.append("ShortDescription", formData.ShortDescription);
-      formDataToSend.append("Priority", formData.Priority);
-
-      // Format dates properly (API expects YYYY-MM-DD)
-      formDataToSend.append("ScheduledDate", formData.ScheduledDate);
-      formDataToSend.append("ExpiryDate", formData.ExpiryDate);
-
-      // Add Poll Unit ID (ensure it's a proper integer)
-      if (formData.PollUnitId) {
-        formDataToSend.append("PollUnitId", parseInt(formData.PollUnitId, 10));
-      } else {
-        formDataToSend.append("PollUnitId", 0); // Send 0 for no poll unit
-      }
-
-      // Add Target Group IDs as an array
-      if (selectedTargetGroups.length > 0) {
-        selectedTargetGroups.forEach((group) => {
-          formDataToSend.append("TargetGroupIds", group.id);
-        });
-      } else if (formData.TargetGroupId) {
-        // Fallback to single TargetGroupId if needed
-        formDataToSend.append(
-          "TargetGroupIds",
-          parseInt(formData.TargetGroupId, 10)
-        );
-      }
-
-      // Add notification flag
-      formDataToSend.append("HasNotification", formData.HasNotification);
-
-      // Add UserId to FormData
-      if (userId) {
-        formDataToSend.append("UserId", userId);
-      }
-
-      // Handle ImageFile
-      if (formData.ImageFile) {
-        formDataToSend.append(
-          "ImageFile",
-          formData.ImageFile,
-          formData.ImageFile.name
-        );
-      }
-
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
-      }
-
-      // Make direct API call to update announcement
-      const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Announcement",
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataToSend,
-        }
-      );
-
-      // Handle response
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", errorText);
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(
-            errorData?.message || "Failed to update announcement"
-          );
-        } catch (jsonError) {
-          throw new Error(
-            `Server error: ${response.status} ${response.statusText}`
-          );
-        }
-      }
-
-      const result = await response.json();
-      console.log("Update result:", result);
-
-      toast.success("Announcement updated successfully");
-      setTimeout(() => {
-        router.push("/admin/dashboard/announcements");
-      }, 1500);
-    } catch (error) {
-      toast.error("Failed to update announcement: " + error.message);
-      console.error("Error updating announcement:", error);
-    } finally {
-      setSaving(false);
+    // Required field validation
+    if (!formData.Title) {
+      throw new Error("Title is required");
     }
-  };
+    if (!formData.ScheduledDate) {
+      throw new Error("Scheduled Date is required");
+    }
+
+    // Add form fields to FormData
+    formDataToSend.append("AnnouncementId", formData.id || 0);
+    formDataToSend.append("Title", formData.Title);
+    formDataToSend.append("SubTitle", formData.SubTitle || "");
+    formDataToSend.append("Description", formData.Description || "");
+    formDataToSend.append("ShortDescription", formData.ShortDescription || "");
+    formDataToSend.append("Priority", formData.Priority || "NORMAL");
+
+    // Format dates as YYYY-MM-DD
+    formDataToSend.append("ScheduledDate", formData.ScheduledDate);
+    formDataToSend.append("ExpiryDate", formData.ExpiryDate || "");
+
+    // Handle PollUnitId
+    formDataToSend.append(
+      "PollUnitId",
+      formData.PollUnitId ? parseInt(formData.PollUnitId, 10) : 0
+    );
+
+    // Handle TargetGroupIds as an array
+    if (selectedTargetGroups.length > 0) {
+      selectedTargetGroups.forEach((group) => {
+        formDataToSend.append("TargetGroupIds", parseInt(group.id, 10));
+      });
+    } else {
+      // Send an empty array explicitly if no target groups are selected
+      formDataToSend.append("TargetGroupIds", "");
+    }
+
+    formDataToSend.append("HasNotification", formData.HasNotification);
+    formDataToSend.append("UserId", userId || 0);
+
+    // Handle ImageFile
+    if (formData.ImageFile) {
+      formDataToSend.append("ImageFile", formData.ImageFile, formData.ImageFile.name);
+    }
+
+    // Log FormData for debugging
+    for (let pair of formDataToSend.entries()) {
+      console.log(`${pair[0]}: ${pair[1]}`);
+    }
+
+    const response = await fetch("https://bravoadmin.uplms.org/api/Announcement", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formDataToSend,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API Error:", errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData?.message || "Failed to update announcement");
+      } catch (jsonError) {
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+    }
+
+    const result = await response.json();
+    console.log("Update result:", result); // Log the response to debug
+
+    toast.success("Announcement updated successfully");
+    setTimeout(() => {
+      router.push("/admin/dashboard/announcements");
+    }, 1500);
+  } catch (error) {
+    console.error("Error updating announcement:", error);
+    toast.error(`Failed to update announcement: ${error.message}`);
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleCancel = () => {
     router.push("/admin/dashboard/announcements");
