@@ -1,456 +1,610 @@
-import React, { useState, useEffect } from "react";
+'use client'
+import React, { useState, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { 
   X, 
   Upload, 
-  Link, 
-  FileText, 
   Video, 
-  File, 
+  FileText, 
+  Globe, 
+  File,
   AlertCircle, 
   CheckCircle,
-  Globe,
-  BookOpen,
-  Info,
-  Eye,
-  Loader
+  Loader2,
+  Save,
+  Link,
+  Eye
 } from "lucide-react";
+import {
+  addContentAsync,
+  updateContentAsync,
+  setModalOpen
+} from "@/redux/course/courseSlice";
 
 const ContentModal = () => {
-  // Mock Redux state - replace with actual Redux hooks
-  const [modals, setModals] = useState({ addContent: true, editContent: false });
-  const [contentModalType] = useState("page"); // page, text, url, file, video
-  const [editingContent] = useState(null);
-  const [activeSection] = useState("section-1");
-
+  const dispatch = useDispatch();
+  
+  // Redux state
+  const { 
+    modals, 
+    activeSection,
+    editingContent,
+    contentModalType,
+    loading 
+  } = useSelector((state) => state.course || {});
+  
+  const isOpen = modals?.addContent || modals?.editContent || false;
+  const isEditing = modals?.editContent || false;
+  
+  // Local state - matching exact API field structure for CourseContent/AddContent
   const [formData, setFormData] = useState({
-    title: "",
+    courseSectionId: null,
     description: "",
-    content: "",
-    url: "",
-    file: null,
-    textContent: "",
-    htmlContent: "",
+    hideContent: false,
+    isDiscussionEnabled: false,
+    isMeetingAllowed: false,
+    type: 0, // API content type enum (integer)
+    contentString: "",
+    contentFile: null
   });
-
-  const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  
-  const isOpen = modals.addContent || modals.editContent;
-  const isEditing = modals.editContent && editingContent;
+  const [filePreview, setFilePreview] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
 
-  const handleClose = () => {
-    // Reset form data
-    setFormData({
-      title: "",
-      description: "",
-      content: "",
-      url: "",
-      file: null,
-      textContent: "",
-      htmlContent: "",
-    });
-    setErrors({});
-    setIsSubmitting(false);
-    setUploadProgress(0);
-    
-    // Close the modal by updating the state
-    setModals({ addContent: false, editContent: false });
-    
-    // In a real Redux app, you would dispatch an action like:
-    // dispatch(closeContentModal());
+  // Content type enum mapping (exact from API documentation)
+  const CONTENT_TYPES = {
+    PAGE: 0,
+    TEXT_BOX: 1,
+    QUIZ: 2,
+    WEB_URL: 3,
+    VIDEO: 4,
+    OTHER_FILE: 5,
+    PPTX: 6
   };
 
+  // Get content type configuration
+  const getContentTypeConfig = (type) => {
+    const configs = {
+      video: {
+        icon: Video,
+        title: "Video Content",
+        description: "Upload video file or provide YouTube/Vimeo link",
+        color: "red",
+        acceptedFiles: "video/*,.mp4,.mov,.avi,.mkv,.webm",
+        maxSize: 500 * 1024 * 1024, // 500MB
+        placeholder: "Enter video description...",
+        apiType: CONTENT_TYPES.VIDEO
+      },
+      text: {
+        icon: FileText,
+        title: "Text Content",
+        description: "Rich text content and documents",
+        color: "blue",
+        acceptedFiles: null,
+        maxSize: null,
+        placeholder: "Enter text content description...",
+        apiType: CONTENT_TYPES.TEXT_BOX
+      },
+      url: {
+        icon: Globe,
+        title: "External Link",
+        description: "Link to external websites and resources",
+        color: "green",
+        acceptedFiles: null,
+        maxSize: null,
+        placeholder: "Enter link description...",
+        apiType: CONTENT_TYPES.WEB_URL
+      },
+      file: {
+        icon: File,
+        title: "File Upload",
+        description: "Documents, PDFs, presentations and other files",
+        color: "purple",
+        acceptedFiles: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt",
+        maxSize: 50 * 1024 * 1024, // 50MB
+        placeholder: "Enter file description...",
+        apiType: CONTENT_TYPES.OTHER_FILE
+      }
+    };
+    return configs[type] || configs.text;
+  };
+
+  const currentConfig = getContentTypeConfig(contentModalType);
+
+  // Initialize form data
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditing && editingContent) {
+        setFormData({
+          courseSectionId: editingContent.courseSectionId || activeSection,
+          description: editingContent.description || "",
+          hideContent: editingContent.hideContent || false,
+          isDiscussionEnabled: editingContent.isDiscussionEnabled || false,
+          isMeetingAllowed: editingContent.isMeetingAllowed || false,
+          type: currentConfig.apiType,
+          contentString: editingContent.contentString || editingContent.data || "",
+          contentFile: null // File will be handled separately for editing
+        });
+      } else {
+        // Reset for new content
+        setFormData({
+          courseSectionId: activeSection,
+          description: "",
+          hideContent: false,
+          isDiscussionEnabled: false,
+          isMeetingAllowed: false,
+          type: currentConfig.apiType,
+          contentString: "",
+          contentFile: null
+        });
+      }
+      setErrors({});
+      setFilePreview(null);
+      setDragActive(false);
+    }
+  }, [isOpen, isEditing, editingContent, activeSection, currentConfig, contentModalType]);
+
+  // Validation - API requirements
   const validateForm = () => {
     const newErrors = {};
+    
+    // Description is required
+    if (!formData.description?.trim()) {
+      newErrors.description = "Description is required";
+    } else if (formData.description.length > 500) {
+      newErrors.description = "Description must be less than 500 characters";
+    }
 
+    // CourseSectionId is required
+    if (!formData.courseSectionId) {
+      newErrors.courseSectionId = "Section ID is required";
+    }
+    
+    // Type-specific validation
     switch (contentModalType) {
-      case "page":
-        if (!formData.title.trim()) {
-          newErrors.title = "Page title is required";
+      case 'video':
+        if (!formData.contentString?.trim() && !formData.contentFile) {
+          newErrors.content = "Please provide a video URL or upload a video file";
         }
-        if (!formData.description.trim()) {
-          newErrors.description = "Page description is required";
-        }
-        break;
-
-      case "text":
-        if (!formData.textContent.trim()) {
-          newErrors.textContent = "Text content is required";
+        if (formData.contentString && !isValidUrl(formData.contentString)) {
+          newErrors.contentString = "Please enter a valid URL";
         }
         break;
-
-      case "url":
-        if (!formData.url.trim()) {
-          newErrors.url = "URL is required";
-        } else if (!isValidUrl(formData.url)) {
-          newErrors.url = "Please enter a valid URL starting with http:// or https://";
+        
+      case 'text':
+        if (!formData.contentString?.trim()) {
+          newErrors.contentString = "Text content is required";
         }
         break;
-
-      case "file":
-      case "video":
-        if (!formData.file && !isEditing) {
-          newErrors.file = `${contentModalType === "video" ? "Video" : "File"} is required`;
+        
+      case 'url':
+        if (!formData.contentString?.trim()) {
+          newErrors.contentString = "URL is required";
+        } else if (!isValidUrl(formData.contentString)) {
+          newErrors.contentString = "Please enter a valid URL";
+        }
+        break;
+        
+      case 'file':
+        if (!formData.contentFile && !isEditing) {
+          newErrors.contentFile = "Please select a file to upload";
         }
         break;
     }
-
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!activeSection || !validateForm()) return;
-
-    setIsSubmitting(true);
-    setUploadProgress(10);
-
-    try {
-      // Simulate upload progress
-      const intervals = [30, 60, 80, 100];
-      for (let i = 0; i < intervals.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        setUploadProgress(intervals[i]);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-      handleClose();
-    } catch (error) {
-      setErrors({ submit: "Failed to save content. Please try again." });
-      setUploadProgress(0);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleFileUpload = (file) => {
-    if (file) {
-      const maxSize = contentModalType === "video" ? 500 * 1024 * 1024 : 100 * 1024 * 1024;
-      
-      if (file.size > maxSize) {
-        setErrors({ file: `File size must be less than ${maxSize / (1024 * 1024)}MB` });
-        return;
-      }
-
-      if (contentModalType === "video" && !file.type.startsWith("video/")) {
-        setErrors({ file: "Please select a valid video file" });
-        return;
-      }
-
-      setFormData((prev) => ({ ...prev, file }));
-      setErrors({ ...errors, file: "" });
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileUpload(file);
-    }
   };
 
   const isValidUrl = (string) => {
     try {
       new URL(string);
       return true;
-    } catch {
+    } catch (_) {
       return false;
     }
   };
 
-  const getModalConfig = () => {
-    const configs = {
-      page: {
-        title: "Page Content",
-        icon: FileText,
-        description: "Create rich, engaging learning content"
-      },
-      text: {
-        title: "Text Block",
-        icon: BookOpen,
-        description: "Add clear, concise text information"
-      },
-      url: {
-        title: "Web Link",
-        icon: Globe,
-        description: "Link to valuable external resources"
-      },
-      file: {
-        title: "File Upload",
-        icon: File,
-        description: "Share important documents and resources"
-      },
-      video: {
-        title: "Video Upload",
-        icon: Video,
-        description: "Add engaging video content"
-      }
-    };
-    return configs[contentModalType] || configs.page;
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }));
+    }
   };
 
-  const config = getModalConfig();
-  const Icon = config.icon;
+  // File upload handlers
+  const handleFileUpload = useCallback((file) => {
+    if (!file) return;
 
-  if (!isOpen) return null;
+    const config = currentConfig;
+    
+    // Validate file type
+    if (config.acceptedFiles) {
+      const extensions = config.acceptedFiles.split(',').map(ext => ext.trim());
+      const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+      
+      if (!extensions.includes(fileExtension) && !extensions.includes(file.type)) {
+        setErrors(prev => ({ ...prev, contentFile: 'Invalid file type' }));
+        return;
+      }
+    }
+
+    // Validate file size
+    if (config.maxSize && file.size > config.maxSize) {
+      const sizeMB = Math.round(config.maxSize / (1024 * 1024));
+      setErrors(prev => ({ ...prev, contentFile: `File size must be less than ${sizeMB}MB` }));
+      return;
+    }
+
+    setErrors(prev => ({ ...prev, contentFile: null }));
+    setFormData(prev => ({ ...prev, contentFile: file }));
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setFilePreview(e.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+  }, [currentConfig]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  }, [handleFileUpload]);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  }, []);
+
+  const handleFileInput = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const removeFile = () => {
+    setFormData(prev => ({ ...prev, contentFile: null }));
+    setFilePreview(null);
+    setErrors(prev => ({ ...prev, contentFile: null }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare content data exactly as API expects (multipart/form-data structure)
+      const contentData = {
+        // Required fields
+        courseSectionId: parseInt(formData.courseSectionId), // integer($int32)
+        type: parseInt(formData.type), // integer($int32) - content type enum
+        hideContent: Boolean(formData.hideContent), // boolean
+        isDiscussionEnabled: Boolean(formData.isDiscussionEnabled), // boolean
+        isMeetingAllowed: Boolean(formData.isMeetingAllowed), // boolean
+        
+        // Optional fields
+        description: formData.description || "", // string
+        contentString: formData.contentString || "", // string
+        contentFile: formData.contentFile || null // file
+      };
+
+      if (isEditing && editingContent) {
+        // Update existing content - use CourseContent/update-content endpoint
+        const updateData = {
+          contentId: parseInt(editingContent.id), // Required for update
+          ...contentData
+        };
+        await dispatch(updateContentAsync(updateData)).unwrap();
+      } else {
+        // Create new content - use CourseContent/AddContent endpoint
+        await dispatch(addContentAsync(contentData)).unwrap();
+      }
+      
+      handleClose();
+    } catch (error) {
+      console.error("Error saving content:", error);
+      setErrors({ submit: error.message || "Failed to save content" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    dispatch(setModalOpen({ modal: 'addContent', isOpen: false }));
+    dispatch(setModalOpen({ modal: 'editContent', isOpen: false }));
+    setFormData({
+      courseSectionId: null,
+      description: "",
+      hideContent: false,
+      isDiscussionEnabled: false,
+      isMeetingAllowed: false,
+      type: 0,
+      contentString: "",
+      contentFile: null
+    });
+    setErrors({});
+    setFilePreview(null);
+    setIsSubmitting(false);
+    setDragActive(false);
+  };
+
+  if (!isOpen || !contentModalType) return null;
+
+  const Icon = currentConfig.icon;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden border border-gray-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         
-        {/* Compact Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-[#0AAC9E]/5 to-[#0AAC9E]/10">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#0AAC9E]/20 rounded-lg flex items-center justify-center">
-              <Icon className="w-4 h-4 text-[#0AAC9E]" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-gray-900">
-                {isEditing ? "Edit" : "Add"} {config.title}
-              </h2>
-              <p className="text-xs text-gray-600">{config.description}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {isSubmitting && uploadProgress > 0 && (
-              <div className="flex items-center gap-2">
-                <div className="w-12 bg-gray-200 rounded-full h-1">
-                  <div 
-                    className="bg-[#0AAC9E] h-1 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-[#0AAC9E]">{uploadProgress}%</span>
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#0AAC9E]/5 to-[#0AAC9E]/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className={`w-10 h-10 bg-${currentConfig.color}-100 rounded-lg flex items-center justify-center`}>
+                <Icon className={`w-5 h-5 text-${currentConfig.color}-600`} />
               </div>
-            )}
-            
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {isEditing ? `Edit ${currentConfig.title}` : `Add ${currentConfig.title}`}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {currentConfig.description}
+                </p>
+              </div>
+            </div>
             <button
               onClick={handleClose}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
               disabled={isSubmitting}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
             >
-              <X className="w-4 h-4 text-gray-500" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Compact Content */}
-        <div className="p-4 overflow-y-auto max-h-[calc(85vh-140px)]">
-          {errors.submit && (
-            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                <span className="text-red-700 text-xs font-medium">{errors.submit}</span>
-              </div>
-            </div>
-          )}
-
-          {contentModalType === "page" && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-900 mb-2">
-                  Page Title <span className="text-red-500">*</span>
-                </label>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="max-h-[calc(90vh-120px)] overflow-y-auto">
+          <div className="p-6 space-y-6">
+            {/* Description - Required API field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
                 <input
                   type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter page title"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] text-xs transition-all duration-200 ${
-                    errors.title 
-                      ? "border-red-300 bg-red-25" 
-                      : "border-gray-200 hover:border-[#0AAC9E]/50 bg-gray-50 focus:bg-white"
-                  }`}
-                />
-                {errors.title && (
-                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.title}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-900 mb-2">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description"
-                  rows={2}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] resize-none text-xs transition-all duration-200 ${
-                    errors.description 
-                      ? "border-red-300 bg-red-25" 
-                      : "border-gray-200 hover:border-[#0AAC9E]/50 bg-gray-50 focus:bg-white"
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder={currentConfig.placeholder}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                    errors.description
+                      ? 'border-red-300 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-[#0AAC9E]'
                   }`}
                 />
-                {errors.description && (
-                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.description}
-                  </p>
+                {formData.description && !errors.description && (
+                  <CheckCircle className="absolute right-3 top-3.5 w-5 h-5 text-green-500" />
                 )}
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-900 mb-2">
-                  Content
-                </label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
-                  placeholder="Enter content..."
-                  rows={5}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] resize-none text-xs hover:border-[#0AAC9E]/50 bg-gray-50 focus:bg-white transition-all duration-200"
-                />
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Info className="w-3 h-3" />
-                    <span>Markdown supported</span>
-                  </div>
-                  <span className="text-xs text-gray-400">{formData.content.length}/5000</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {contentModalType === "text" && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-2">
-                Text Content <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.textContent}
-                onChange={(e) => setFormData((prev) => ({ ...prev, textContent: e.target.value }))}
-                placeholder="Enter text content..."
-                rows={8}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] resize-none text-xs transition-all duration-200 ${
-                  errors.textContent 
-                    ? "border-red-300 bg-red-25" 
-                    : "border-gray-200 hover:border-[#0AAC9E]/50 bg-gray-50 focus:bg-white"
-                }`}
-              />
-              {errors.textContent && (
-                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.textContent}
+              {errors.description && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.description}
                 </p>
               )}
-              <div className="flex justify-between mt-2">
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <BookOpen className="w-3 h-3" />
-                  <span>Plain text</span>
-                </div>
-                <span className="text-xs text-gray-400">{formData.textContent.length}/2000</span>
-              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                {formData.description?.length || 0}/500 characters
+              </p>
             </div>
-          )}
 
-          {contentModalType === "url" && (
-            <div className="space-y-4">
+            {/* Content Type Specific Fields */}
+            {contentModalType === 'text' && (
               <div>
-                <label className="block text-xs font-semibold text-gray-900 mb-2">
-                  Web URL <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Text Content <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="url"
-                    value={formData.url}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
-                    placeholder="https://example.com"
-                    className={`w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] text-xs transition-all duration-200 ${
-                      errors.url 
-                        ? "border-red-300 bg-red-25" 
-                        : "border-gray-200 hover:border-[#0AAC9E]/50 bg-gray-50 focus:bg-white"
-                    }`}
-                  />
-                </div>
-                {errors.url && (
-                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.url}
+                <textarea
+                  value={formData.contentString}
+                  onChange={(e) => handleInputChange('contentString', e.target.value)}
+                  placeholder="Enter your text content here..."
+                  rows={8}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
+                    errors.contentString
+                      ? 'border-red-300 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-[#0AAC9E]'
+                  }`}
+                />
+                {errors.contentString && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.contentString}
                   </p>
                 )}
               </div>
-              
-              {formData.url && isValidUrl(formData.url) && (
-                <div className="p-3 bg-[#0AAC9E]/5 border border-[#0AAC9E]/20 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-[#0AAC9E]" />
-                      <div>
-                        <p className="text-[#0AAC9E] font-semibold text-xs">Valid URL</p>
-                        <p className="text-gray-600 text-xs">Opens in new tab</p>
-                      </div>
-                    </div>
-                    <a
-                      href={formData.url}
-                      target="_blank"
+            )}
+
+            {contentModalType === 'url' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  URL <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={formData.contentString}
+                    onChange={(e) => handleInputChange('contentString', e.target.value)}
+                    placeholder="https://example.com"
+                    className={`w-full px-4 py-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                      errors.contentString
+                        ? 'border-red-300 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-[#0AAC9E]'
+                    }`}
+                  />
+                  <Link className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                  {formData.contentString && !errors.contentString && isValidUrl(formData.contentString) && (
+                    <CheckCircle className="absolute right-3 top-3.5 w-5 h-5 text-green-500" />
+                  )}
+                </div>
+                {errors.contentString && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.contentString}
+                  </p>
+                )}
+                {formData.contentString && isValidUrl(formData.contentString) && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <a 
+                      href={formData.contentString} 
+                      target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 bg-[#0AAC9E] text-white rounded-md hover:bg-[#0AAC9E]/90 transition-colors text-xs"
+                      className="text-sm text-[#0AAC9E] hover:underline flex items-center"
                     >
-                      <Eye className="w-3 h-3" />
-                      <span>Test</span>
+                      <Eye className="w-4 h-4 mr-1" />
+                      Preview link
                     </a>
                   </div>
-                </div>
-              )}
-
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <h4 className="text-xs font-semibold text-gray-900 mb-2">Guidelines</h4>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  <li className="flex items-start gap-1">
-                    <div className="w-1 h-1 bg-[#0AAC9E] rounded-full mt-1.5 flex-shrink-0" />
-                    <span>Ensure URL is accessible</span>
-                  </li>
-                  <li className="flex items-start gap-1">
-                    <div className="w-1 h-1 bg-[#0AAC9E] rounded-full mt-1.5 flex-shrink-0" />
-                    <span>Check login requirements</span>
-                  </li>
-                </ul>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {(contentModalType === "file" || contentModalType === "video") && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-900 mb-2">
-                  {contentModalType === "video" ? "Video File" : "File Upload"} <span className="text-red-500">*</span>
-                </label>
+            {contentModalType === 'video' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Video Source <span className="text-red-500">*</span>
+                  </label>
+                  
+                  {/* URL Input */}
+                  <div className="mb-4">
+                    <label className="text-sm text-gray-600 mb-2 block">Video URL (YouTube, Vimeo, etc.)</label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={formData.contentString}
+                        onChange={(e) => handleInputChange('contentString', e.target.value)}
+                        placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                        className={`w-full px-4 py-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                          errors.contentString
+                            ? 'border-red-300 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-[#0AAC9E]'
+                        }`}
+                      />
+                      <Video className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
 
-                {formData.file ? (
-                  <div className="border border-[#0AAC9E]/20 rounded-lg p-3 bg-[#0AAC9E]/5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#0AAC9E]/20 rounded-lg flex items-center justify-center">
-                          {contentModalType === "video" ? (
-                            <Video className="w-4 h-4 text-[#0AAC9E]" />
-                          ) : (
-                            <File className="w-4 h-4 text-[#0AAC9E]" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-xs">
-                            {formData.file.name}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                            <span>{(formData.file.size / 1024 / 1024).toFixed(1)} MB</span>
-                            <span>•</span>
-                            <span>{formData.file.type}</span>
+                  <div className="text-center text-gray-500 text-sm mb-4">OR</div>
+
+                  {/* File Upload */}
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">Upload Video File</label>
+                    {formData.contentFile ? (
+                      <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Video className="w-8 h-8 text-red-600" />
+                            <div>
+                              <p className="font-medium text-gray-900">{formData.contentFile.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {(formData.contentFile.size / (1024 * 1024)).toFixed(2)} MB
+                              </p>
+                            </div>
                           </div>
+                          <button
+                            type="button"
+                            onClick={removeFile}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                          dragActive 
+                            ? 'border-[#0AAC9E] bg-[#0AAC9E]/5' 
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                      >
+                        <input
+                          type="file"
+                          accept={currentConfig.acceptedFiles}
+                          onChange={handleFileInput}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-sm font-medium text-gray-900 mb-1">
+                          Drop video here, or click to browse
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          MP4, MOV, AVI, MKV, WebM up to 500MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {errors.content && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.content}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {contentModalType === 'file' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  File Upload <span className="text-red-500">*</span>
+                </label>
+                
+                {formData.contentFile ? (
+                  <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {filePreview ? (
+                          <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded" />
+                        ) : (
+                          <File className="w-8 h-8 text-purple-600" />
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">{formData.contentFile.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {(formData.contentFile.size / (1024 * 1024)).toFixed(2)} MB
+                          </p>
                         </div>
                       </div>
                       <button
-                        onClick={() => setFormData((prev) => ({ ...prev, file: null }))}
-                        className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        type="button"
+                        onClick={removeFile}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -458,117 +612,138 @@ const ContentModal = () => {
                   </div>
                 ) : (
                   <div
-                    className={`border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 ${
-                      dragActive
-                        ? "border-[#0AAC9E] bg-[#0AAC9E]/10"
-                        : "border-gray-300 hover:border-[#0AAC9E] hover:bg-[#0AAC9E]/5"
-                    } ${errors.file ? "border-red-300 bg-red-50" : ""}`}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragActive(true);
-                    }}
-                    onDragLeave={() => setDragActive(false)}
+                    className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      dragActive 
+                        ? 'border-[#0AAC9E] bg-[#0AAC9E]/5' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
                     onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
                   >
-                    <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 transition-all duration-200 ${
-                        dragActive ? "bg-[#0AAC9E] text-white" : "bg-[#0AAC9E]/10 text-[#0AAC9E]"
-                      }`}>
-                        <Upload className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs text-gray-900 mb-1 font-semibold">
-                        {dragActive ? "Drop file here" : `Upload ${contentModalType}`}
-                      </p>
-                      <p className="text-xs text-gray-600 mb-2">
-                        Drag & drop or{" "}
-                        <label className="text-[#0AAC9E] hover:text-[#0AAC9E]/80 cursor-pointer font-semibold underline">
-                          browse
-                          <input
-                            type="file"
-                            accept={contentModalType === "video" ? "video/*" : "*/*"}
-                            onChange={(e) => handleFileUpload(e.target.files[0])}
-                            className="hidden"
-                          />
-                        </label>
-                      </p>
-                      <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        <Info className="w-3 h-3" />
-                        <span>
-                          {contentModalType === "video" ? "Video up to 500MB" : "Files up to 100MB"}
-                        </span>
-                      </div>
-                    </div>
+                    <input
+                      type="file"
+                      accept={currentConfig.acceptedFiles}
+                      onChange={handleFileInput}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">
+                      Drop file here, or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX up to 50MB
+                    </p>
                   </div>
                 )}
                 
-                {errors.file && (
-                  <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.file}
+                {errors.contentFile && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.contentFile}
                   </p>
                 )}
               </div>
+            )}
 
-              {(formData.file || isEditing) && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-900 mb-2">
-                    Description <span className="text-gray-500">(Optional)</span>
-                  </label>
+            {/* Content Settings - API boolean fields */}
+            <div className="space-y-4 border-t border-gray-200 pt-6">
+              <h3 className="text-sm font-medium text-gray-700">Content Settings</h3>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {/* Hide Content - API field: hideContent (boolean) */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label htmlFor="hideContent" className="text-sm font-medium text-gray-900">
+                      Hide Content
+                    </label>
+                    <p className="text-xs text-gray-500">Content will not be visible to learners</p>
+                  </div>
                   <input
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="File description"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] text-xs hover:border-[#0AAC9E]/50 bg-gray-50 focus:bg-white transition-all duration-200"
+                    type="checkbox"
+                    id="hideContent"
+                    checked={formData.hideContent}
+                    onChange={(e) => handleInputChange('hideContent', e.target.checked)}
+                    className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
                   />
                 </div>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* Compact Footer */}
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={handleClose}
-            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 text-xs font-medium"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSubmitting || !Object.keys(errors).every(key => !errors[key])}
-            className="px-4 py-1.5 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium transform hover:scale-105 disabled:transform-none flex items-center gap-1"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader className="w-3 h-3 animate-spin" />
-                <span>
-                  {uploadProgress < 100 ? `${uploadProgress}%` : "Done"}
-                </span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-3 h-3" />
-                <span>{isEditing ? "Update" : "Add"}</span>
-              </>
-            )}
-          </button>
-        </div>
+                {/* Discussion Enabled - API field: isDiscussionEnabled (boolean) */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label htmlFor="isDiscussionEnabled" className="text-sm font-medium text-gray-900">
+                      Enable Discussions
+                    </label>
+                    <p className="text-xs text-gray-500">Allow learners to discuss this content</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="isDiscussionEnabled"
+                    checked={formData.isDiscussionEnabled}
+                    onChange={(e) => handleInputChange('isDiscussionEnabled', e.target.checked)}
+                    className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                  />
+                </div>
 
-        {/* Compact Success Overlay */}
-        {isSubmitting && uploadProgress === 100 && (
-          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center rounded-xl">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-[#0AAC9E]/10 rounded-xl flex items-center justify-center mx-auto mb-2">
-                <CheckCircle className="w-6 h-6 text-[#0AAC9E]" />
+                {/* Meeting Allowed - API field: isMeetingAllowed (boolean) */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label htmlFor="isMeetingAllowed" className="text-sm font-medium text-gray-900">
+                      Allow Meetings
+                    </label>
+                    <p className="text-xs text-gray-500">Enable meeting requests for this content</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="isMeetingAllowed"
+                    checked={formData.isMeetingAllowed}
+                    onChange={(e) => handleInputChange('isMeetingAllowed', e.target.checked)}
+                    className="w-4 h-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                  />
+                </div>
               </div>
-              <p className="text-sm font-semibold text-gray-900 mb-1">Saved!</p>
-              <p className="text-xs text-gray-600">Redirecting...</p>
             </div>
+
+            {/* Error Messages */}
+            {errors.submit && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  {errors.submit}
+                </p>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3 p-6 bg-gray-50 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || Object.keys(errors).filter(k => k !== 'submit').length > 0}
+              className="flex-1 px-4 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {isEditing ? 'Updating...' : 'Adding...'}
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isEditing ? 'Update Content' : 'Add Content'}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

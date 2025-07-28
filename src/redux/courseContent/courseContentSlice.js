@@ -13,8 +13,7 @@ import {
   updateVideoContent,
   getVideoById,
   getVideoInteractions,
-  addVideoInteraction,
-  updateVideoInteraction,
+  updateVideoInteraction as updateVideoInteractionAPI,
   deleteVideoInteraction,
   
   // Subtitle operations
@@ -55,17 +54,21 @@ import {
   formatDuration,
   calculateContentProgress,
   getContentTypeName,
+  getLanguageName,
   generateContentPreview,
   sortContents,
   filterContents,
   CONTENT_TYPES,
   VIDEO_QUALITIES,
   INTERACTION_TYPES,
+  SUBTITLE_LANGUAGES,
+  COMMENT_ORDER_OPTIONS,
+  MEETING_ORDER_OPTIONS,
 } from '@/api/courseContent';
 
 // ======================== ASYNC THUNKS ========================
 
-// Content CRUD operations
+// Content CRUD operations (FIXED: Proper enum handling)
 export const addContentAsync = createAsyncThunk(
   'courseContent/addContent',
   async (contentData, { rejectWithValue }) => {
@@ -75,7 +78,14 @@ export const addContentAsync = createAsyncThunk(
         return rejectWithValue(errors.join(', '));
       }
       
-      const response = await addContent(contentData);
+      // FIXED: Ensure proper content type enum values
+      const apiData = {
+        ...contentData,
+        type: contentData.type || CONTENT_TYPES.TEXT_BOX,
+        sectionId: contentData.sectionId
+      };
+      
+      const response = await addContent(apiData);
       return formatContentForDisplay(response);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -92,7 +102,13 @@ export const updateContentAsync = createAsyncThunk(
         return rejectWithValue(errors.join(', '));
       }
       
-      const response = await updateContent(contentData);
+      // FIXED: Ensure proper content type enum values
+      const apiData = {
+        ...contentData,
+        type: contentData.type || CONTENT_TYPES.TEXT_BOX
+      };
+      
+      const response = await updateContent(apiData);
       return formatContentForDisplay(response);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -139,7 +155,7 @@ export const getContentByIdAsync = createAsyncThunk(
   }
 );
 
-// Video operations
+// Video operations (FIXED: Video type enum)
 export const addVideoContentAsync = createAsyncThunk(
   'courseContent/addVideoContent',
   async (videoData, { rejectWithValue }) => {
@@ -149,7 +165,13 @@ export const addVideoContentAsync = createAsyncThunk(
         return rejectWithValue(errors.join(', '));
       }
       
-      const response = await addVideoContent(videoData);
+      // FIXED: Use correct video content type (CONTENT_TYPES.VIDEO = 4)
+      const apiData = {
+        ...videoData,
+        type: CONTENT_TYPES.VIDEO
+      };
+      
+      const response = await addVideoContent(apiData);
       return formatVideoForDisplay(response);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -161,7 +183,13 @@ export const updateVideoContentAsync = createAsyncThunk(
   'courseContent/updateVideoContent',
   async (videoData, { rejectWithValue }) => {
     try {
-      const response = await updateVideoContent(videoData);
+      // FIXED: Use correct video content type
+      const apiData = {
+        ...videoData,
+        type: CONTENT_TYPES.VIDEO
+      };
+      
+      const response = await updateVideoContent(apiData);
       return formatVideoForDisplay(response);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -181,11 +209,11 @@ export const getVideoInteractionsAsync = createAsyncThunk(
   }
 );
 
-export const addVideoInteractionAsync = createAsyncThunk(
-  'courseContent/addVideoInteraction',
+export const updateVideoInteractionAsync = createAsyncThunk(
+  'courseContent/updateVideoInteraction',
   async (interactionData, { rejectWithValue }) => {
     try {
-      const response = await addVideoInteraction(interactionData);
+      const response = await updateVideoInteractionAPI(interactionData);
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -193,7 +221,7 @@ export const addVideoInteractionAsync = createAsyncThunk(
   }
 );
 
-// Subtitle operations
+// Subtitle operations (FIXED: Language enum handling)
 export const addSubtitleAsync = createAsyncThunk(
   'courseContent/addSubtitle',
   async (subtitleData, { rejectWithValue }) => {
@@ -203,7 +231,13 @@ export const addSubtitleAsync = createAsyncThunk(
         return rejectWithValue(errors.join(', '));
       }
       
-      const response = await addSubtitle(subtitleData);
+      // FIXED: Ensure proper language enum values
+      const apiData = {
+        ...subtitleData,
+        language: subtitleData.language || SUBTITLE_LANGUAGES.ENGLISH
+      };
+      
+      const response = await addSubtitle(apiData);
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -223,12 +257,20 @@ export const getSubtitlesByVideoIdAsync = createAsyncThunk(
   }
 );
 
-// Comment operations
+// Comment operations (FIXED: Order by handling)
 export const getCommentsByContentIdAsync = createAsyncThunk(
   'courseContent/getCommentsByContentId',
-  async (contentId, { rejectWithValue }) => {
+  async ({ contentId, params = {} }, { rejectWithValue }) => {
     try {
-      const response = await getCommentsByContentId(contentId);
+      // FIXED: Ensure proper orderBy parameter
+      const apiParams = {
+        ...params,
+        orderBy: params.orderBy ? 
+          COMMENT_ORDER_OPTIONS[params.orderBy.toUpperCase()] || COMMENT_ORDER_OPTIONS.VOTE_DESC 
+          : COMMENT_ORDER_OPTIONS.VOTE_DESC
+      };
+      
+      const response = await getCommentsByContentId(contentId, apiParams);
       return { contentId, comments: response };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -265,12 +307,20 @@ export const addCommentReplyAsync = createAsyncThunk(
   }
 );
 
-// Meeting operations
+// Meeting operations (FIXED: Order by handling)
 export const getMeetingsByContentIdAsync = createAsyncThunk(
   'courseContent/getMeetingsByContentId',
-  async (contentId, { rejectWithValue }) => {
+  async ({ contentId, userId, params = {} }, { rejectWithValue }) => {
     try {
-      const response = await getMeetingsByContentId(contentId);
+      // FIXED: Ensure proper orderBy parameter
+      const apiParams = {
+        ...params,
+        orderBy: params.orderBy ? 
+          MEETING_ORDER_OPTIONS[params.orderBy.toUpperCase()] || MEETING_ORDER_OPTIONS.DATE_DESC 
+          : MEETING_ORDER_OPTIONS.DATE_DESC
+      };
+      
+      const response = await getMeetingsByContentId(contentId, userId, apiParams);
       return { contentId, meetings: response };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -360,10 +410,10 @@ const courseContentInitialState = {
   meetingError: null,
   fileError: null,
   
-  // Content creation/editing form
+  // Content creation/editing form (FIXED: Use proper enum values)
   contentForm: {
     // Basic content info
-    contentTypeId: CONTENT_TYPES.TEXT,
+    contentTypeId: CONTENT_TYPES.TEXT_BOX, // FIXED: Use proper enum
     title: '',
     description: '',
     body: '',
@@ -424,7 +474,7 @@ const courseContentInitialState = {
     isFullscreen: false,
     showControls: true,
     showSubtitles: false,
-    selectedSubtitleLanguage: 'en',
+    selectedSubtitleLanguage: SUBTITLE_LANGUAGES.ENGLISH, // FIXED: Use enum
   },
   
   // Video interactions (overlay elements)
@@ -456,7 +506,7 @@ const courseContentInitialState = {
     },
   },
   
-  // Filters and search
+  // Filters and search (FIXED: Use proper enum values)
   filters: {
     contentType: '',
     search: '',
@@ -488,7 +538,7 @@ const courseContentInitialState = {
     commentCounts: {}, // { contentId: count }
   },
   
-  // Statistics
+  // Statistics (FIXED: Use proper enum for content types)
   statistics: {
     totalContents: 0,
     totalVideos: 0,
@@ -496,12 +546,13 @@ const courseContentInitialState = {
     totalMeetings: 0,
     totalFileSize: 0,
     contentTypes: {
-      [CONTENT_TYPES.TEXT]: 0,
-      [CONTENT_TYPES.VIDEO]: 0,
-      [CONTENT_TYPES.AUDIO]: 0,
-      [CONTENT_TYPES.IMAGE]: 0,
-      [CONTENT_TYPES.FILE]: 0,
+      [CONTENT_TYPES.PAGE]: 0,
+      [CONTENT_TYPES.TEXT_BOX]: 0,
       [CONTENT_TYPES.QUIZ]: 0,
+      [CONTENT_TYPES.WEB_URL]: 0,
+      [CONTENT_TYPES.VIDEO]: 0,
+      [CONTENT_TYPES.OTHER_FILE]: 0,
+      [CONTENT_TYPES.PPTX]: 0,
     },
     averageDuration: 0,
     engagementRate: 0,
@@ -514,10 +565,18 @@ const courseContentSlice = createSlice({
   name: 'courseContent',
   initialState: courseContentInitialState,
   reducers: {
-    // Content form management
+    // Content form management (FIXED: Use proper enums)
     setContentForm: (state, action) => {
       state.contentForm = { ...state.contentForm, ...action.payload };
       state.editor.isDirty = true;
+      
+      // FIXED: Validate content type enum
+      if (action.payload.contentTypeId !== undefined) {
+        const validTypes = Object.values(CONTENT_TYPES);
+        if (!validTypes.includes(action.payload.contentTypeId)) {
+          state.contentForm.contentTypeId = CONTENT_TYPES.TEXT_BOX;
+        }
+      }
     },
     
     resetContentForm: (state) => {
@@ -583,9 +642,17 @@ const courseContentSlice = createSlice({
       state.editor.isDirty = false;
     },
     
-    // Video player controls
+    // Video player controls (FIXED: Use proper enums)
     setVideoPlayerState: (state, action) => {
       state.videoPlayer = { ...state.videoPlayer, ...action.payload };
+      
+      // FIXED: Validate subtitle language enum
+      if (action.payload.selectedSubtitleLanguage !== undefined) {
+        const validLanguages = Object.values(SUBTITLE_LANGUAGES);
+        if (!validLanguages.includes(action.payload.selectedSubtitleLanguage)) {
+          state.videoPlayer.selectedSubtitleLanguage = SUBTITLE_LANGUAGES.ENGLISH;
+        }
+      }
     },
     
     playVideo: (state) => {
@@ -617,7 +684,11 @@ const courseContentSlice = createSlice({
     },
     
     setSubtitleLanguage: (state, action) => {
-      state.videoPlayer.selectedSubtitleLanguage = action.payload;
+      // FIXED: Validate subtitle language enum
+      const validLanguages = Object.values(SUBTITLE_LANGUAGES);
+      if (validLanguages.includes(action.payload)) {
+        state.videoPlayer.selectedSubtitleLanguage = action.payload;
+      }
     },
     
     // Content management within sections
@@ -632,6 +703,8 @@ const courseContentSlice = createSlice({
         ...content,
         id: content.id || `temp_${Date.now()}`,
         orderNumber: state.contentsBySection[sectionId].length + 1,
+        // FIXED: Ensure content type is valid
+        type: content.type || CONTENT_TYPES.TEXT_BOX,
       };
       
       state.contentsBySection[sectionId].push(newContent);
@@ -647,10 +720,20 @@ const courseContentSlice = createSlice({
         );
         
         if (contentIndex !== -1) {
-          state.contentsBySection[sectionId][contentIndex] = {
+          // FIXED: Validate content type on update
+          const updatedContent = {
             ...state.contentsBySection[sectionId][contentIndex],
             ...updates,
           };
+          
+          if (updates.type !== undefined) {
+            const validTypes = Object.values(CONTENT_TYPES);
+            if (!validTypes.includes(updates.type)) {
+              updatedContent.type = CONTENT_TYPES.TEXT_BOX;
+            }
+          }
+          
+          state.contentsBySection[sectionId][contentIndex] = updatedContent;
         }
       }
       
@@ -699,9 +782,16 @@ const courseContentSlice = createSlice({
         state.videoInteractions[videoId] = [];
       }
       
+      // FIXED: Validate interaction type
+      const validTypes = Object.values(INTERACTION_TYPES);
+      const interactionType = validTypes.includes(interaction.interactionType) 
+        ? interaction.interactionType 
+        : INTERACTION_TYPES.QUESTION;
+      
       state.videoInteractions[videoId].push({
         ...interaction,
         id: interaction.id || `interaction_${Date.now()}`,
+        interactionType,
       });
     },
     
@@ -714,10 +804,20 @@ const courseContentSlice = createSlice({
         );
         
         if (interactionIndex !== -1) {
-          state.videoInteractions[videoId][interactionIndex] = {
+          // FIXED: Validate interaction type on update
+          const updatedInteraction = {
             ...state.videoInteractions[videoId][interactionIndex],
             ...updates,
           };
+          
+          if (updates.interactionType !== undefined) {
+            const validTypes = Object.values(INTERACTION_TYPES);
+            if (!validTypes.includes(updates.interactionType)) {
+              updatedInteraction.interactionType = INTERACTION_TYPES.QUESTION;
+            }
+          }
+          
+          state.videoInteractions[videoId][interactionIndex] = updatedInteraction;
         }
       }
     },
@@ -994,27 +1094,28 @@ const courseContentSlice = createSlice({
       }
     },
     
-    // Statistics calculation
+    // Statistics calculation (FIXED: Use proper enum values)
     updateStatistics: (state) => {
       const allContents = Object.values(state.contentsBySection).flat();
       const allComments = Object.values(state.commentsByContent).flat();
       const allMeetings = Object.values(state.meetingsByContent).flat();
       
-      // Content type distribution
+      // FIXED: Content type distribution using proper enums
       const contentTypes = allContents.reduce((acc, content) => {
-        const type = content.contentTypeId || CONTENT_TYPES.TEXT;
+        const type = content.type || CONTENT_TYPES.TEXT_BOX;
         acc[type] = (acc[type] || 0) + 1;
         return acc;
       }, {
-        [CONTENT_TYPES.TEXT]: 0,
-        [CONTENT_TYPES.VIDEO]: 0,
-        [CONTENT_TYPES.AUDIO]: 0,
-        [CONTENT_TYPES.IMAGE]: 0,
-        [CONTENT_TYPES.FILE]: 0,
+        [CONTENT_TYPES.PAGE]: 0,
+        [CONTENT_TYPES.TEXT_BOX]: 0,
         [CONTENT_TYPES.QUIZ]: 0,
+        [CONTENT_TYPES.WEB_URL]: 0,
+        [CONTENT_TYPES.VIDEO]: 0,
+        [CONTENT_TYPES.OTHER_FILE]: 0,
+        [CONTENT_TYPES.PPTX]: 0,
       });
       
-      const totalVideos = allContents.filter(c => c.contentTypeId === CONTENT_TYPES.VIDEO).length;
+      const totalVideos = allContents.filter(c => c.type === CONTENT_TYPES.VIDEO).length;
       const totalFileSize = Object.values(state.uploadedFiles).reduce(
         (sum, file) => sum + (file.size || 0), 0
       );
@@ -1057,9 +1158,16 @@ const courseContentSlice = createSlice({
         state.subtitles[videoId] = [];
       }
       
+      // FIXED: Validate language enum
+      const validLanguages = Object.values(SUBTITLE_LANGUAGES);
+      const language = validLanguages.includes(subtitle.language) 
+        ? subtitle.language 
+        : SUBTITLE_LANGUAGES.ENGLISH;
+      
       state.subtitles[videoId].push({
         ...subtitle,
         id: subtitle.id || `subtitle_${Date.now()}`,
+        language,
       });
     },
     
@@ -1069,10 +1177,20 @@ const courseContentSlice = createSlice({
       if (state.subtitles[videoId]) {
         const subtitleIndex = state.subtitles[videoId].findIndex(s => s.id === subtitleId);
         if (subtitleIndex !== -1) {
-          state.subtitles[videoId][subtitleIndex] = {
+          const updatedSubtitle = {
             ...state.subtitles[videoId][subtitleIndex],
             ...updates,
           };
+          
+          // FIXED: Validate language enum on update
+          if (updates.language !== undefined) {
+            const validLanguages = Object.values(SUBTITLE_LANGUAGES);
+            if (!validLanguages.includes(updates.language)) {
+              updatedSubtitle.language = SUBTITLE_LANGUAGES.ENGLISH;
+            }
+          }
+          
+          state.subtitles[videoId][subtitleIndex] = updatedSubtitle;
         }
       }
     },
@@ -1115,10 +1233,15 @@ const courseContentSlice = createSlice({
       }
       
       contents.forEach((content, index) => {
+        // FIXED: Validate content type on import
+        const validTypes = Object.values(CONTENT_TYPES);
+        const contentType = validTypes.includes(content.type) ? content.type : CONTENT_TYPES.TEXT_BOX;
+        
         const importedContent = {
           ...content,
           id: `imported_${Date.now()}_${index}`,
           orderNumber: state.contentsBySection[sectionId].length + index + 1,
+          type: contentType,
         };
         
         state.contentsBySection[sectionId].push(importedContent);
@@ -1306,7 +1429,7 @@ const courseContentSlice = createSlice({
         state.videoInteractions[videoId] = interactions;
       })
       
-      .addCase(addVideoInteractionAsync.fulfilled, (state, action) => {
+      .addCase(updateVideoInteractionAsync.fulfilled, (state, action) => {
         const interaction = action.payload;
         const videoId = interaction.videoId;
         
@@ -1314,7 +1437,13 @@ const courseContentSlice = createSlice({
           state.videoInteractions[videoId] = [];
         }
         
-        state.videoInteractions[videoId].push(interaction);
+        // Find and update existing interaction or add new one
+        const existingIndex = state.videoInteractions[videoId].findIndex(i => i.id === interaction.id);
+        if (existingIndex !== -1) {
+          state.videoInteractions[videoId][existingIndex] = interaction;
+        } else {
+          state.videoInteractions[videoId].push(interaction);
+        }
       })
       
       // Subtitles
@@ -1649,6 +1778,7 @@ export const selectVideoPlayerTime = (state) => {
   };
 };
 
+// FIXED: Content type distribution with proper enum names
 export const selectContentTypeDistribution = (state) => {
   const stats = state.courseContent.statistics;
   const total = stats.totalContents;
@@ -1656,11 +1786,30 @@ export const selectContentTypeDistribution = (state) => {
   if (total === 0) return [];
   
   return Object.entries(stats.contentTypes).map(([type, count]) => ({
-    type,
+    type: parseInt(type),
     name: getContentTypeName(parseInt(type)),
     count,
     percentage: Math.round((count / total) * 100),
   }));
 };
 
+// FIXED: Subtitle language options
+export const selectSubtitleLanguageOptions = () => {
+  return Object.entries(SUBTITLE_LANGUAGES).map(([key, value]) => ({
+    value: value,
+    label: getLanguageName(value),
+    key: key.toLowerCase()
+  }));
+};
+
+// FIXED: Content type options  
+export const selectContentTypeOptions = () => {
+  return Object.entries(CONTENT_TYPES).map(([key, value]) => ({
+    value: value,
+    label: getContentTypeName(value),
+    key: key.toLowerCase()
+  }));
+};
+
 export default courseContentSlice.reducer;
+  

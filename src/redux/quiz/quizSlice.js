@@ -44,7 +44,14 @@ export const addQuizAsync = createAsyncThunk(
   'quiz/addQuiz',
   async (quizData, { rejectWithValue }) => {
     try {
-      const response = await addQuiz(quizData);
+      // FIXED: Ensure proper data structure for API
+      const apiData = {
+        contentId: quizData.contentId,
+        duration: quizData.duration || 60,
+        canSkip: quizData.canSkip || false
+      };
+      
+      const response = await addQuiz(apiData);
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -56,7 +63,24 @@ export const addQuestionsAsync = createAsyncThunk(
   'quiz/addQuestions',
   async (questionsData, { rejectWithValue }) => {
     try {
-      const response = await addQuestions(questionsData);
+      // FIXED: Ensure proper data structure - API expects { questions: [...] }
+      const apiData = {
+        questions: questionsData.questions.map(question => ({
+          quizId: question.quizId,
+          text: question.text || "",
+          title: question.title || "",
+          questionRate: question.questionRate || 1,
+          duration: {
+            ticks: question.duration ? question.duration * 10000000 : 300000000 // 30 seconds default
+          },
+          hasDuration: question.hasDuration !== undefined ? question.hasDuration : true,
+          canSkip: question.canSkip || false,
+          questionType: question.questionType || 1,
+          categories: question.categories || [],
+        }))
+      };
+      
+      const response = await addQuestions(apiData);
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -68,7 +92,19 @@ export const addOptionsAsync = createAsyncThunk(
   'quiz/addOptions',
   async (optionsData, { rejectWithValue }) => {
     try {
-      const response = await addOptions(optionsData);
+      // FIXED: Ensure proper data structure - API expects { options: [...] }
+      const apiData = {
+        options: optionsData.options.map(option => ({
+          questionId: option.questionId,
+          text: option.text || "",
+          isCorrect: option.isCorrect || false,
+          order: option.order || 0,
+          gapText: option.gapText || option.text,
+          category: option.category || "",
+        }))
+      };
+      
+      const response = await addOptions(apiData);
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -260,7 +296,7 @@ const quizSlice = createSlice({
       }
     },
     
-    // Question management
+    // Question management (FIXED: Use correct question type mapping)
     addQuestion: (state, action) => {
       const questionType = action.payload || state.selectedQuestionType;
       const template = state.questionTemplates[questionType];
@@ -271,6 +307,8 @@ const quizSlice = createSlice({
           id: `temp_${Date.now()}`,
           title: `Question ${state.currentQuiz.questions.length + 1}`,
           orderNumber: state.currentQuiz.questions.length + 1,
+          // FIXED: Map question type to API enum
+          questionType: getQuestionTypeId(questionType),
         };
         
         state.currentQuiz.questions.push(newQuestion);
@@ -436,11 +474,11 @@ const quizSlice = createSlice({
       const index = action.payload;
       
       if (state.currentQuestion.content.answers) {
+        const removedAnswer = state.currentQuestion.content.answers[index];
         state.currentQuestion.content.answers.splice(index, 1);
         
         // Remove from correct answers if it was selected
         if (state.currentQuestion.content.correctAnswers) {
-          const removedAnswer = state.currentQuestion.content.answers[index];
           state.currentQuestion.content.correctAnswers = state.currentQuestion.content.correctAnswers.filter(
             answer => answer !== removedAnswer
           );
@@ -855,6 +893,20 @@ const quizSlice = createSlice({
   },
 });
 
+// ======================== HELPER FUNCTIONS ========================
+
+// FIXED: Helper function to get question type ID for API
+const getQuestionTypeId = (type) => {
+  const typeMap = {
+    choice: 1, // Single choice
+    multiple: 2, // Multiple choice
+    reorder: 3, // Reorder
+    fillgap: 4, // Fill in the gap
+    categorize: 5, // Categorize
+  };
+  return typeMap[type] || 1;
+};
+
 // ======================== ACTIONS EXPORT ========================
 
 export const quizActions = quizSlice.actions;
@@ -1044,7 +1096,7 @@ export const selectExportData = (state) => {
   return {
     ...state.quiz.exportData,
     formattedQuiz: formatQuizForDisplay(state.quiz.currentQuiz),
-    summary: quizSlice.getSelectors().selectQuizSummary(state),
+    summary: selectQuizSummary(state),
   };
 };
 

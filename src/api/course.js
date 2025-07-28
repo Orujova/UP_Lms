@@ -26,7 +26,7 @@ export const getImageUrl = (url) => {
 
 // ======================== COURSE ENDPOINTS ========================
 
-// Fetch all courses
+// Fetch all courses (FIXED ORDER BY)
 export const fetchCourses = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
@@ -40,9 +40,21 @@ export const fetchCourses = async (params = {}) => {
       queryParams.append("MinDuration", params.minDuration);
     if (params.maxDuration)
       queryParams.append("MaxDuration", params.maxDuration);
-    if (params.orderBy) queryParams.append("OrderBy", params.orderBy);
     if (params.courseCategoryName)
       queryParams.append("CourseCategoryName", params.courseCategoryName);
+
+    // FIXED: Add proper orderBy parameter based on API documentation
+    if (params.orderBy) {
+      const orderByMap = {
+        'nameasc': 'nameasc',
+        'namedesc': 'namedesc',
+        'dateasc': 'dateasc',
+        'datedesc': 'datedesc',
+        'durationasc': 'durationasc',
+        'durationdesc': 'durationdesc'
+      };
+      queryParams.append("OrderBy", orderByMap[params.orderBy.toLowerCase()] || 'nameasc');
+    }
 
     const url = `${API_URL}Course${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -119,7 +131,7 @@ export const fetchCourseById = async (courseId, userId = null) => {
   }
 };
 
-// Create course using AddCourse endpoint
+// Fixed createCourse function in course.js
 export const createCourse = async (courseData) => {
   try {
     const token = getToken();
@@ -129,78 +141,110 @@ export const createCourse = async (courseData) => {
       throw new Error("Authentication token not found. Please login again.");
     }
 
+    console.log("Creating course with data:", courseData);
+
     const formData = new FormData();
 
-    // Required fields
+    // Required fields - these MUST be provided
     formData.append("Name", courseData.name || "");
     formData.append("Description", courseData.description || "");
-    formData.append("Duration", (courseData.duration || 200).toString());
+    formData.append("Duration", (courseData.duration || 60).toString());
     formData.append("CategoryId", (courseData.categoryId || "").toString());
-    formData.append("UserId", userId);
+    formData.append("UserId", (userId || "").toString());
 
-    // Optional fields
-    if (courseData.verifiedCertificate !== undefined) {
-      formData.append("VerifiedCertificate", courseData.verifiedCertificate.toString());
+    // Boolean fields - always include with explicit true/false
+    formData.append("VerifiedCertificate", (courseData.verifiedCertificate || false).toString());
+    formData.append("AutoReassign", (courseData.autoReassign || false).toString());
+    formData.append("ClusterIsMandatory", (courseData.clusterIsMandatory || false).toString());
+
+    // Optional integer fields - only add if they have valid values
+    if (courseData.certificateId && courseData.certificateId !== null && courseData.certificateId !== "") {
+      formData.append("CertificateId", courseData.certificateId.toString());
     }
 
+    if (courseData.startDuration && courseData.startDuration !== null && courseData.startDuration !== "") {
+      formData.append("StartDuration", courseData.startDuration.toString());
+    }
+
+    if (courseData.deadline && courseData.deadline !== null && courseData.deadline !== "") {
+      formData.append("DeadLine", courseData.deadline.toString());
+    }
+
+    // Cluster settings - DÜZƏLDILMIŞ HISSƏ
+    if (courseData.clusterId && courseData.clusterId !== null && courseData.clusterId !== "") {
+      formData.append("ClusterId", courseData.clusterId.toString());
+      
+      // ClusterCoefficient - BURA ƏHƏMİYYƏTLİDİR: 0 dəyərini də daxil et
+      if (courseData.clusterCoefficient !== null && courseData.clusterCoefficient !== undefined) {
+        console.log('🔧 Adding ClusterCoefficient to FormData:', courseData.clusterCoefficient);
+        formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
+      } else {
+        // Əgər clusterId var amma coefficient yoxdursa, avtomatik 0 təyin et
+        console.log('🔧 No coefficient provided for cluster, setting to 0');
+        formData.append("ClusterCoefficient", "0");
+      }
+    }
+
+    if (courseData.clusterOrderNumber && courseData.clusterOrderNumber !== null && courseData.clusterOrderNumber !== "") {
+      formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
+    }
+
+    // Image file - only add if provided
     if (courseData.imageFile && courseData.imageFile instanceof File) {
       formData.append("ImageFile", courseData.imageFile);
     }
 
-    if (courseData.certificateId) {
-      formData.append("CertificateId", courseData.certificateId.toString());
-    }
-
-    // Arrays - Target Groups
-    if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds)) {
+    // Arrays - Target Groups (only add if array has items)
+    if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds) && courseData.targetGroupIds.length > 0) {
       courseData.targetGroupIds.forEach((id) => {
-        formData.append("TargetGroupIds", id.toString());
+        if (id !== null && id !== undefined && id !== "") {
+          formData.append("TargetGroupIds", id.toString());
+        }
       });
     }
 
-    // Arrays - Tags
-    if (courseData.tagIds && Array.isArray(courseData.tagIds)) {
+    // Arrays - Tags (only add if array has items)  
+    if (courseData.tagIds && Array.isArray(courseData.tagIds) && courseData.tagIds.length > 0) {
       courseData.tagIds.forEach((id) => {
-        formData.append("TagIds", id.toString());
+        if (id !== null && id !== undefined && id !== "") {
+          formData.append("TagIds", id.toString());
+        }
       });
     }
 
-    // Advanced settings
-    if (courseData.startDuration) {
-      formData.append("StartDuration", courseData.startDuration.toString());
+    if (courseData.successionRates && Array.isArray(courseData.successionRates) && courseData.successionRates.length > 0) {
+  console.log('🔧 Processing SuccessionRates:', courseData.successionRates);
+  
+  // Her bir succession rate üçün JSON formatda göndər
+  courseData.successionRates.forEach((rate, index) => {
+    // Only add succession rates that have valid data
+    if (rate.minRange !== null && rate.minRange !== undefined && 
+        rate.maxRange !== null && rate.maxRange !== undefined) {
+      
+      // JSON obyekti yarad
+      const rateObject = {
+        minRange: parseInt(rate.minRange),
+        maxRange: parseInt(rate.maxRange)
+      };
+      
+      // Badge ID - yalnız valid olanları əlavə et
+      if (rate.badgeId && rate.badgeId !== null && rate.badgeId !== undefined && 
+          typeof rate.badgeId === 'number' && !isNaN(rate.badgeId)) {
+        rateObject.badgeId = parseInt(rate.badgeId);
+      }
+      
+      console.log(`🔧 Adding SuccessionRate[${index}]:`, rateObject);
+      
+      // JSON string kimi göndər - Swagger-də olduğu kimi
+      formData.append(`SuccessionRates`, JSON.stringify(rateObject));
     }
+  });
+}
 
-    if (courseData.deadline) {
-      formData.append("DeadLine", courseData.deadline.toString());
-    }
-
-    if (courseData.autoReassign !== undefined) {
-      formData.append("AutoReassign", courseData.autoReassign.toString());
-    }
-
-    // Cluster settings
-    if (courseData.clusterId) {
-      formData.append("ClusterId", courseData.clusterId.toString());
-    }
-
-    if (courseData.clusterOrderNumber) {
-      formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
-    }
-
-    if (courseData.clusterCoefficient) {
-      formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
-    }
-
-    if (courseData.clusterIsMandatory !== undefined) {
-      formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
-    }
-
-    // Succession rates
-    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
-      courseData.successionRates.forEach((rate, index) => {
-        formData.append(`SuccessionRates[${index}].Rate`, rate.rate.toString());
-        formData.append(`SuccessionRates[${index}].Description`, rate.description || "");
-      });
+    // Debug: Log what we're sending
+    console.log("FormData contents:");
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
     }
 
     const response = await axios.post(`${API_URL}Course/AddCourse`, formData, {
@@ -210,14 +254,48 @@ export const createCourse = async (courseData) => {
       },
     });
 
+    console.log("Course created successfully:", response.data);
+
+    // Handle API response - check if it's actually successful
+    if (response.data && response.data.success === false) {
+      // This is a business logic error, not a technical error
+      throw new Error(response.data.message || "Course creation failed due to business rules");
+    }
+
     return response.data;
   } catch (error) {
     console.error("Error creating course:", error);
-    throw new Error("Failed to create course: " + (error.response?.data?.detail || error.message));
+    
+    // Log more details about the error
+    if (error.response) {
+      console.error("Error response status:", error.response.status);
+      console.error("Error response data:", error.response.data);
+      console.error("Error response headers:", error.response.headers);
+    }
+    
+    // Provide more specific error messages
+    let errorMessage = "Failed to create course";
+    
+    if (error.message && error.message.includes("katsayısı")) {
+      // Turkish cluster coefficient error
+      errorMessage = "Cannot add course: Adding this course would exceed the cluster's maximum coefficient limit (100). Please reduce the coefficient or choose a different cluster.";
+    } else if (error.response?.data?.detail) {
+      errorMessage += ": " + error.response.data.detail;
+    } else if (error.response?.data?.title) {
+      errorMessage += ": " + error.response.data.title;
+    } else if (error.response?.data?.message) {
+      errorMessage += ": " + error.response.data.message;
+    } else if (error.response?.status === 500) {
+      errorMessage += ": Server error - please check your data and try again";
+    } else {
+      errorMessage += ": " + error.message;
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 
-// Update course using UpdateCourse endpoint
+// Update course using UpdateCourse endpoint - DÜZƏLDILMIŞ
 export const updateCourse = async (courseData) => {
   try {
     const formData = new FormData();
@@ -272,36 +350,36 @@ export const updateCourse = async (courseData) => {
       formData.append("PublishCourse", courseData.publishCourse.toString());
     }
 
-    if (courseData.hasEvalution !== undefined) {
-      formData.append("HasEvalution", courseData.hasEvalution.toString());
-    }
-
     if (courseData.userId) {
       formData.append("UserId", courseData.userId.toString());
     }
 
-    // Cluster settings
+    // Cluster settings - DÜZƏLDILMIŞ
     if (courseData.clusterId) {
       formData.append("ClusterId", courseData.clusterId.toString());
+      
+      // ClusterCoefficient - 0 dəyərini də daxil et
+      if (courseData.clusterCoefficient !== null && courseData.clusterCoefficient !== undefined) {
+        formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
+      }
     }
 
     if (courseData.clusterOrderNumber) {
       formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
     }
 
-    if (courseData.clusterCoefficient) {
-      formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
-    }
-
     if (courseData.clusterIsMandatory !== undefined) {
       formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
     }
 
-    // Succession rates
+    // FIXED: Succession rates - proper structure
     if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
       courseData.successionRates.forEach((rate, index) => {
-        formData.append(`SuccessionRates[${index}].Rate`, rate.rate.toString());
-        formData.append(`SuccessionRates[${index}].Description`, rate.description || "");
+        formData.append(`SuccessionRates[${index}].MinRange`, (rate.minRange || 0).toString());
+        formData.append(`SuccessionRates[${index}].MaxRange`, (rate.maxRange || 100).toString());
+        if (rate.badgeId && rate.badgeId !== null) {
+          formData.append(`SuccessionRates[${index}].BadgeId`, rate.badgeId.toString());
+        }
       });
     }
 
@@ -318,7 +396,6 @@ export const updateCourse = async (courseData) => {
     throw new Error("Failed to update course: " + (error.response?.data?.detail || error.message));
   }
 };
-
 // Delete course
 export const deleteCourse = async (courseId) => {
   try {
@@ -629,6 +706,24 @@ export const validateCourseData = (courseData) => {
     errors.push("Start duration must be less than deadline");
   }
 
+  // FIXED: Validate succession rates structure
+  if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
+    courseData.successionRates.forEach((rate, index) => {
+      if (rate.minRange === undefined || rate.minRange === null) {
+        errors.push(`Succession rate ${index + 1}: Min range is required`);
+      }
+      if (rate.maxRange === undefined || rate.maxRange === null) {
+        errors.push(`Succession rate ${index + 1}: Max range is required`);
+      }
+      if (rate.minRange >= rate.maxRange) {
+        errors.push(`Succession rate ${index + 1}: Min range must be less than max range`);
+      }
+      if (rate.minRange < 0 || rate.maxRange > 100) {
+        errors.push(`Succession rate ${index + 1}: Range must be between 0 and 100`);
+      }
+    });
+  }
+
   return errors;
 };
 
@@ -663,7 +758,7 @@ export const formatCourseForDisplay = (course) => {
     formattedDuration: formatDuration(course.duration),
     formattedCreatedDate: new Date(course.createdDate).toLocaleDateString(),
     isPublished: course.publishCourse,
-    hasEvaluation: course.hasEvalution,
+
     sectionsCount: course.totalSection || 0,
     contentsCount: course.totalContent || 0,
     videosCount: course.totalVideos || 0,
@@ -715,6 +810,33 @@ export const calculateCourseCompletion = (course) => {
   return totalContent > 0 ? Math.round((completedContent / totalContent) * 100) : 0;
 };
 
+// ======================== CONSTANTS ========================
+
+// Course order by options - FIXED based on API documentation
+export const COURSE_ORDER_OPTIONS = {
+  NAME_ASC: 'nameasc',
+  NAME_DESC: 'namedesc',
+  DATE_ASC: 'dateasc', 
+  DATE_DESC: 'datedesc',
+  DURATION_ASC: 'durationasc',
+  DURATION_DESC: 'durationdesc'
+};
+
+// Course difficulty levels
+export const COURSE_DIFFICULTY_LEVELS = {
+  BEGINNER: 'beginner',
+  INTERMEDIATE: 'intermediate',
+  ADVANCED: 'advanced'
+};
+
+// Succession rate validation constants
+export const SUCCESSION_RATE_LIMITS = {
+  MIN_RANGE: 0,
+  MAX_RANGE: 100,
+  MIN_ITEMS: 1,
+  MAX_ITEMS: 10
+};
+
 export default {
   // Core operations
   fetchCourses,
@@ -754,4 +876,9 @@ export default {
   formatDuration,
   getCourseDifficulty,
   calculateCourseCompletion,
+  
+  // Constants
+  COURSE_ORDER_OPTIONS,
+  COURSE_DIFFICULTY_LEVELS,
+  SUCCESSION_RATE_LIMITS,
 };

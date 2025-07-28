@@ -1,29 +1,27 @@
+'use client'
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
 import { 
-  ArrowLeft, 
+  ChevronLeft, 
+  ChevronRight, 
   Save, 
   Eye, 
-  Settings, 
   Users, 
   BookOpen, 
-  CheckCircle, 
-  Clock, 
+  Target,
+  CheckCircle,
+  Clock,
   AlertCircle,
-  FileText,
-  Play,
-  Star,
-  ChevronRight
+  Loader2,
+  Globe,
+  Settings
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import {
-  setCurrentStep,
-  prevStep,
   nextStep,
-  createCourseAsync,
-  updateCourseAsync,
-  publishCourseAsync,
-  resetFormData
+  prevStep,
+  setCurrentStep,
+  setModalOpen
 } from "@/redux/course/courseSlice";
 
 const CourseCreateLayout = ({ children, isEditing = false }) => {
@@ -33,345 +31,330 @@ const CourseCreateLayout = ({ children, isEditing = false }) => {
   const { 
     currentStep, 
     formData, 
-    loading, 
-    currentCourse,
-    sections = []
+    sections,
+    loading,
+    currentCourse
   } = useSelector((state) => state.course || {});
 
   const steps = [
-    { 
-      id: 1, 
-      title: "Course Basics", 
-      subtitle: "Name, description & category",
+    {
+      number: 1,
+      title: "Course Information",
+      description: "Basic course details",
       icon: BookOpen
     },
-    { 
-      id: 2, 
-      title: "Build Content", 
-      subtitle: "Add sections & materials",
-      icon: FileText
+    {
+      number: 2,
+      title: "Course Content",
+      description: "Add sections and materials",
+      icon: Settings
     },
-    { 
-      id: 3, 
-      title: "Launch Course", 
-      subtitle: "Assign to groups & publish",
-      icon: Star
+    {
+      number: 3,
+      title: "Target Groups",
+      description: "Assign and publish",
+      icon: Target
     }
   ];
 
-  const handleSave = async () => {
-    try {
-      if (isEditing && currentCourse?.id) {
-        await dispatch(updateCourseAsync({ 
-          ...formData, 
-          id: currentCourse.id 
-        })).unwrap();
-      } else {
-        const result = await dispatch(createCourseAsync(formData)).unwrap();
-        if (result?.id) {
-          router.push(`admin/dashboard/courses/edit/${result.id}`);
-        }
-      }
-    } catch (error) {
-      console.error("Save failed:", error);
+  // Sadə validation - yalnız course yaradılıb yaradılmadığını yoxlayaq
+  const canProceedToStep2 = !!currentCourse?.id;
+  const canProceedToStep3 = !!currentCourse?.id; // Step 3 üçün də yalnız course ID lazımdır
+
+  const handleNext = () => {
+    if (currentStep === 1 && !canProceedToStep2) {
+      alert("Əvvəlcə kursu yadda saxlayın!");
+      return;
     }
-  };
-
-  const handlePublish = async () => {
-    if (currentCourse?.id) {
-      try {
-        await dispatch(publishCourseAsync(currentCourse.id)).unwrap();
-      } catch (error) {
-        console.error("Publish failed:", error);
-      }
-    }
-  };
-
-  const handleBack = () => {
-    router.push("admin/dashboard/courses");
-  };
-
-  const isStepComplete = (stepId) => {
-    switch (stepId) {
-      case 1:
-        return formData?.name && formData?.description && formData?.categoryId;
-      case 2:
-        return sections && sections.length > 0 && sections.some(s => s.contents && s.contents.length > 0);
-      case 3:
-        return formData?.targetGroupIds && formData?.targetGroupIds.length > 0;
-      default:
-        return false;
-    }
-  };
-
-  const canProceedToNext = () => {
-    return isStepComplete(currentStep);
-  };
-
-  const getOverallProgress = () => {
-    const completedSteps = steps.filter(step => isStepComplete(step.id)).length;
-    return Math.round((completedSteps / steps.length) * 100);
-  };
-
-  const getCourseStats = () => {
-    const totalSections = sections.length;
-    const totalContent = sections.reduce((total, section) => total + (section.contents?.length || 0), 0);
-    const estimatedDuration = sections.reduce((total, section) => total + (section.duration || 0), 0);
-    const targetGroups = formData?.targetGroupIds?.length || 0;
     
-    return { totalSections, totalContent, estimatedDuration, targetGroups };
+    if (currentStep < 3) {
+      dispatch(nextStep());
+    }
   };
 
-  const stats = getCourseStats();
-  const overallProgress = getOverallProgress();
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      dispatch(prevStep());
+    }
+  };
+
+  const handleStepClick = (stepNumber) => {
+    // Sadə məntiqi - əgər kurs yaradılıbsa bütün step-lərə icazə ver
+    if (stepNumber === 1) {
+      dispatch(setCurrentStep(stepNumber));
+    } else if (stepNumber === 2 && canProceedToStep2) {
+      dispatch(setCurrentStep(stepNumber));
+    } else if (stepNumber === 3 && canProceedToStep3) {
+      dispatch(setCurrentStep(stepNumber));
+    } else if (stepNumber > 1 && !currentCourse?.id) {
+      alert("Əvvəlcə kursu yaradın!");
+    }
+  };
+
+  const getStepStatus = (stepNumber) => {
+    if (stepNumber < currentStep) return 'completed';
+    if (stepNumber === currentStep) return 'active';
+    
+    // Növbəti step-lər üçün yoxlama
+    if (stepNumber === 2 && canProceedToStep2) return 'available';
+    if (stepNumber === 3 && canProceedToStep3) return 'available';
+    
+    return 'disabled';
+  };
+
+  const getStepMessage = () => {
+    switch (currentStep) {
+      case 1:
+        if (!currentCourse?.id) {
+          return "Kurs məlumatlarını doldurun və yadda saxlayın";
+        }
+        return "Kurs uğurla yaradıldı!";
+      case 2:
+        return "Kurs strukturunu qurun";
+      case 3:
+        return "Hədəf qrupları təyin edin";
+      default:
+        return "";
+    }
+  };
+
+  const stepMessage = getStepMessage();
+  const isError = stepMessage.includes("doldurun") || stepMessage.includes("yaradın");
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-14">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b rounded-lg border-gray-200">
-        <div className=" px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Left */}
-            <div className="flex items-center gap-2">
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Sol tərəf */}
+            <div className="flex items-center space-x-4">
               <button
-                onClick={handleBack}
-                className="p-1.5 text-gray-500 hover:text-[#0AAC9E] hover:bg-gray-50 rounded-lg transition-colors"
+                onClick={() => router.push('/courses')}
+                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5 mr-1" />
+                Kurslara qayıt
               </button>
-              
+              <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-base font-semibold text-gray-900">
-                  {isEditing ? "Edit Course" : "Create Course"}
+                <h1 className="text-xl font-semibold text-gray-900">
+                  {isEditing ? 'Kursu Redaktə Et' : 'Yeni Kurs Yarat'}
                 </h1>
-                <p className="text-xs text-gray-500">
-                  {formData?.name || " "}
-                </p>
+                {currentCourse?.name && (
+                  <p className="text-sm text-gray-500">{currentCourse.name}</p>
+                )}
               </div>
             </div>
 
-            {/* Right */}
-            <div className="flex items-center gap-3">
-              {/* Progress */}
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-gray-600">
-                  <span className="font-medium">{overallProgress}%</span> complete
-                </div>
-                <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                  <div 
-                    className="h-1.5 bg-[#0AAC9E] rounded-full transition-all duration-300"
-                    style={{ width: `${overallProgress}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              {isEditing && currentCourse && (
-                <button
-                  onClick={() => router.push(`/courses/preview/${currentCourse.id}`)}
-                  className="px-2 py-1.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-xs"
-                >
-                  Preview
-                </button>
-              )}
-              
+            {/* Sağ tərəf */}
+            <div className="flex items-center space-x-3">
               <button
-                onClick={handleSave}
-                disabled={loading}
-                className="px-3 py-1.5 bg-[#0AAC9E] hover:bg-[#0AAC9E]/90 text-white rounded-lg transition-colors text-xs font-medium disabled:opacity-50"
+                onClick={() => dispatch(setModalOpen({ modal: 'coursePreview', isOpen: true }))}
+                disabled={!currentCourse?.id}
+                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? "Saving..." : "Save"}
+                <Eye className="w-4 h-4 mr-2" />
+                Önizləmə
               </button>
+
+              {currentCourse?.id && (
+                <button
+                  onClick={() => dispatch(setModalOpen({ modal: 'assignUsers', isOpen: true }))}
+                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 transition-colors"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  İstifadəçi Təyin Et
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Steps Navigation */}
-      <div className="bg-gray-50 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = isStepComplete(step.id);
-              const isAccessible = step.id <= currentStep || isCompleted;
-
-              return (
-                <React.Fragment key={step.id}>
-                  <button
-                    onClick={() => isAccessible && dispatch(setCurrentStep(step.id))}
-                    disabled={!isAccessible}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-[#0AAC9E]/10 border-2 border-[#0AAC9E]/30"
-                        : isCompleted
-                        ? "bg-[#0AAC9E]/5 border-2 border-[#0AAC9E]/20 hover:bg-[#0AAC9E]/10"
-                        : isAccessible
-                        ? "hover:bg-gray-100 border-2 border-transparent"
-                        : "opacity-50 cursor-not-allowed border-2 border-transparent"
-                    }`}
-                  >
-                    <div className={`p-1.5 rounded-lg ${
-                      isActive
-                        ? "bg-[#0AAC9E] text-white"
-                        : isCompleted
-                        ? "bg-[#0AAC9E] text-white"
-                        : isAccessible
-                        ? "bg-gray-200 text-gray-600"
-                        : "bg-gray-100 text-gray-400"
-                    }`}>
-                      {isCompleted && !isActive ? (
-                        <div>
-                          <CheckCircle className="w-4 h-3" /> 
-                        </div>
-                       
-                      ) : (
-                        <div>
-                          <Icon className="w-4 h-3" />
-                        </div>
-                        
-                      )}
-                    </div>
-                    
-                    <div className="text-left">
-                      <div className={`text-xs font-medium ${
-                        isActive
-                          ? "text-[#0AAC9E]"
-                          : isCompleted
-                          ? "text-[#0AAC9E]"
-                          : isAccessible
-                          ? "text-gray-700"
-                          : "text-gray-500"
-                      }`}>
-                        {step.title}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {step.subtitle}
-                      </div>
-                    </div>
-                  </button>
-
-                  {index < steps.length - 1 && (
-                    <div className="flex-1 flex items-center justify-center px-1">
-                      <div className={`h-0.5 w-full rounded-full ${
-                        isStepComplete(step.id) ? "bg-[#0AAC9E]/50" : "bg-gray-300"
-                      }`}></div>
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Course Status Banner */}
-      {isEditing && currentCourse && (
-        <div className={`${
-          currentCourse.publishCourse 
-            ? "bg-[#0AAC9E]/10 border-[#0AAC9E]/30" 
-            : "bg-amber-50 border-amber-200"
-        } border-b`}>
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`p-2 rounded-lg ${
-                  currentCourse.publishCourse 
-                    ? "bg-[#0AAC9E]/20 text-[#0AAC9E]" 
-                    : "bg-amber-100 text-amber-600"
-                }`}>
-                  {currentCourse.publishCourse ? (
-                    <CheckCircle className="w-4 h-4" />
-                  ) : (
-                    <Clock className="w-4 h-4" />
-                  )}
-                </div>
-                <div>
-                  <h3 className={`text-sm font-semibold ${
-                    currentCourse.publishCourse ? "text-[#0AAC9E]" : "text-amber-800"
-                  }`}>
-                    {currentCourse.publishCourse ? "Course Published" : "Draft Status"}
-                  </h3>
-                  <p className="text-xs text-gray-600">
-                    {currentCourse.publishCourse 
-                      ? "Your course is live and available to learners" 
-                      : "Complete all steps to publish your course"
-                    }
-                  </p>
-                </div>
+      {/* Kurs yaradıldığında uğur mesajı */}
+      {currentCourse?.id && (
+        <div className="bg-green-50 border-b border-green-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-3">
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                <span className="text-sm font-medium text-green-800">
+                  Kurs uğurla yaradıldı! ID: #{currentCourse.id}
+                </span>
+                <span className="ml-4 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                  Qaralama
+                </span>
               </div>
-              
-              {!currentCourse.publishCourse && overallProgress === 100 && (
-                <button
-                  onClick={handlePublish}
-                  className="flex items-center gap-1 px-3 py-2 bg-[#0AAC9E] hover:bg-[#0AAC9E]/90 text-white rounded-lg font-medium transition-all duration-200 text-xs"
-                >
-                  <div><Play className="w-4 h-3" /></div>
-                  
-                  <span>Publish Course</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1  py-6">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {children}
+      {/* Progress Steps */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <nav aria-label="Progress">
+              <ol className="flex items-center justify-center space-x-8">
+                {steps.map((step, index) => {
+                  const status = getStepStatus(step.number);
+                  const StepIcon = step.icon;
+                  
+                  return (
+                    <li key={step.number} className="flex items-center">
+                      {/* Step */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => handleStepClick(step.number)}
+                          disabled={status === 'disabled'}
+                          className={`
+                            flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-200
+                            ${status === 'completed' 
+                              ? 'bg-[#0AAC9E] border-[#0AAC9E] text-white' 
+                              : status === 'active'
+                              ? 'bg-[#0AAC9E] border-[#0AAC9E] text-white ring-4 ring-[#0AAC9E]/20'
+                              : status === 'available'
+                              ? 'bg-white border-[#0AAC9E] text-[#0AAC9E] hover:bg-[#0AAC9E]/5 cursor-pointer'
+                              : 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                            }
+                          `}
+                        >
+                          {status === 'completed' ? (
+                            <CheckCircle className="w-6 h-6" />
+                          ) : (
+                            <StepIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                        
+                        <div className="mt-3 text-center">
+                          <p className={`text-sm font-medium ${
+                            status === 'active' ? 'text-[#0AAC9E]' :
+                            status === 'completed' ? 'text-[#0AAC9E]' :
+                            status === 'available' ? 'text-gray-900' :
+                            'text-gray-400'
+                          }`}>
+                            {step.title}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bağlayıcı xətt */}
+                      {index < steps.length - 1 && (
+                        <div className={`w-16 h-0.5 mx-4 ${
+                          getStepStatus(step.number + 1) !== 'disabled' 
+                            ? 'bg-[#0AAC9E]' 
+                            : 'bg-gray-300'
+                        }`} />
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
+
+            {/* Hazırki step-in statusu */}
+            <div className="mt-4 text-center">
+              <div className={`inline-flex items-center px-4 py-2 rounded-lg border ${
+                isError ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
+              }`}>
+                {isError ? (
+                  <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                )}
+                <span className={`text-sm font-medium ${
+                  isError ? 'text-red-800' : 'text-green-800'
+                }`}>
+                  {stepMessage}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="bg-white border-t rounded-lg border-gray-200 sticky bottom-0 z-40">
-        <div className=" mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">Step {currentStep} of {steps.length}</span>
-                <span className="mx-2 text-gray-400">•</span>
-                <span className="text-gray-500">{steps.find(s => s.id === currentStep)?.title}</span>
-              </div>
+      {/* Əsas məzmun */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-8">
+            {children}
+          </div>
+
+          {/* Navigation Footer */}
+          <div className="flex items-center justify-between px-8 py-6 bg-gray-50 border-t border-gray-200 rounded-b-xl">
+            <button
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="flex items-center px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Əvvəlki
+            </button>
+
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500">
+                Addım {currentStep} / {steps.length}
+              </span>
             </div>
-            
-            <div className="flex items-center gap-2">
-              {currentStep > 1 && (
-                <button
-                  onClick={() => dispatch(prevStep())}
-                  className="px-3 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-all duration-200 text-xs"
-                >
-                  Previous
-                </button>
-              )}
-              
-              {currentStep < steps.length ? (
-                <button
-                  onClick={() => dispatch(nextStep())}
-                  disabled={!canProceedToNext()}
-                  className="flex items-center gap-1 px-3 py-2 bg-[#0AAC9E] hover:bg-[#0AAC9E]/90 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                >
-                  <span>Continue to {steps.find(s => s.id === currentStep + 1)?.title}</span>
-                  <div>
-                    <ChevronRight className="w-4 h-3" />
-                  </div>
-                  
-                </button>
-              ) : (
-                overallProgress === 100 && !currentCourse?.publishCourse && (
-                  <button
-                    onClick={handlePublish}
-                    className="flex items-center gap-1 px-3 py-2 bg-[#0AAC9E] hover:bg-[#0AAC9E]/90 text-white rounded-lg font-medium transition-all duration-200 text-xs"
-                  >
-                    <div>
-                       <Play className="w-4 h-3" />
-                    </div>
-                   
-                    <span>Publish Course</span>
-                  </button>
-                )
-              )}
+
+            {currentStep < 3 ? (
+              <button
+                onClick={handleNext}
+                disabled={currentStep === 1 && !currentCourse?.id}
+                className={`flex items-center px-6 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                  currentStep === 1 && !currentCourse?.id
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-[#0AAC9E] hover:bg-[#0AAC9E]/90'
+                }`}
+              >
+                {currentStep === 1 && !currentCourse?.id ? (
+                  <>
+                    Əvvəl Yadda Saxla
+                    <Save className="w-4 h-4 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    Növbəti
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => dispatch(setModalOpen({ modal: 'publishConfirm', isOpen: true }))}
+                disabled={!currentCourse?.id}
+                className="flex items-center px-6 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Dərc Et
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Köməkçi məlumat */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+              <span className="text-xs font-bold text-blue-600">!</span>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-blue-900 mb-1">Addım təlimatları</h4>
+              <div className="text-xs text-blue-800 space-y-1">
+                {currentStep === 1 && (
+                  <p>• Kurs adı, təsviri, kateqoriya və müddəti daxil edin və "Yadda Saxla" düyməsini basın</p>
+                )}
+                {currentStep === 2 && (
+                  <p>• Kursunuz üçün bölmələr yaradın və hər bölməyə məzmun əlavə edin</p>
+                )}
+                {currentStep === 3 && (
+                  <p>• Kursun əlçatan olacağı hədəf qrupları seçin və dərc parametrlərini tənzimləyin</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

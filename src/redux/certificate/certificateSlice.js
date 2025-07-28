@@ -16,7 +16,7 @@ import {
   validateCertificateTypeData,
   formatCertificateForDisplay,
   getCertificateTypeStats,
-} from '@/api/certificate';
+} from '@/api/certifcate';
 
 // ======================== CERTIFICATE ASYNC THUNKS ========================
 

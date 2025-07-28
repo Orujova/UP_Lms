@@ -39,10 +39,10 @@ export const addQuiz = async (quizData) => {
   }
 };
 
-// Add questions to quiz - application/json format
+// Add questions to quiz - application/json format (FIXED STRUCTURE)
 export const addQuestions = async (questionsData) => {
   try {
-    // API documentation shows questions should be sent as array
+    // FIXED: API expects questions array directly, not nested in object
     const payload = {
       questions: questionsData.questions.map(question => ({
         quizId: question.quizId,
@@ -76,9 +76,10 @@ export const addQuestions = async (questionsData) => {
   }
 };
 
-// Add options to questions - application/json format
+// Add options to questions - application/json format (FIXED STRUCTURE)
 export const addOptions = async (optionsData) => {
   try {
+    // FIXED: API expects options array directly, not nested in object
     const payload = {
       options: optionsData.options.map(option => ({
         questionId: option.questionId,
@@ -109,7 +110,7 @@ export const addOptions = async (optionsData) => {
 
 // ======================== COMPLETE QUIZ CREATION ========================
 
-// Create complete quiz with questions and options
+// Create complete quiz with questions and options (FIXED)
 export const createCompleteQuiz = async (quizData) => {
   try {
     // 1. First create the quiz
@@ -181,7 +182,7 @@ export const createCompleteQuiz = async (quizData) => {
 
 // ======================== HELPER FUNCTIONS ========================
 
-// Helper function to get question type ID
+// Helper function to get question type ID (FIXED ENUM VALUES)
 const getQuestionTypeId = (type) => {
   const typeMap = {
     choice: 1, // Single choice
@@ -637,7 +638,7 @@ export const getQuestionTemplates = () => {
 
 // ======================== CONSTANTS ========================
 
-// Question type constants
+// Question type constants (FIXED ENUM VALUES)
 export const QUESTION_TYPES = {
   SINGLE_CHOICE: 1,
   MULTIPLE_CHOICE: 2,

@@ -1,72 +1,122 @@
-import React, { useState, useCallback } from "react";
+'use client'
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { 
   Plus, 
-  FileText, 
-  Video, 
-  Link, 
-  Upload, 
-  Edit2, 
+  ChevronDown, 
+  ChevronRight, 
+  Edit3, 
   Trash2, 
-  ChevronDown,
-  ChevronRight,
+  GripVertical,
+  Play,
+  FileText,
+  Link,
+  HelpCircle,
+  Download,
+  Globe,
   Clock,
   Eye,
   EyeOff,
   Settings,
   BookOpen,
-  Globe,
-  File,
-  HelpCircle,
+  AlertCircle,
   CheckCircle,
-  BarChart3,
-  PlayCircle,
-  GripVertical
+  Video,
+  File,
+  Loader2
 } from "lucide-react";
+import {
+  addSection,
+  removeSection,
+  updateSection,
+  setActiveSection,
+  addContentToSection,
+  removeContentFromSection,
+  reorderContentInSection,
+  setEditingContent,
+  setContentModalType,
+  setModalOpen,
+  getSectionsByCourseIdAsync
+} from "@/redux/course/courseSlice";
 
-const CourseContentForm = () => {
-  const [sections, setSections] = useState([]);
-  const [activeSection, setActiveSection] = useState(null);
+const CourseContentForm = ({ isEditing = false }) => {
+  const dispatch = useDispatch();
+  
+  const { 
+    sections,
+    activeSection,
+    sectionContents,
+    formData,
+    currentCourse,
+    loading
+  } = useSelector((state) => state.course || {});
+
   const [expandedSections, setExpandedSections] = useState(new Set());
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, type: null, id: null, sectionId: null });
-  const [draggedItem, setDraggedItem] = useState(null);
-  const [dragOverTarget, setDragOverTarget] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ 
+    isOpen: false, 
+    type: null, 
+    id: null, 
+    sectionId: null 
+  });
 
+  // Load sections for editing mode
+  useEffect(() => {
+    if (isEditing && currentCourse?.id && (!sections || sections.length === 0)) {
+      dispatch(getSectionsByCourseIdAsync(currentCourse.id));
+    }
+  }, [dispatch, isEditing, currentCourse?.id, sections]);
+
+  // Auto-expand first section and set as active
+  useEffect(() => {
+    if (sections && sections.length > 0 && expandedSections.size === 0) {
+      setExpandedSections(new Set([sections[0].id]));
+      if (!activeSection) {
+        dispatch(setActiveSection(sections[0].id));
+      }
+    }
+  }, [sections, expandedSections.size, activeSection, dispatch]);
+
+  // Content types with exact API enum mapping
   const contentTypes = [
-    { 
-      type: "page", 
-      label: "Page", 
-      icon: FileText, 
-      description: "Rich content"
-    },
-    { 
-      type: "text", 
-      label: "Text", 
-      icon: BookOpen, 
-      description: "Simple text"
-    },
     { 
       type: "video", 
       label: "Video", 
       icon: Video, 
-      description: "Video content"
+      description: "Video content from file or URL",
+      color: "red",
+      apiType: 4 // VIDEO = 4
+    },
+    { 
+      type: "text", 
+      label: "Text", 
+      icon: FileText, 
+      description: "Rich text content",
+      color: "blue",
+      apiType: 1 // TEXT_BOX = 1
     },
     { 
       type: "url", 
       label: "Link", 
       icon: Globe, 
-      description: "External link"
+      description: "External website link",
+      color: "green",
+      apiType: 3 // WEB_URL = 3
     },
     { 
       type: "file", 
       label: "File", 
       icon: File, 
-      description: "Document"
+      description: "Document upload",
+      color: "purple",
+      apiType: 5 // OTHER_FILE = 5
     },
     {
       type: "quiz",
       label: "Quiz",
       icon: HelpCircle,
-      description: "Assessment"
+      description: "Assessment quiz",
+      color: "orange",
+      apiType: 2 // QUIZ = 2
     }
   ];
 
@@ -81,38 +131,50 @@ const CourseContentForm = () => {
   };
 
   const handleAddSection = () => {
-    const newSection = {
-      id: `section-${Date.now()}`,
-      description: "",
-      contents: [],
-      duration: 0,
-      mandatory: false,
-      hideSection: false
-    };
-    setSections([...sections, newSection]);
-    setExpandedSections(prev => new Set([...prev, newSection.id]));
+    if (!currentCourse?.id) {
+      alert("Əvvəlcə kursu yadda saxlayın.");
+      return;
+    }
+    
+    dispatch(setModalOpen({ modal: 'addSection', isOpen: true }));
+  };
+
+  const handleEditSection = (section) => {
+    dispatch(setActiveSection(section.id));
+    dispatch(setModalOpen({ modal: 'editSection', isOpen: true }));
   };
 
   const handleAddContent = (sectionId, contentType) => {
-    const newContent = {
-      id: `content-${Date.now()}`,
-      type: contentType === "page" ? 0 : contentType === "text" ? 1 : contentType === "quiz" ? 2 : contentType === "url" ? 3 : contentType === "video" ? 4 : 5,
-      title: `New ${contentType}`,
-      contentString: "",
-      fileName: "",
-      fileSize: 0,
-      duration: 0
-    };
+    dispatch(setActiveSection(sectionId));
     
-    setSections(sections.map(section => 
-      section.id === sectionId 
-        ? { ...section, contents: [...section.contents, newContent] }
-        : section
-    ));
+    if (contentType === "quiz") {
+      dispatch(setModalOpen({ modal: 'addQuiz', isOpen: true }));
+    } else {
+      dispatch(setContentModalType(contentType));
+      dispatch(setModalOpen({ modal: 'addContent', isOpen: true }));
+    }
   };
 
   const handleEditContent = (sectionId, content) => {
-    console.log('Edit content:', content);
+    dispatch(setEditingContent(content));
+    dispatch(setActiveSection(sectionId));
+    
+    if (content.type === "quiz" || content.type === 2) { // QUIZ = 2
+      dispatch(setModalOpen({ modal: 'editQuiz', isOpen: true }));
+    } else {
+      // Map API content type to our content type
+      const typeMapping = {
+        1: 'text',    // TEXT_BOX
+        3: 'url',     // WEB_URL
+        4: 'video',   // VIDEO
+        5: 'file',    // OTHER_FILE
+        6: 'file'     // PPTX (treat as file)
+      };
+      
+      const contentTypeKey = typeMapping[content.type] || 'text';
+      dispatch(setContentModalType(contentTypeKey));
+      dispatch(setModalOpen({ modal: 'editContent', isOpen: true }));
+    }
   };
 
   const handleDeleteContent = (sectionId, contentId) => {
@@ -135,13 +197,12 @@ const CourseContentForm = () => {
 
   const confirmDelete = () => {
     if (deleteModal.type === 'content') {
-      setSections(sections.map(section => 
-        section.id === deleteModal.sectionId 
-          ? { ...section, contents: section.contents.filter(c => c.id !== deleteModal.id) }
-          : section
-      ));
+      dispatch(removeContentFromSection({ 
+        sectionId: deleteModal.sectionId, 
+        contentId: deleteModal.id 
+      }));
     } else if (deleteModal.type === 'section') {
-      setSections(sections.filter(s => s.id !== deleteModal.id));
+      dispatch(removeSection(deleteModal.id));
     }
     setDeleteModal({ isOpen: false, type: null, id: null, sectionId: null });
   };
@@ -150,646 +211,469 @@ const CourseContentForm = () => {
     setDeleteModal({ isOpen: false, type: null, id: null, sectionId: null });
   };
 
-  const updateSection = (sectionId, updates) => {
-    setSections(sections.map(section => 
-      section.id === sectionId 
-        ? { ...section, ...updates }
-        : section
-    ));
-  };
-
   const getContentIcon = (type) => {
-    switch (type) {
-      case 0: return FileText;
-      case 1: return BookOpen;
-      case 2: return HelpCircle;
-      case 3: return Globe;
-      case 4: return Video;
-      case 5: return File;
-      default: return FileText;
+    // Handle both string and numeric types
+    if (typeof type === 'number') {
+      const typeMapping = {
+        0: FileText,    // PAGE
+        1: FileText,    // TEXT_BOX
+        2: HelpCircle,  // QUIZ
+        3: Globe,       // WEB_URL
+        4: Video,       // VIDEO
+        5: File,        // OTHER_FILE
+        6: File         // PPTX
+      };
+      return typeMapping[type] || FileText;
     }
+    
+    const contentType = contentTypes.find(ct => ct.type === type);
+    return contentType ? contentType.icon : FileText;
   };
 
   const getContentTypeLabel = (type) => {
-    switch (type) {
-      case 0: return "Page";
-      case 1: return "Text";
-      case 2: return "Quiz";
-      case 3: return "Link";
-      case 4: return "Video";
-      case 5: return "File";
-      default: return "Content";
-    }
-  };
-
-  const formatContentTitle = (content) => {
-    if (content.title) return content.title;
-    
-    try {
-      if (content.type === 0 && content.contentString) {
-        const pageData = JSON.parse(content.contentString);
-        return pageData.title || "Untitled Page";
-      }
-    } catch (e) {
-      // Fallback for parsing errors
+    // Handle both string and numeric types
+    if (typeof type === 'number') {
+      const typeMapping = {
+        0: 'Page',
+        1: 'Text',
+        2: 'Quiz',
+        3: 'Link',
+        4: 'Video',
+        5: 'File',
+        6: 'PowerPoint'
+      };
+      return typeMapping[type] || 'Content';
     }
     
-    if (content.fileName) return content.fileName;
-    if (content.contentString) {
-      const preview = content.contentString.substring(0, 30);
-      return preview.length < content.contentString.length ? `${preview}...` : preview;
+    const contentType = contentTypes.find(ct => ct.type === type);
+    return contentType ? contentType.label : 'Content';
+  };
+
+  const getContentTypeColor = (type) => {
+    // Handle both string and numeric types
+    if (typeof type === 'number') {
+      const typeMapping = {
+        0: 'gray',      // PAGE
+        1: 'blue',      // TEXT_BOX
+        2: 'orange',    // QUIZ
+        3: 'green',     // WEB_URL
+        4: 'red',       // VIDEO
+        5: 'purple',    // OTHER_FILE
+        6: 'indigo'     // PPTX
+      };
+      return typeMapping[type] || 'gray';
     }
     
-    return `${getContentTypeLabel(content.type)} Content`;
+    const contentType = contentTypes.find(ct => ct.type === type);
+    return contentType ? contentType.color : 'gray';
   };
 
-  const calculateCourseStats = () => {
-    const totalSections = sections.length;
-    const totalContent = sections.reduce((total, section) => total + (section.contents?.length || 0), 0);
-    const estimatedDuration = sections.reduce((total, section) => total + (section.duration || 0), 0);
+  const getSectionProgress = (section) => {
+    const contents = sectionContents[section.id] || section.contents || [];
+    return {
+      total: contents.length,
+      hasContent: contents.length > 0
+    };
+  };
+
+  const getTotalProgress = () => {
+    const totalSections = sections?.length || 0;
+    const sectionsWithContent = sections?.filter(section => {
+      const progress = getSectionProgress(section);
+      return progress.hasContent;
+    }).length || 0;
     
-    return { totalSections, totalContent, estimatedDuration };
+    return {
+      totalSections,
+      sectionsWithContent,
+      percentage: totalSections > 0 ? Math.round((sectionsWithContent / totalSections) * 100) : 0
+    };
   };
 
-  const stats = calculateCourseStats();
+  const progress = getTotalProgress();
 
-  // Enhanced Drag and Drop handlers
-  const handleDragStart = (e, item, type, sourceIndex, sourceSectionId = null) => {
-    setDraggedItem({ 
-      item, 
-      type, 
-      sourceIndex, 
-      sourceSectionId 
-    });
-    e.dataTransfer.effectAllowed = 'move';
-    e.target.classList.add('opacity-50');
-  };
+  // Show course creation required message if no course
+  if (!currentCourse?.id) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <div className="flex items-center justify-center w-16 h-16 bg-[#0AAC9E]/10 rounded-xl mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-[#0AAC9E]" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Build Your Course Content
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Complete the basic course information first to start building content.
+          </p>
+        </div>
 
-  const handleDragEnd = (e) => {
-    e.target.classList.remove('opacity-50');
-    setDraggedItem(null);
-    setDragOverTarget(null);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDragEnter = (e, targetId, targetType) => {
-    e.preventDefault();
-    setDragOverTarget({ id: targetId, type: targetType });
-  };
-
-  const handleDragLeave = (e) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setDragOverTarget(null);
-    }
-  };
-
-  const handleDrop = (e, targetId, targetType, targetIndex) => {
-    e.preventDefault();
-    setDragOverTarget(null);
-    
-    if (!draggedItem) return;
-
-    if (draggedItem.type === 'section' && targetType === 'section') {
-      // Reorder sections
-      const newSections = [...sections];
-      const draggedSection = newSections[draggedItem.sourceIndex];
-      newSections.splice(draggedItem.sourceIndex, 1);
-      newSections.splice(targetIndex, 0, draggedSection);
-      setSections(newSections);
-    } else if (draggedItem.type === 'content' && targetType === 'content') {
-      // Reorder content within or between sections
-      const newSections = [...sections];
-      
-      // Remove from source
-      const sourceSection = newSections.find(s => s.id === draggedItem.sourceSectionId);
-      const draggedContent = sourceSection.contents[draggedItem.sourceIndex];
-      sourceSection.contents.splice(draggedItem.sourceIndex, 1);
-      
-      // Add to target
-      const targetSection = newSections.find(s => s.contents.some(c => c.id === targetId));
-      const targetContentIndex = targetSection.contents.findIndex(c => c.id === targetId);
-      targetSection.contents.splice(targetContentIndex, 0, draggedContent);
-      
-      setSections(newSections);
-    }
-    
-    setDraggedItem(null);
-  };
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+          <div className="flex items-center">
+            <AlertCircle className="w-6 h-6 text-yellow-600 mr-3" />
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800">Course Not Created Yet</h3>
+              <p className="text-yellow-700 mt-1">
+                Please complete Step 1 (Basic Information) and save your course before adding content.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#0AAC9E]/5">
-        {/* Modern Header with Glass Effect */}
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
-          <div className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-lg font-bold text-gray-900 mb-1">Course Builder</h1>
-                <p className="text-xs text-gray-600">Design engaging learning experiences</p>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="flex items-center justify-center w-16 h-16 bg-[#0AAC9E]/10 rounded-xl mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-[#0AAC9E]" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Build Your Course Content
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Organize your course into sections and fill them with engaging learning materials. 
+            Each section represents a key learning module or topic.
+          </p>
+        </div>
+
+        {/* Course Info */}
+        <div className="bg-gradient-to-r from-[#0AAC9E]/5 to-[#0AAC9E]/10 rounded-xl p-6 border border-[#0AAC9E]/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{currentCourse.name}</h3>
+              <p className="text-gray-600 text-sm mt-1">{currentCourse.description}</p>
+              <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {currentCourse.duration} minutes
+                </span>
+                <span className="flex items-center gap-1">
+                  <BookOpen className="w-4 h-4" />
+                  {sections?.length || 0} sections
+                </span>
               </div>
-              
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleAddSection}
-                  className="flex items-center gap-2 px-3 py-2 bg-[#0AAC9E] hover:bg-[#0AAC9E]/80 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Section</span>
-                </button>
-              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Course ID</div>
+              <div className="text-sm font-mono text-gray-700">#{currentCourse.id}</div>
             </div>
           </div>
         </div>
 
-        <div className="p-3 max-w-6xl mx-auto pb-6">
-          {/* Progressive Stats Dashboard */}
-          {sections.length > 0 && (
-            <div className="mb-4 bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200/50 p-4 shadow-lg">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-[#0AAC9E]" />
-                  Course Overview
-                </h2>
-                <div className="text-xs text-gray-500">
-                  {stats.totalSections > 0 && `${((stats.totalContent / stats.totalSections) || 0).toFixed(1)} items per section`}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="group bg-gradient-to-br from-[#0AAC9E]/10 to-[#0AAC9E]/5 p-3 rounded-lg border border-[#0AAC9E]/20 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-[#0AAC9E] mb-1">{stats.totalSections}</div>
-                      <div className="text-xs text-gray-600 font-medium">Learning Sections</div>
-                    </div>
-                    <div className="w-10 h-10 bg-[#0AAC9E]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <BookOpen className="w-5 h-5 text-[#0AAC9E]" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="group bg-gradient-to-br from-[#0AAC9E]/10 to-[#0AAC9E]/5 p-3 rounded-lg border border-[#0AAC9E]/20 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-[#0AAC9E] mb-1">{stats.totalContent}</div>
-                      <div className="text-xs text-gray-600 font-medium">Content Items</div>
-                    </div>
-                    <div className="w-10 h-10 bg-[#0AAC9E]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <FileText className="w-5 h-5 text-[#0AAC9E]" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="group bg-gradient-to-br from-[#0AAC9E]/10 to-[#0AAC9E]/5 p-3 rounded-lg border border-[#0AAC9E]/20 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-[#0AAC9E] mb-1">{stats.estimatedDuration}</div>
-                      <div className="text-xs text-gray-600 font-medium">Total Minutes</div>
-                    </div>
-                    <div className="w-10 h-10 bg-[#0AAC9E]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Clock className="w-5 h-5 text-[#0AAC9E]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Progress Bar */}
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Content Progress</h3>
+              <p className="text-sm text-gray-600">
+                {progress.sectionsWithContent} of {progress.totalSections} sections have content
+              </p>
             </div>
-          )}
+            <div className="text-right">
+              <div className="text-2xl font-bold text-[#0AAC9E]">{progress.percentage}%</div>
+              <div className="text-sm text-gray-500">Complete</div>
+            </div>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-[#0AAC9E] h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress.percentage}%` }}
+            />
+          </div>
+        </div>
 
-          {/* Enhanced Sections with Modern Card Design */}
-          <div className="space-y-3">
-            {sections.map((section, index) => {
-              const isExpanded = expandedSections.has(section.id);
-              const contents = section.contents || [];
-              const isDragOver = dragOverTarget?.id === section.id && dragOverTarget?.type === 'section';
+        {/* Course Structure */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">Course Structure</h3>
+            <button
+              onClick={handleAddSection}
+              disabled={loading}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              Add Section
+            </button>
+          </div>
 
-              return (
-                <div 
-                  key={section.id} 
-                  className={`group bg-white/70 backdrop-blur-sm rounded-xl border transition-all duration-300 hover:shadow-lg ${
-                    isExpanded 
-                      ? 'border-[#0AAC9E]/30 shadow-lg shadow-[#0AAC9E]/10' 
-                      : 'border-gray-200/50 hover:border-[#0AAC9E]/20'
-                  } ${isDragOver ? 'border-[#0AAC9E] bg-[#0AAC9E]/5' : ''}`}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, section, 'section', index)}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={handleDragOver}
-                  onDragEnter={(e) => handleDragEnter(e, section.id, 'section')}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, section.id, 'section', index)}
-                >
-                  
-                  {/* Section Header with Modern Typography */}
-                  <div className={`p-4 border-b transition-all duration-300 ${
-                    isExpanded 
-                      ? 'bg-gradient-to-r from-[#0AAC9E]/5 to-[#0AAC9E]/10 border-[#0AAC9E]/20' 
-                      : 'bg-gray-50/50 border-gray-200/50'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {/* Drag Handle */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <GripVertical className="w-4 h-4 text-gray-400 hover:text-[#0AAC9E] cursor-grab active:cursor-grabbing" />
-                        </div>
+          {/* Sections List */}
+          {sections && sections.length > 0 ? (
+            <div className="space-y-4">
+              {sections.map((section, sectionIndex) => {
+                const isExpanded = expandedSections.has(section.id);
+                const isActive = activeSection === section.id;
+                const sectionProgress = getSectionProgress(section);
+                const contents = sectionContents[section.id] || section.contents || [];
+                
+                return (
+                  <div 
+                    key={section.id}
+                    className={`border rounded-xl transition-all duration-200 ${
+                      isActive 
+                        ? 'border-[#0AAC9E] shadow-lg bg-[#0AAC9E]/5' 
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    {/* Section Header */}
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 flex-1">
+                          <button
+                            onClick={() => toggleSection(section.id)}
+                            className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="w-5 h-5" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5" />
+                            )}
+                          </button>
 
-                        <button
-                          onClick={() => toggleSection(section.id)}
-                          className="p-1.5 text-gray-500 hover:text-[#0AAC9E] hover:bg-white/80 rounded-lg transition-all duration-200 transform hover:scale-110"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </button>
-
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 bg-[#0AAC9E] text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md">
-                            {index + 1}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <input
-                              type="text"
-                              value={section.description || ""}
-                              onChange={(e) =>
-                                updateSection(section.id, { description: e.target.value })
-                              }
-                              placeholder="Section title"
-                              className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none focus:bg-white/90 focus:border-2 focus:border-[#0AAC9E] focus:rounded-md px-2 py-1 -mx-2 -my-1 w-full transition-all duration-200 hover:bg-white/50"
-                            />
-                            
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                              <span className="flex items-center gap-1">
-                                <div> <FileText className="w-4 h-3" /></div>
-                               
-                                {contents.length} {contents.length === 1 ? 'item' : 'items'}
-                              </span>
-                              {section.duration && (
-                                <span className="flex items-center gap-1">
-                                 
-                                  <div> <Clock className="w-4 h-3" /></div>
-                                  {section.duration}min
-                                </span>
+                          <div className="flex items-center space-x-3 flex-1">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              sectionProgress.hasContent 
+                                ? 'bg-green-100 text-green-600' 
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {sectionProgress.hasContent ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : (
+                                <BookOpen className="w-4 h-4" />
                               )}
-                              {section.mandatory && (
-                                <span className="flex items-center gap-1 text-[#0AAC9E]">
-                                  <div> <CheckCircle className="w-4 h-3" /></div>
-                                 
-                                  Required
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-medium text-gray-900">
+                                  Section {sectionIndex + 1}: {section.description || "Untitled Section"}
+                                </h4>
+                                {section.hideSection && (
+                                  <EyeOff className="w-4 h-4 text-gray-400" />
+                                )}
+                                {section.mandatory && (
+                                  <div className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full">
+                                    Required
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-4 mt-1">
+                                <span className="text-sm text-gray-500 flex items-center">
+                                  <Clock className="w-4 h-4 mr-1" />
+                                  {section.duration || 0} min
                                 </span>
-                              )}
+                                <span className="text-sm text-gray-500">
+                                  {contents.length} content item{contents.length !== 1 ? 's' : ''}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Section Actions */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button
-                          onClick={() =>
-                            updateSection(section.id, { hideSection: !section.hideSection })
-                          }
-                          className={`p-1.5 rounded-lg transition-all duration-200 ${
-                            section.hideSection
-                              ? "text-orange-500 hover:bg-orange-50"
-                              : "text-[#0AAC9E] hover:bg-[#0AAC9E]/10"
-                          }`}
-                          title={section.hideSection ? "Section is hidden" : "Section is visible"}
-                        >
-                          {section.hideSection ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-
-                        <button
-                          onClick={() => handleDeleteSection(section.id)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {/* Section Actions */}
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleEditSection(section)}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSection(section.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Expandable Section Content */}
-                  {isExpanded && (
-                    <div className="p-4 space-y-4">
-                      {/* Enhanced Settings Panel */}
-                      <div className="bg-gradient-to-r from-gray-50 to-gray-25 p-3 rounded-lg border border-gray-200">
-                        <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <div><Settings className="w-4 h-3 text-[#0AAC9E]" /></div>
-                          
-                          Section Configuration
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                            <input
-                              type="number"
-                              value={section.duration || ""}
-                              onChange={(e) =>
-                                updateSection(section.id, { duration: parseInt(e.target.value) || 0 })
-                              }
-                              placeholder="60"
-                              className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] transition-all duration-200"
-                            />
-                          </div>
-                          <div className="flex items-end">
-                            <div className="flex items-center gap-2 cursor-pointer">
-                              <div>
-                                  <input
-                                type="checkbox"
-                                checked={section.mandatory || false}
-                                onChange={(e) =>
-                                  updateSection(section.id, { mandatory: e.target.checked })
-                                }
-                                className="w-4 h-3 rounded border-2 border-gray-300 text-[#0AAC9E] focus:ring-[#0AAC9E] focus:ring-2 focus:ring-offset-0 bg-white checked:bg-[#0AAC9E] checked:border-[#0AAC9E]"
-                              />
-                              </div>
-                            
-                              <div>
-                                <span className="text-xs font-medium text-gray-700">Required Section</span>
-                              </div>
-                              
-                            </div>
-                          </div>
-                          <div className="flex items-end">
-                            <div className="flex items-center gap-2 cursor-pointer">
-                              <div><input
-                                type="checkbox"
-                                checked={section.hideSection || false}
-                                onChange={(e) =>
-                                  updateSection(section.id, { hideSection: e.target.checked })
-                                }
-                                className="w-4 h-3 rounded border-2 border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-2 focus:ring-offset-0 bg-white checked:bg-orange-500 checked:border-orange-500"
-                              /></div>
-                              
-                              <span className="text-xs font-medium text-gray-700">Hide from Students</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Modern Content Management */}
-                      <div>
-                        <h3 className="text-xs font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <div><FileText className="w-4 h-3 text-[#0AAC9E]" /></div>
-                          
-                          Learning Materials
-                          <span className="ml-auto text-xs font-normal text-gray-500">
-                            {contents.length} {contents.length === 1 ? 'item' : 'items'}
-                          </span>
-                        </h3>
-                        
-                        {contents.length > 0 ? (
-                          <div className="space-y-2 mb-4">
-                            {contents.map((content, contentIndex) => {
-                              const ContentIcon = getContentIcon(content.type);
-                              const isDragOver = dragOverTarget?.id === content.id && dragOverTarget?.type === 'content';
-                              
-                              return (
-                                <div
-                                  key={content.id}
-                                  className={`group bg-gradient-to-r from-white to-gray-50 p-3 rounded-lg border border-gray-200 hover:border-[#0AAC9E]/30 transition-all duration-200 hover:shadow-md ${
-                                    isDragOver ? 'border-[#0AAC9E] bg-[#0AAC9E]/5' : ''
-                                  }`}
-                                  draggable
-                                  onDragStart={(e) => handleDragStart(e, content, 'content', contentIndex, section.id)}
-                                  onDragEnd={handleDragEnd}
-                                  onDragOver={handleDragOver}
-                                  onDragEnter={(e) => handleDragEnter(e, content.id, 'content')}
-                                  onDragLeave={handleDragLeave}
-                                  onDrop={(e) => handleDrop(e, content.id, 'content', contentIndex)}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                      <GripVertical className="w-3 h-3 text-gray-400 cursor-grab active:cursor-grabbing" />
-                                    </div>
-                                    
-                                    <div className="w-8 h-8 bg-gradient-to-br from-white to-gray-50 rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
-                                      <ContentIcon className="w-4 h-4 text-gray-600" />
-                                    </div>
-                                    
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="text-xs font-semibold text-gray-900 truncate mb-1">
-                                        {formatContentTitle(content)}
-                                      </h4>
-                                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                                        <span className="font-medium">{getContentTypeLabel(content.type)}</span>
-                                        {content.fileSize && (
-                                          <>
-                                            <span>•</span>
-                                            <span>{(content.fileSize / 1024 / 1024).toFixed(1)}MB</span>
-                                          </>
-                                        )}
-                                        {content.duration && (
-                                          <>
-                                            <span>•</span>
-                                            <span>{content.duration}s</span>
-                                          </>
+                    {/* Section Content */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-200 bg-gray-50">
+                        <div className="p-4">
+                          {/* Content Items */}
+                          {contents.length > 0 ? (
+                            <div className="space-y-3 mb-4">
+                              {contents.map((content, contentIndex) => {
+                                const ContentIcon = getContentIcon(content.type);
+                                const colorClass = getContentTypeColor(content.type);
+                                
+                                return (
+                                  <div 
+                                    key={content.id}
+                                    className="flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                  >
+                                    <div className="flex items-center space-x-3 flex-1">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-${colorClass}-100 text-${colorClass}-600`}>
+                                        <ContentIcon className="w-4 h-4" />
+                                      </div>
+                                      
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2">
+                                          <span className="font-medium text-gray-900">
+                                            {content.description || content.title || content.name || `${getContentTypeLabel(content.type)} ${contentIndex + 1}`}
+                                          </span>
+                                          <span className={`px-2 py-1 text-xs rounded-full bg-${colorClass}-100 text-${colorClass}-600`}>
+                                            {getContentTypeLabel(content.type)}
+                                          </span>
+                                          {content.hideContent && (
+                                            <EyeOff className="w-4 h-4 text-gray-400" />
+                                          )}
+                                        </div>
+                                        {content.contentString && (
+                                          <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+                                            {content.contentString.length > 100 
+                                              ? content.contentString.substring(0, 100) + '...'
+                                              : content.contentString
+                                            }
+                                          </p>
                                         )}
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    {/* Content Actions */}
+                                    <div className="flex items-center space-x-2">
                                       <button
                                         onClick={() => handleEditContent(section.id, content)}
-                                        className="p-1.5 text-gray-400 hover:text-[#0AAC9E] hover:bg-[#0AAC9E]/10 rounded-md transition-all duration-200"
+                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                       >
-                                        <Edit2 className="w-4 h-3" />
+                                        <Edit3 className="w-4 h-4" />
                                       </button>
-                                      
                                       <button
                                         onClick={() => handleDeleteContent(section.id, content.id)}
-                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all duration-200"
+                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                       >
-                                        <Trash2 className="w-4 h-3" />
+                                        <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
                                   </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 bg-gradient-to-br from-gray-50 to-gray-25 rounded-lg border-2 border-dashed border-gray-300 mb-4">
-                            <div><FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" /></div>
-                            
-                            <h4 className="text-xs font-semibold text-gray-600 mb-1">No content yet</h4>
-                            <p className="text-xs text-gray-500">Add learning materials to make this section engaging</p>
-                          </div>
-                        )}
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg mb-4">
+                              <BookOpen className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                              <p className="text-sm font-medium text-gray-900 mb-1">No content yet</p>
+                              <p className="text-sm text-gray-500">Add your first learning material to this section</p>
+                            </div>
+                          )}
 
-                        {/* Enhanced Content Type Selector */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Add Learning Material</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {/* Add Content Buttons */}
+                          <div className="flex flex-wrap gap-2">
                             {contentTypes.map((contentType) => {
                               const Icon = contentType.icon;
                               return (
                                 <button
                                   key={contentType.type}
                                   onClick={() => handleAddContent(section.id, contentType.type)}
-                                  className="group flex flex-col items-center p-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#0AAC9E] hover:bg-[#0AAC9E]/5 transition-all duration-200 transform hover:scale-105"
+                                  className={`flex items-center px-3 py-2 text-sm font-medium border rounded-lg transition-colors hover:bg-${contentType.color}-50 hover:border-${contentType.color}-200 hover:text-${contentType.color}-700 border-gray-300 text-gray-700`}
                                 >
-                                  <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-50 group-hover:from-[#0AAC9E]/20 group-hover:to-[#0AAC9E]/10 rounded-lg flex items-center justify-center mb-1 transition-all duration-200">
-                                    <Icon className="w-4 h-4 text-gray-600 group-hover:text-[#0AAC9E] transition-colors duration-200" />
-                                  </div>
-                                  <span className="text-xs font-semibold text-gray-700 group-hover:text-[#0AAC9E] text-center transition-colors duration-200">
-                                    {contentType.label}
-                                  </span>
-                                  <span className="text-xs text-gray-500 text-center mt-1">
-                                    {contentType.description}
-                                  </span>
+                                  <Icon className="w-4 h-4 mr-2" />
+                                  Add {contentType.label}
                                 </button>
                               );
                             })}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Enhanced Empty State */}
-          {sections.length === 0 && (
-            <div className="text-center py-8 bg-gradient-to-br from-white to-[#0AAC9E]/5 rounded-xl border border-gray-200 shadow-lg">
-              <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#0AAC9E]/20 to-[#0AAC9E]/10 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <BookOpen className="w-8 h-8 text-[#0AAC9E]" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  Design Your First Course
-                </h3>
-                <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                  Transform your knowledge into engaging learning experiences. Start by creating your first section to organize content into logical learning modules.
-                </p>
-                <button
-                  onClick={handleAddSection}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#0AAC9E] hover:bg-[#0AAC9E]/80 text-white rounded-lg hover:shadow-lg transition-all duration-200 text-sm font-semibold transform hover:scale-105"
-                >
-                  <div>
-                   <Plus className="w-4 h-4" />  
+                    )}
                   </div>
-                 
-                  <span>Create Your First Section</span>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl">
+              <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No sections yet</h3>
+              <p className="text-gray-500 mb-6">
+                Start building your course by adding your first section
+              </p>
+              <button
+                onClick={handleAddSection}
+                disabled={loading}
+                className="flex items-center px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 transition-colors mx-auto disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                Add First Section
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Course Requirements */}
+        {sections && sections.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-900 mb-2">Content Requirements</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Each section must contain at least one content item</li>
+                  <li>• Consider adding quizzes to assess learning progress</li>
+                  <li>• Mix different content types for better engagement</li>
+                  <li>• Set appropriate durations for each section</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Delete {deleteModal.type === 'section' ? 'Section' : 'Content'}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete this {deleteModal.type}? 
+                {deleteModal.type === 'section' && ' All content within this section will also be removed.'}
+              </p>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={closeDeleteModal}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
                 </button>
               </div>
             </div>
-          )}
-
-       
+          </div>
         </div>
-      </div>
-
-      {/* Enhanced Delete Modal */}
-      <DeleteModal
-        isOpen={deleteModal.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={confirmDelete}
-        type={deleteModal.type}
-      />
+      )}
     </>
-  );
-};
-
-// Modern Delete Modal Component with Enhanced Design
-const DeleteModal = ({ isOpen, onClose, onConfirm, type }) => {
-  if (!isOpen) return null;
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  const getModalContent = () => {
-    if (type === 'section') {
-      return {
-        title: 'Delete Learning Section',
-        description: 'This will permanently remove the section and all its learning materials. Students will lose access to this content immediately.',
-        warning: 'This action affects all enrolled students and cannot be reversed.',
-        buttonText: 'Delete Section',
-        icon: BookOpen,
-        color: 'red'
-      };
-    }
-    return {
-      title: 'Delete Content Item',
-      description: 'This learning material will be permanently removed from the course.',
-      warning: 'Students will no longer be able to access this content.',
-      buttonText: 'Delete Content',
-      icon: FileText,
-      color: 'red'
-    };
-  };
-
-  const content = getModalContent();
-  const Icon = content.icon;
-
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden transform transition-all duration-300 scale-100">
-        
-        {/* Modern Header with Enhanced Gradient */}
-        <div className="relative p-4 bg-gradient-to-br from-red-50 via-orange-50 to-red-50 border-b border-red-100">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center shadow-lg">
-              <Icon className="w-6 h-6 text-red-600" />
-            </div>
-            
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
-                {content.title}
-              </h3>
-              <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
-                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                Permanent action - cannot be undone
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Content */}
-        <div className="p-4 space-y-3">
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <p className="text-xs text-gray-700 leading-relaxed mb-2">
-              {content.description}
-            </p>
-            <div className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-200">
-              <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
-              {content.warning}
-            </div>
-          </div>
-
-          {/* Enhanced Action Buttons */}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200 hover:scale-105 transform"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              {content.buttonText}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 };
 

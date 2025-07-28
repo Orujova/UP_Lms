@@ -1,6 +1,7 @@
 // redux/course/courseSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
+  // Core CRUD operations
   fetchCourses,
   fetchCourseById,
   createCourse as apiCreateCourse,
@@ -25,6 +26,7 @@ import {
   formatDuration,
   getCourseDifficulty,
   calculateCourseCompletion,
+  COURSE_ORDER_OPTIONS,
 } from "@/api/course";
 import {
   addContent as apiAddContent,
@@ -32,6 +34,11 @@ import {
   deleteContent as apiDeleteContent,
   getContentsBySection,
 } from "@/api/courseContent";
+import { 
+  addQuiz as apiAddQuiz, 
+  addQuestions as apiAddQuestions, 
+  addOptions as apiAddOptions 
+} from "@/api/quiz";
 import { getUserId } from "@/authtoken/auth.js";
 
 // ======================== ASYNC THUNKS ========================
@@ -40,13 +47,91 @@ export const fetchCoursesAsync = createAsyncThunk(
   "course/fetchCourses",
   async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await fetchCourses(params);
+      // FIXED: Ensure proper orderBy parameter
+      const apiParams = {
+        ...params,
+        orderBy: params.orderBy ? COURSE_ORDER_OPTIONS[params.orderBy.toUpperCase()] || COURSE_ORDER_OPTIONS.NAME_ASC : undefined
+      };
+      
+      const response = await fetchCourses(apiParams);
       return {
         courses: response.courses.map(course => formatCourseForDisplay(course)),
         totalCourseCount: response.totalCourseCount,
       };
     } catch (error) {
       return rejectWithValue(error.message || "Failed to fetch courses");
+    }
+  }
+);
+
+export const addQuizAsync = createAsyncThunk(
+  "course/addQuiz",
+  async (quizData, { rejectWithValue }) => {
+    try {
+      // FIXED: Ensure proper data structure for quiz API
+      const apiData = {
+        contentId: quizData.contentId,
+        duration: quizData.duration || 60,
+        canSkip: quizData.canSkip || false
+      };
+      
+      const response = await apiAddQuiz(apiData);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to add quiz");
+    }
+  }
+);
+
+export const addQuestionsAsync = createAsyncThunk(
+  "course/addQuestions",
+  async (questionsData, { rejectWithValue }) => {
+    try {
+      // FIXED: Ensure proper data structure - API expects { questions: [...] }
+      const apiData = {
+        questions: questionsData.questions.map(question => ({
+          quizId: question.quizId,
+          text: question.text || "",
+          title: question.title || "",
+          questionRate: question.questionRate || 1,
+          duration: {
+            ticks: question.duration ? question.duration * 10000000 : 300000000 // 30 seconds default
+          },
+          hasDuration: question.hasDuration !== undefined ? question.hasDuration : true,
+          canSkip: question.canSkip || false,
+          questionType: question.questionType || 1,
+          categories: question.categories || [],
+        }))
+      };
+      
+      const response = await apiAddQuestions(apiData);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to add questions");
+    }
+  }
+);
+
+export const addOptionsAsync = createAsyncThunk(
+  "course/addOptions",
+  async (optionsData, { rejectWithValue }) => {
+    try {
+      // FIXED: Ensure proper data structure - API expects { options: [...] }
+      const apiData = {
+        options: optionsData.options.map(option => ({
+          questionId: option.questionId,
+          text: option.text || "",
+          isCorrect: option.isCorrect || false,
+          order: option.order || 0,
+          gapText: option.gapText || option.text,
+          category: option.category || "",
+        }))
+      };
+      
+      const response = await apiAddOptions(apiData);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to add options");
     }
   }
 );
@@ -63,6 +148,7 @@ export const fetchCourseByIdAsync = createAsyncThunk(
   }
 );
 
+// Fixed createCourseAsync in courseSlice.js
 export const createCourseAsync = createAsyncThunk(
   "course/createCourse",
   async (courseData, { getState, rejectWithValue }) => {
@@ -70,34 +156,113 @@ export const createCourseAsync = createAsyncThunk(
       const state = getState().course;
       const userId = getUserId();
 
+      // Validate required fields first
+      const requiredFields = ['name', 'description', 'categoryId'];
+      const missingFields = requiredFields.filter(field => {
+        const value = courseData[field] || state.formData[field];
+        return !value || (typeof value === 'string' && !value.trim());
+      });
+
+      if (missingFields.length > 0) {
+        return rejectWithValue(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Clean and validate succession rates
+      const rawSuccessionRates = courseData.successionRates || state.formData.successionRates || [];
+      const cleanSuccessionRates = rawSuccessionRates
+        .filter(rate => {
+          // Only keep rates that have valid ranges
+          return rate.minRange !== null && rate.minRange !== undefined && 
+                 rate.maxRange !== null && rate.maxRange !== undefined &&
+                 typeof rate.minRange === 'number' && typeof rate.maxRange === 'number' &&
+                 rate.minRange >= 0 && rate.maxRange <= 100 && rate.minRange < rate.maxRange;
+        })
+        .map(rate => ({
+          minRange: parseInt(rate.minRange),
+          maxRange: parseInt(rate.maxRange),
+          // Only include badgeId if it's a valid number
+          badgeId: (rate.badgeId && typeof rate.badgeId === 'number' && !isNaN(rate.badgeId)) 
+            ? parseInt(rate.badgeId) 
+            : null
+        }));
+
+      // Clean target group IDs
+      const rawTargetGroupIds = courseData.targetGroupIds || state.formData.targetGroupIds || [];
+      const cleanTargetGroupIds = rawTargetGroupIds
+        .filter(id => id !== null && id !== undefined && id !== "")
+        .map(id => parseInt(id))
+        .filter(id => !isNaN(id));
+
+      // Clean tag IDs
+      const rawTagIds = courseData.tagIds || state.formData.tagIds || [];
+      const cleanTagIds = rawTagIds
+        .filter(id => id !== null && id !== undefined && id !== "")
+        .map(id => parseInt(id))
+        .filter(id => !isNaN(id));
+
+      // Prepare API data with proper validation and defaults
       const apiData = {
-        name: courseData.name || state.formData.name,
-        description: courseData.description || state.formData.description,
-        duration: courseData.duration || state.formData.duration || 200,
-        verifiedCertificate: courseData.verifiedCertificate ?? state.formData.verifiedCertificate ?? false,
-        categoryId: courseData.categoryId || state.formData.categoryId,
+        userId: userId,
+        name: (courseData.name || state.formData.name || "").trim(),
+        description: (courseData.description || state.formData.description || "").trim(),
+        duration: parseInt(courseData.duration || state.formData.duration || 60),
+        verifiedCertificate: Boolean(courseData.verifiedCertificate ?? state.formData.verifiedCertificate ?? false),
+        categoryId: parseInt(courseData.categoryId || state.formData.categoryId),
         imageFile: courseData.imageFile || state.formData.imageFile,
-        targetGroupIds: courseData.targetGroupIds || state.formData.targetGroupIds || [],
-        certificateId: courseData.certificateId || state.formData.certificateId,
-        tagIds: courseData.tagIds || state.formData.tagIds || [],
-        startDuration: courseData.startDuration || state.formData.startDuration,
-        deadline: courseData.deadline || state.formData.deadline,
-        autoReassign: courseData.autoReassign ?? state.formData.autoReassign ?? false,
-        clusterId: courseData.clusterId || state.formData.clusterId,
-        clusterOrderNumber: courseData.clusterOrderNumber || state.formData.clusterOrderNumber,
-        clusterCoefficient: courseData.clusterCoefficient || state.formData.clusterCoefficient,
-        clusterIsMandatory: courseData.clusterIsMandatory ?? state.formData.clusterIsMandatory,
-        successionRates: courseData.successionRates || state.formData.successionRates || [],
+        targetGroupIds: cleanTargetGroupIds,
+        certificateId: (courseData.certificateId || state.formData.certificateId) 
+          ? parseInt(courseData.certificateId || state.formData.certificateId) 
+          : null,
+        tagIds: cleanTagIds,
+        startDuration: (courseData.startDuration || state.formData.startDuration) 
+          ? parseInt(courseData.startDuration || state.formData.startDuration) 
+          : null,
+        deadline: (courseData.deadline || state.formData.deadline) 
+          ? parseInt(courseData.deadline || state.formData.deadline) 
+          : null,
+        autoReassign: Boolean(courseData.autoReassign ?? state.formData.autoReassign ?? false),
+        clusterId: (courseData.clusterId || state.formData.clusterId) 
+          ? parseInt(courseData.clusterId || state.formData.clusterId) 
+          : null,
+        clusterOrderNumber: (courseData.clusterOrderNumber || state.formData.clusterOrderNumber) 
+          ? parseInt(courseData.clusterOrderNumber || state.formData.clusterOrderNumber) 
+          : null,
+        clusterCoefficient: (courseData.clusterCoefficient || state.formData.clusterCoefficient) 
+          ? parseFloat(courseData.clusterCoefficient || state.formData.clusterCoefficient) 
+          : null,
+        clusterIsMandatory: Boolean(courseData.clusterIsMandatory ?? state.formData.clusterIsMandatory ?? false),
+        successionRates: cleanSuccessionRates,
       };
 
+      // Additional validation
+      if (isNaN(apiData.duration) || apiData.duration < 1) {
+        return rejectWithValue("Duration must be a valid number greater than 0");
+      }
+
+      if (isNaN(apiData.categoryId)) {
+        return rejectWithValue("Please select a valid category");
+      }
+
+      // Log the clean data being sent
+      console.log("Sending clean API data:", apiData);
+
       const response = await apiCreateCourse(apiData);
+
+      // Check if the API returned a business logic error
+      if (response && response.success === false) {
+        return rejectWithValue(response.message || "Course creation failed");
+      }
+
+      console.log("Course created successfully:", response);
       return formatCourseForDisplay(response);
     } catch (error) {
+      console.error("Course creation failed:", error);
       return rejectWithValue(error.message || "Failed to create course");
     }
   }
-);
 
+   
+);
 export const updateCourseAsync = createAsyncThunk(
   "course/updateCourse",
   async (courseData, { rejectWithValue }) => {
@@ -107,7 +272,17 @@ export const updateCourseAsync = createAsyncThunk(
         return rejectWithValue(errors.join(', '));
       }
       
-      const response = await apiUpdateCourse(courseData);
+      // FIXED: Ensure proper succession rates structure for update
+      const apiData = {
+        ...courseData,
+        successionRates: (courseData.successionRates || []).map(rate => ({
+          minRange: rate.minRange || 0,
+          maxRange: rate.maxRange || 100,
+          badgeId: rate.badgeId || null
+        }))
+      };
+      
+      const response = await apiUpdateCourse(apiData);
       return formatCourseForDisplay(response);
     } catch (error) {
       return rejectWithValue(error.message || "Failed to update course");
@@ -397,7 +572,7 @@ const initialState = {
     clusterCoefficient: null,
     clusterIsMandatory: false,
     
-    // Succession rates
+    // FIXED: Succession rates with proper structure
     successionRates: [],
   },
 
@@ -460,7 +635,7 @@ const initialState = {
     hasCertificate: null,
     minDuration: '',
     maxDuration: '',
-    orderBy: 'createdDate',
+    orderBy: 'nameasc', // FIXED: Use proper enum value
     page: 1,
     take: 10,
   },
@@ -534,12 +709,14 @@ const courseSlice = createSlice({
       state.formData.imageFile = action.payload;
     },
 
-    // Succession rates management
-    addSuccessionRate: (state, action) => {
-      state.formData.successionRates.push({
-        rate: action.payload.rate || 0,
-        description: action.payload.description || '',
-      });
+   // FIXED: Succession rates management with proper structure
+   addSuccessionRate: (state, action) => {
+      const newRate = {
+        minRange: action.payload.minRange || 0,
+        maxRange: action.payload.maxRange || 100,
+        badgeId: action.payload.badgeId || null,
+      };
+      state.formData.successionRates.push(newRate);
     },
 
     updateSuccessionRate: (state, action) => {
@@ -555,6 +732,44 @@ const courseSlice = createSlice({
     removeSuccessionRate: (state, action) => {
       const index = action.payload;
       state.formData.successionRates.splice(index, 1);
+    },
+
+    // Bulk update succession rates (useful for reordering or bulk changes)
+    setSuccessionRates: (state, action) => {
+      state.formData.successionRates = action.payload || [];
+    },
+
+    // FIXED: Validate and auto-fix succession rate ranges
+    validateSuccessionRates: (state) => {
+      // Sort by minRange
+      state.formData.successionRates.sort((a, b) => a.minRange - b.minRange);
+      
+      // Ensure no overlapping ranges
+      for (let i = 0; i < state.formData.successionRates.length - 1; i++) {
+        if (state.formData.successionRates[i].maxRange >= state.formData.successionRates[i + 1].minRange) {
+          state.formData.successionRates[i].maxRange = state.formData.successionRates[i + 1].minRange - 1;
+        }
+      }
+    },
+
+    // Helper to create default succession rates based on badges
+    createDefaultSuccessionRates: (state, action) => {
+      const badges = action.payload || [];
+      state.formData.successionRates = [];
+      
+      if (badges.length > 0) {
+        const rangeSize = Math.floor(100 / badges.length);
+        badges.forEach((badge, index) => {
+          const minRange = index * rangeSize;
+          const maxRange = index === badges.length - 1 ? 100 : (index + 1) * rangeSize - 1;
+          
+          state.formData.successionRates.push({
+            minRange,
+            maxRange,
+            badgeId: badge.id,
+          });
+        });
+      }
     },
 
     // Sections management
@@ -720,9 +935,19 @@ const courseSlice = createSlice({
       };
     },
 
-    // Filters management
+    // Filters management (FIXED: Proper orderBy handling)
     setFilters: (state, action) => {
-      state.filters = { ...state.filters, ...action.payload };
+      const newFilters = { ...state.filters, ...action.payload };
+      
+      // FIXED: Ensure orderBy uses proper enum values
+      if (newFilters.orderBy) {
+        const validOrderValues = Object.values(COURSE_ORDER_OPTIONS);
+        if (!validOrderValues.includes(newFilters.orderBy.toLowerCase())) {
+          newFilters.orderBy = COURSE_ORDER_OPTIONS.NAME_ASC;
+        }
+      }
+      
+      state.filters = newFilters;
     },
 
     resetFilters: (state) => {
@@ -1100,6 +1325,58 @@ const courseSlice = createSlice({
         });
       })
 
+      // FIXED: Quiz operations with proper data handling
+      .addCase(addQuizAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addQuizAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        // Update quiz builder with created quiz ID
+        if (state.quizBuilder.contentId) {
+          state.quizBuilder.quizId = action.payload.id;
+        }
+      })
+      .addCase(addQuizAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Add questions
+      .addCase(addQuestionsAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addQuestionsAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        // Update questions with returned IDs
+        if (action.payload && Array.isArray(action.payload)) {
+          action.payload.forEach((returnedQuestion, index) => {
+            if (state.quizBuilder.questions[index]) {
+              state.quizBuilder.questions[index].id = returnedQuestion.id;
+            }
+          });
+        }
+      })
+      .addCase(addQuestionsAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Add options
+      .addCase(addOptionsAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addOptionsAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        // Options added successfully
+      })
+      .addCase(addOptionsAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
       // Evaluation
       .addCase(createCourseEvaluationAsync.fulfilled, (state, action) => {
         state.modals.evaluation = false;
@@ -1124,6 +1401,9 @@ export const {
   addSuccessionRate,
   updateSuccessionRate,
   removeSuccessionRate,
+  setSuccessionRates,
+  validateSuccessionRates,
+  createDefaultSuccessionRates,
   addSection,
   updateSection,
   removeSection,
@@ -1189,6 +1469,11 @@ export const selectUserAssignment = (state) => state.course.userAssignment;
 export const selectAnalytics = (state) => state.course.analytics;
 export const selectStatistics = (state) => state.course.statistics;
 
+// FIXED: Succession rates selectors
+export const selectSuccessionRates = (state) => state.course.formData.successionRates;
+export const selectSuccessionRateByIndex = (index) => (state) => state.course.formData.successionRates[index];
+export const selectSuccessionRatesCount = (state) => state.course.formData.successionRates.length;
+
 // Computed selectors
 export const selectFilteredCourses = (state) => {
   const courses = state.course.courses;
@@ -1252,6 +1537,61 @@ export const selectCourseProgress = (state) => {
   if (!course) return 0;
   
   return calculateCourseCompletion(course);
+};
+
+// FIXED: Succession rates with badges selector
+export const selectSuccessionRatesWithBadges = (state) => {
+  const successionRates = state.course.formData.successionRates;
+  const badges = state.badge?.badges || [];
+  
+  return successionRates.map(rate => {
+    const badge = badges.find(b => b.id === rate.badgeId);
+    return {
+      ...rate,
+      badge: badge || null
+    };
+  });
+};
+
+// FIXED: Validation selector for succession rates
+export const selectSuccessionRatesValidation = (state) => {
+  const rates = state.course.formData.successionRates;
+  const errors = [];
+  
+  // Check for overlapping ranges
+  for (let i = 0; i < rates.length - 1; i++) {
+    for (let j = i + 1; j < rates.length; j++) {
+      const rate1 = rates[i];
+      const rate2 = rates[j];
+      
+      if ((rate1.minRange <= rate2.maxRange && rate1.maxRange >= rate2.minRange)) {
+        errors.push(`Range ${i + 1} overlaps with range ${j + 1}`);
+      }
+    }
+  }
+  
+  // Check for gaps in coverage
+  const sortedRates = [...rates].sort((a, b) => a.minRange - b.minRange);
+  for (let i = 0; i < sortedRates.length - 1; i++) {
+    if (sortedRates[i].maxRange + 1 < sortedRates[i + 1].minRange) {
+      errors.push(`Gap between range ${i + 1} and ${i + 2}`);
+    }
+  }
+  
+  // Check if full range is covered (0-100)
+  if (sortedRates.length > 0) {
+    if (sortedRates[0].minRange > 0) {
+      errors.push('Range does not start from 0');
+    }
+    if (sortedRates[sortedRates.length - 1].maxRange < 100) {
+      errors.push('Range does not end at 100');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
 };
 
 export default courseSlice.reducer;

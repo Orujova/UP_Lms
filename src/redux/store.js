@@ -25,7 +25,7 @@ import courseContent from "./courseContent/courseContentSlice";
 import quiz from "./quiz/quizSlice";
 import courseTag from "./courseTag/courseTagSlice";
 import courseCategory from "./courseCategory/courseCategorySlice.js";
-
+import badge from "./badge/badgeSlice";
 const combinedReducers = combineReducers({
   news,
   quiz,
@@ -52,6 +52,7 @@ const combinedReducers = combineReducers({
   notification,
   annoucement,
   event,
+  badge,
   vacancy,
 });
 
