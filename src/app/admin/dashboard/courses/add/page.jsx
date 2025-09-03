@@ -11,9 +11,7 @@ import TargetGroupsForm from "@/components/course/TargetGroupsForm";
 import ContentModal from "@/components/course/ContentModal";
 import QuizModal from "@/components/course/QuizModal";
 import SectionModal from "@/components/course/SectionModal";
-import AssignUsersModal from "@/components/course/AssignUsersModal";
-import PublishConfirmModal from "@/components/course/PublishConfirmModal";
-import CoursePreviewModal from "@/components/course/CoursePreviewModal";
+
 import DeleteConfirmModal from "@/components/course/DeleteConfirmModal";
 
 import { resetFormData, setCurrentStep } from "@/redux/course/courseSlice";
@@ -66,9 +64,8 @@ const CourseAddPage = () => {
       <ContentModal />
       <QuizModal />
       <SectionModal />
-      <AssignUsersModal />
-      <PublishConfirmModal />
-      <CoursePreviewModal />
+
+      
       <DeleteConfirmModal />
     </>
   );

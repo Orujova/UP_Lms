@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Upload, Trash2, Search, X, ImagePlus, Loader } from "lucide-react";
-import { getToken } from "@/authtoken/auth.js";
+import { getToken ,getUserId} from "@/authtoken/auth.js";
 import { toast } from "sonner";
 
 const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
@@ -14,13 +14,13 @@ const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const fileInputRef = useRef(null);
   const itemsPerPage = 10;
-
+ const userId = getUserId();
   const fetchImages = async () => {
     try {
       setLoading(true);
       const token = getToken();
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/ImageContainer?Page=${page}&ShowMore.Take=${itemsPerPage}&OrderBy=${orderBy}`,
+        `https://bravoadmin.uplms.org/api/ImageContainer/GetAll?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}&OrderBy=${orderBy}`,
         {
           headers: {
             accept: "*/*",
@@ -28,13 +28,13 @@ const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
           },
         }
       );
-
       if (!response.ok) throw new Error("Failed to fetch images");
-
+      
       const data = await response.json();
+      console.log(data.images)
       if (data && data[0]) {
-        setImages(data[0].images);
-        setTotalPages(Math.ceil(data[0].totalImageCount / itemsPerPage));
+        setImages(data.images);
+        setTotalPages(Math.ceil(data.totalImageCount / itemsPerPage));
       }
     } catch (error) {
       toast.error("Failed to load images");

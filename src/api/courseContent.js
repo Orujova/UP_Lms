@@ -18,6 +18,7 @@ export const addContent = async (contentData) => {
   try {
     const formData = new FormData();
     formData.append("CourseSectionId", contentData.sectionId.toString());
+    formData.append("Order", contentData.order.toString());
     formData.append("HideContent", (contentData.hideContent || false).toString());
     formData.append("Type", contentData.type.toString()); // Use CONTENT_TYPES enum
     formData.append("IsDiscussionEnabled", (contentData.isDiscussionEnabled || false).toString());
@@ -53,6 +54,7 @@ export const updateContent = async (contentData) => {
   try {
     const formData = new FormData();
     formData.append("ContentId", contentData.contentId.toString());
+    formData.append("Order", contentData.order.toString());
     formData.append("CourseSectionId", contentData.sectionId.toString());
     formData.append("HideContent", (contentData.hideContent || false).toString());
     formData.append("IsDiscussionEnabled", (contentData.isDiscussionEnabled || false).toString());
@@ -87,10 +89,19 @@ export const updateContent = async (contentData) => {
 // Delete content
 export const deleteContent = async (contentId) => {
   try {
+    // FIXED: API docs əsasında düzəlişlər
+    const requestBody = {
+      contentId: parseInt(contentId)
+    };
+    
     const response = await axios.delete(`${API_URL}CourseContent/delete-content`, {
-      params: { id: contentId },
-      headers: getHeaders(),
+      data: requestBody, // DELETE request body
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "application/json",
+      },
     });
+    
     return response.data;
   } catch (error) {
     console.error("Error deleting content:", error);
@@ -159,35 +170,176 @@ export const getUploadStatus = async (contentId) => {
   }
 };
 
-// Get content stream
-export const getContentStream = async (contentId, file) => {
-  try {
-    const response = await axios.get(`${API_URL}CourseContent/stream`, {
-      params: { contentId, file },
-      headers: getHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error getting content stream:", error);
-    throw new Error("Failed to get content stream: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Get content paths
+// FIXED: Enhanced HLS streaming implementation for video paths
 export const getContentPaths = async (contentId) => {
   try {
+    console.log('🔍 Getting content paths for ID:', contentId);
+    
     const response = await axios.get(`${API_URL}CourseContent/paths`, {
-      params: { contentId },
+      params: { contentId: parseInt(contentId) },
       headers: getHeaders(),
     });
+
+    console.log('📺 Content paths response:', response.data);
+    
+    // Process and fix URLs to use the correct domain
+    if (response.data?.playlistPath) {
+      // Replace the internal IP with the public domain
+      const originalPlaylistPath = response.data.playlistPath;
+      const fixedPlaylistPath = originalPlaylistPath.replace(
+        'https://100.42.179.27:7198/', 
+        'https://bravoadmin.uplms.org/uploads/'
+      );
+      
+      response.data.playlistPath = fixedPlaylistPath;
+      console.log('🔧 Fixed playlist path:', fixedPlaylistPath);
+    }
+    
+    // Also fix segment paths if present
+    if (response.data?.segmentPaths && Array.isArray(response.data.segmentPaths)) {
+      response.data.segmentPaths = response.data.segmentPaths.map(segmentPath => 
+        segmentPath.replace('https://100.42.179.27:7198/', 'https://bravoadmin.uplms.org/uploads/')
+      );
+      console.log('🔧 Fixed segment paths:', response.data.segmentPaths);
+    }
+    
     return response.data;
+    
   } catch (error) {
-    console.error("Error getting content paths:", error);
+    console.error("❌ Error getting content paths:", error);
+    
+    // Handle specific error cases
+    if (error.response?.status === 500 && 
+        error.response?.data?.detail?.includes("Content not found or not a video")) {
+      console.log('⚠️ Content is not a video or not ready for streaming');
+      return { 
+        success: false, 
+        message: "Video content not ready for streaming",
+        playlistPath: null,
+        segmentPaths: []
+      };
+    }
+    
     throw new Error("Failed to get content paths: " + (error.response?.data?.detail || error.message));
   }
 };
 
-// ======================== VIDEO OPERATIONS ========================
+// FIXED: Enhanced streaming function for HLS segments and playlists
+export const getContentStream = async (contentId, file) => {
+  try {
+    console.log(`🎬 Getting content stream - ContentID: ${contentId}, File: ${file}`);
+    
+    if (!file || file.trim() === '') {
+      throw new Error('File parameter is required for streaming');
+    }
+
+    const response = await axios.get(`${API_URL}CourseContent/stream`, {
+      params: { 
+        contentId: parseInt(contentId), 
+        file: file.trim()
+      },
+      headers: getHeaders(),
+      responseType: 'blob', // Important for video/playlist files
+      timeout: 30000, // 30 second timeout
+    });
+
+    console.log('✅ Content stream received:', {
+      contentType: response.headers['content-type'],
+      size: response.data.size,
+      file: file
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error getting content stream:", error);
+    
+    if (error.response?.status === 400) {
+      throw new Error("File parameter is required for streaming");
+    }
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error("Stream request timed out");
+    }
+    
+    throw new Error("Failed to get content stream: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// FIXED: Enhanced HLS playlist processing for video streaming
+export const getVideoStreamingUrl = async (contentId) => {
+  try {
+    console.log('🎥 Getting video streaming URL for content:', contentId);
+    
+    // 1. Get video paths (playlist and segments)
+    const pathsData = await getContentPaths(contentId);
+    
+    if (!pathsData.playlistPath) {
+      console.log('⚠️ No playlist path available');
+      return {
+        success: false,
+        message: 'Video not ready for streaming',
+        streamingUrl: null,
+        pathsData: pathsData
+      };
+    }
+
+    console.log('✅ Video paths available, processing HLS playlist');
+    
+    // 2. Get the playlist file
+    const playlistFileName = pathsData.playlistPath.split('/').pop();
+    const playlistBlob = await getContentStream(contentId, `coursecontent/content_${contentId}/${playlistFileName}`);
+    const playlistText = await playlistBlob.text();
+    
+    console.log('📄 Original playlist content length:', playlistText.length);
+    
+    if (!playlistText.includes('#EXTM3U')) {
+      throw new Error('Invalid HLS playlist format');
+    }
+    
+    // 3. Process playlist to use streaming API for segments
+    const modifiedPlaylist = playlistText
+      .split('\n')
+      .map((line) => {
+        const trimmedLine = line.trim();
+        
+        // Replace .ts segment references with streaming API URLs
+        if (trimmedLine.endsWith('.ts')) {
+          const segmentFileName = trimmedLine;
+          const segmentPath = `coursecontent/content_${contentId}/${segmentFileName}`;
+          return `${API_URL}CourseContent/stream?contentId=${contentId}&file=${encodeURIComponent(segmentPath)}`;
+        }
+        
+        return line;
+      })
+      .join('\n');
+    
+    console.log('📄 Modified playlist for streaming API');
+    
+    // 4. Create blob URL for the modified playlist
+    const blob = new Blob([modifiedPlaylist], { type: 'application/x-mpegURL' });
+    const objectUrl = URL.createObjectURL(blob);
+    
+    console.log('✅ Created streaming playlist URL:', objectUrl);
+    
+    return {
+      success: true,
+      streamingUrl: objectUrl,
+      playlistPath: pathsData.playlistPath,
+      segmentPaths: pathsData.segmentPaths,
+      pathsData: pathsData
+    };
+    
+  } catch (error) {
+    console.error('❌ Error getting video streaming URL:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to get streaming URL',
+      streamingUrl: null
+    };
+  }
+};
+
+// ======================== ENHANCED VIDEO OPERATIONS ========================
 
 // Add video content (FIXED - Video type is 4 not 2)
 export const addVideoContent = async (videoData) => {
@@ -1289,6 +1441,100 @@ export const MEETING_ORDER_OPTIONS = {
   STATUS_DESC: 'statusdesc'
 };
 
+// FIXED: Constants with correct values
+export const UPLOAD_STATUS = {
+  PENDING: 0,
+  PROCESSING: 1,
+  UPLOADING: 2,
+  COMPLETED: 3,
+  FAILED: 4
+};
+
+// FIXED: Enhanced helper to check if video is ready for streaming
+export const isVideoReadyForStreaming = (content) => {
+  // Check if content is video type
+  if (content?.type !== CONTENT_TYPES.VIDEO && content?.contentType !== 'Video') {
+    return false;
+  }
+  
+  // Check upload status if available
+  if (content?.uploadStatus !== undefined) {
+    return content.uploadStatus === UPLOAD_STATUS.COMPLETED;
+  }
+  
+  // Check if has video URL or paths
+  if (content?.contentString || content?.data || content?.pathsData?.playlistPath) {
+    return true;
+  }
+  
+  // Default to false if we can't determine
+  return false;
+};
+
+// FIXED: Enhanced function to get video display URL
+export const getVideoDisplayUrl = (content) => {
+  if (!content) return null;
+  
+  // Try streaming URL first
+  if (content.streamingUrl) {
+    return content.streamingUrl;
+  }
+  
+  // Try content string/data
+  if (content.contentString) {
+    return content.contentString;
+  }
+  
+  if (content.data) {
+    return content.data;
+  }
+  
+  // Try paths data
+  if (content.pathsData?.playlistPath) {
+    const contentId = content.id || content.contentId;
+    const fileName = content.pathsData.playlistPath.split('/').pop();
+    return `${API_URL}CourseContent/stream?contentId=${contentId}&file=${encodeURIComponent(fileName)}`;
+  }
+  
+  return null;
+};
+
+// FIXED: Function to get upload status message
+export const getUploadStatusMessage = (status) => {
+  switch (status) {
+    case UPLOAD_STATUS.PENDING:
+      return 'Video upload is pending';
+    case UPLOAD_STATUS.PROCESSING:
+      return 'Video is being processed';
+    case UPLOAD_STATUS.UPLOADING:
+      return 'Video is uploading';
+    case UPLOAD_STATUS.COMPLETED:
+      return 'Video is ready for streaming';
+    case UPLOAD_STATUS.FAILED:
+      return 'Video upload failed';
+    default:
+      return 'Unknown upload status';
+  }
+};
+
+// FIXED: Function to get upload status info with color
+export const getUploadStatusInfo = (status) => {
+  switch (status) {
+    case UPLOAD_STATUS.PENDING:
+      return { text: 'Pending', color: 'yellow', icon: 'Clock' };
+    case UPLOAD_STATUS.PROCESSING:
+      return { text: 'Processing', color: 'blue', icon: 'Loader2' };
+    case UPLOAD_STATUS.UPLOADING:
+      return { text: 'Uploading', color: 'green', icon: 'Upload' };
+    case UPLOAD_STATUS.COMPLETED:
+      return { text: 'Completed', color: 'green', icon: 'CheckCircle' };
+    case UPLOAD_STATUS.FAILED:
+      return { text: 'Failed', color: 'red', icon: 'AlertCircle' };
+    default:
+      return { text: 'Unknown', color: 'gray', icon: 'HelpCircle' };
+  }
+};
+
 export default {
   // Content management
   addContent,
@@ -1300,6 +1546,7 @@ export default {
   getUploadStatus,
   getContentStream,
   getContentPaths,
+  getVideoStreamingUrl,
   
   // Video operations
   addVideoContent,
@@ -1361,6 +1608,10 @@ export default {
   validateMeetingData,
   formatContentForDisplay,
   formatVideoForDisplay,
+  isVideoReadyForStreaming,
+  getVideoDisplayUrl,
+  getUploadStatusMessage,
+  getUploadStatusInfo,
   
   // Constants
   CONTENT_TYPES,
@@ -1369,4 +1620,5 @@ export default {
   SUBTITLE_LANGUAGES,
   COMMENT_ORDER_OPTIONS,
   MEETING_ORDER_OPTIONS,
+  UPLOAD_STATUS,
 };

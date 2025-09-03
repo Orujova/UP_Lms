@@ -1,9 +1,9 @@
-// redux/courseContent/courseContentSlice.js
+// redux/courseContent/courseContentSlice.js - Enhanced for Video Streaming
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import {
   // Core CRUD operations
   addContent,
-  updateContent,
+ 
   deleteContent,
   getContentsBySection,
   getContentById,
@@ -15,6 +15,11 @@ import {
   getVideoInteractions,
   updateVideoInteraction as updateVideoInteractionAPI,
   deleteVideoInteraction,
+  
+  // FIXED: Enhanced video streaming operations
+  getContentPaths,
+  getContentStream,
+  getVideoStreamingUrl,
   
   // Subtitle operations
   addSubtitle,
@@ -36,7 +41,7 @@ import {
   updateMeetingRequest,
   deleteMeetingRequest,
   getMeetingsByContentId,
-  
+ updateContent,
   // File operations
   uploadFile,
   getFileInfo,
@@ -58,12 +63,17 @@ import {
   generateContentPreview,
   sortContents,
   filterContents,
+  isVideoReadyForStreaming,
+  getVideoDisplayUrl,
+  getUploadStatusMessage,
+  getUploadStatusInfo,
   CONTENT_TYPES,
   VIDEO_QUALITIES,
   INTERACTION_TYPES,
   SUBTITLE_LANGUAGES,
   COMMENT_ORDER_OPTIONS,
   MEETING_ORDER_OPTIONS,
+  UPLOAD_STATUS,
 } from '@/api/courseContent';
 
 // ======================== ASYNC THUNKS ========================
@@ -93,28 +103,7 @@ export const addContentAsync = createAsyncThunk(
   }
 );
 
-export const updateContentAsync = createAsyncThunk(
-  'courseContent/updateContent',
-  async (contentData, { rejectWithValue }) => {
-    try {
-      const errors = validateContentData(contentData);
-      if (errors.length > 0) {
-        return rejectWithValue(errors.join(', '));
-      }
-      
-      // FIXED: Ensure proper content type enum values
-      const apiData = {
-        ...contentData,
-        type: contentData.type || CONTENT_TYPES.TEXT_BOX
-      };
-      
-      const response = await updateContent(apiData);
-      return formatContentForDisplay(response);
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
+
 
 export const deleteContentAsync = createAsyncThunk(
   'courseContent/deleteContent',
@@ -155,7 +144,7 @@ export const getContentByIdAsync = createAsyncThunk(
   }
 );
 
-// Video operations (FIXED: Video type enum)
+// FIXED: Enhanced video operations with streaming support
 export const addVideoContentAsync = createAsyncThunk(
   'courseContent/addVideoContent',
   async (videoData, { rejectWithValue }) => {
@@ -197,6 +186,49 @@ export const updateVideoContentAsync = createAsyncThunk(
   }
 );
 
+// FIXED: Enhanced video streaming operations
+export const getVideoPathsAsync = createAsyncThunk(
+  'courseContent/getVideoPaths',
+  async (contentId, { rejectWithValue }) => {
+    try {
+      console.log('🎬 Redux: Getting video paths for content:', contentId);
+      const response = await getContentPaths(contentId);
+      return { contentId, pathsData: response };
+    } catch (error) {
+      console.error('❌ Redux: Failed to get video paths:', error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const getVideoStreamingUrlAsync = createAsyncThunk(
+  'courseContent/getVideoStreamingUrl',
+  async (contentId, { rejectWithValue }) => {
+    try {
+      console.log('🎥 Redux: Getting video streaming URL for content:', contentId);
+      const response = await getVideoStreamingUrl(contentId);
+      return { contentId, streamingData: response };
+    } catch (error) {
+      console.error('❌ Redux: Failed to get video streaming URL:', error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const getContentStreamAsync = createAsyncThunk(
+  'courseContent/getContentStream',
+  async ({ contentId, file }, { rejectWithValue }) => {
+    try {
+      console.log('📡 Redux: Getting content stream for:', contentId, file);
+      const response = await getContentStream(contentId, file);
+      return { contentId, file, streamData: response };
+    } catch (error) {
+      console.error('❌ Redux: Failed to get content stream:', error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const getVideoInteractionsAsync = createAsyncThunk(
   'courseContent/getVideoInteractions',
   async (videoId, { rejectWithValue }) => {
@@ -221,7 +253,28 @@ export const updateVideoInteractionAsync = createAsyncThunk(
   }
 );
 
-// Subtitle operations (FIXED: Language enum handling)
+export const updateContentAsync = createAsyncThunk(
+  'courseContent/updateContent',
+  async (contentData, { rejectWithValue }) => {
+    try {
+      const errors = validateContentData(contentData);
+      if (errors.length > 0) {
+        return rejectWithValue(errors.join(', '));
+      }
+      
+      const response = await updateContent(contentData);
+      return { 
+        contentId: contentData.contentId,
+        sectionId: contentData.courseSectionId,
+        updatedContent: response.data || response,
+        contentData
+      };
+    } catch (error) {
+      console.error('Error updating content:', error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
 export const addSubtitleAsync = createAsyncThunk(
   'courseContent/addSubtitle',
   async (subtitleData, { rejectWithValue }) => {
@@ -379,9 +432,12 @@ const courseContentInitialState = {
   // Current content being viewed/edited
   currentContent: null,
   
-  // Video data
+  // FIXED: Enhanced video data with streaming support
   videos: {}, // { videoId: videoData }
   videoInteractions: {}, // { videoId: [interactions] }
+  videoStreamingData: {}, // { videoId: { streamingUrl, pathsData, ready } }
+  videoPaths: {}, // { videoId: pathsData }
+  videoStreams: {}, // { videoId: { [fileName]: streamData } }
   subtitles: {}, // { videoId: [subtitles] }
   
   // Comments by content
@@ -398,6 +454,7 @@ const courseContentInitialState = {
   loading: false,
   contentLoading: false,
   videoLoading: false,
+  streamingLoading: false, // FIXED: Added streaming loading state
   commentLoading: false,
   meetingLoading: false,
   fileLoading: false,
@@ -406,6 +463,7 @@ const courseContentInitialState = {
   error: null,
   contentError: null,
   videoError: null,
+  streamingError: null, // FIXED: Added streaming error state
   commentError: null,
   meetingError: null,
   fileError: null,
@@ -434,7 +492,7 @@ const courseContentInitialState = {
     orderNumber: 1,
   },
   
-  // Video form for editing
+  // FIXED: Enhanced video form for editing with streaming support
   videoForm: {
     title: '',
     description: '',
@@ -444,6 +502,10 @@ const courseContentInitialState = {
     enableComments: true,
     autoplay: false,
     loop: false,
+    // Streaming settings
+    useHLS: true,
+    enableAdaptiveBitrate: true,
+    preloadLevel: 'metadata', // 'none', 'metadata', 'auto'
   },
   
   // Comment form
@@ -463,7 +525,7 @@ const courseContentInitialState = {
     urgency: 'normal', // 'low', 'normal', 'high'
   },
   
-  // Video player state
+  // FIXED: Enhanced video player state with streaming support
   videoPlayer: {
     isPlaying: false,
     currentTime: 0,
@@ -475,6 +537,14 @@ const courseContentInitialState = {
     showControls: true,
     showSubtitles: false,
     selectedSubtitleLanguage: SUBTITLE_LANGUAGES.ENGLISH, // FIXED: Use enum
+    // Streaming specific
+    isBuffering: false,
+    streamingReady: false,
+    hlsSupported: false,
+    currentLevel: -1, // Auto quality
+    levels: [], // Available quality levels
+    networkError: false,
+    streamUrl: null,
   },
   
   // Video interactions (overlay elements)
@@ -491,6 +561,7 @@ const courseContentInitialState = {
     fileUpload: false,
     videoInteractions: false,
     subtitleEditor: false,
+    videoSettings: false, // FIXED: Added video settings modal
   },
   
   // Content editor state
@@ -529,22 +600,31 @@ const courseContentInitialState = {
     mode: 'desktop', // 'desktop', 'tablet', 'mobile'
   },
   
-  // Analytics and tracking
+  // FIXED: Enhanced analytics and tracking with video streaming metrics
   analytics: {
     viewCounts: {}, // { contentId: count }
     completionRates: {}, // { contentId: rate }
     averageTimeSpent: {}, // { contentId: seconds }
     interactionCounts: {}, // { contentId: count }
     commentCounts: {}, // { contentId: count }
+    // Video streaming analytics
+    streamingMetrics: {}, // { contentId: { bufferEvents, qualityChanges, errors } }
+    playbackMetrics: {}, // { contentId: { startTime, endTime, pauseCount } }
+    qualityMetrics: {}, // { contentId: { averageQuality, qualityChanges } }
   },
   
-  // Statistics (FIXED: Use proper enum for content types)
+  // FIXED: Statistics with video streaming support
   statistics: {
     totalContents: 0,
     totalVideos: 0,
     totalComments: 0,
     totalMeetings: 0,
     totalFileSize: 0,
+    // Video streaming statistics
+    totalStreamingVideos: 0,
+    totalHLSStreams: 0,
+    averageBufferTime: 0,
+    streamingSuccessRate: 0,
     contentTypes: {
       [CONTENT_TYPES.PAGE]: 0,
       [CONTENT_TYPES.TEXT_BOX]: 0,
@@ -585,7 +665,7 @@ const courseContentSlice = createSlice({
       state.editor.currentStep = 1;
     },
     
-    // Video form management
+    // FIXED: Enhanced video form management with streaming support
     setVideoForm: (state, action) => {
       state.videoForm = { ...state.videoForm, ...action.payload };
     },
@@ -642,7 +722,7 @@ const courseContentSlice = createSlice({
       state.editor.isDirty = false;
     },
     
-    // Video player controls (FIXED: Use proper enums)
+    // FIXED: Enhanced video player controls with streaming support
     setVideoPlayerState: (state, action) => {
       state.videoPlayer = { ...state.videoPlayer, ...action.payload };
       
@@ -691,6 +771,54 @@ const courseContentSlice = createSlice({
       }
     },
     
+    // FIXED: Enhanced streaming state management
+    setStreamingState: (state, action) => {
+      const { videoId, streamingData } = action.payload;
+      state.videoStreamingData[videoId] = {
+        ...state.videoStreamingData[videoId],
+        ...streamingData
+      };
+    },
+    
+    setStreamingReady: (state, action) => {
+      const { videoId, ready, streamUrl } = action.payload;
+      if (!state.videoStreamingData[videoId]) {
+        state.videoStreamingData[videoId] = {};
+      }
+      state.videoStreamingData[videoId].ready = ready;
+      if (streamUrl) {
+        state.videoStreamingData[videoId].streamingUrl = streamUrl;
+        state.videoPlayer.streamUrl = streamUrl;
+      }
+    },
+    
+    setStreamingError: (state, action) => {
+      const { videoId, error } = action.payload;
+      if (!state.videoStreamingData[videoId]) {
+        state.videoStreamingData[videoId] = {};
+      }
+      state.videoStreamingData[videoId].error = error;
+      state.streamingError = error;
+    },
+    
+    clearStreamingError: (state) => {
+      state.streamingError = null;
+    },
+    
+    updateStreamingMetrics: (state, action) => {
+      const { videoId, metrics } = action.payload;
+      if (!state.analytics.streamingMetrics[videoId]) {
+        state.analytics.streamingMetrics[videoId] = {
+          bufferEvents: 0,
+          qualityChanges: 0,
+          errors: 0,
+          totalPlayTime: 0,
+          averageQuality: 0
+        };
+      }
+      Object.assign(state.analytics.streamingMetrics[videoId], metrics);
+    },
+    
     // Content management within sections
     addContentToSection: (state, action) => {
       const { sectionId, content } = action.payload;
@@ -711,35 +839,173 @@ const courseContentSlice = createSlice({
       courseContentSlice.caseReducers.updateStatistics(state);
     },
     
+    // Update content in section
     updateContentInSection: (state, action) => {
-      const { sectionId, contentId, updates } = action.payload;
+      const { sectionId, contentId, updatedContent } = action.payload;
       
       if (state.contentsBySection[sectionId]) {
         const contentIndex = state.contentsBySection[sectionId].findIndex(
-          c => c.id === contentId
+          c => (c.id || c.contentId) === contentId
         );
         
-        if (contentIndex !== -1) {
-          // FIXED: Validate content type on update
-          const updatedContent = {
+        if (contentIndex >= 0) {
+          state.contentsBySection[sectionId][contentIndex] = {
             ...state.contentsBySection[sectionId][contentIndex],
-            ...updates,
+            ...updatedContent
           };
-          
-          if (updates.type !== undefined) {
-            const validTypes = Object.values(CONTENT_TYPES);
-            if (!validTypes.includes(updates.type)) {
-              updatedContent.type = CONTENT_TYPES.TEXT_BOX;
-            }
-          }
-          
-          state.contentsBySection[sectionId][contentIndex] = updatedContent;
         }
       }
       
       courseContentSlice.caseReducers.updateStatistics(state);
     },
     
+    reorderContentInSection: (state, action) => {
+      const { sectionId, sourceIndex, destinationIndex } = action.payload;
+      
+      if (state.contentsBySection[sectionId] && 
+          sourceIndex !== destinationIndex &&
+          sourceIndex >= 0 && 
+          destinationIndex >= 0 &&
+          sourceIndex < state.contentsBySection[sectionId].length &&
+          destinationIndex < state.contentsBySection[sectionId].length) {
+        
+        const contents = Array.from(state.contentsBySection[sectionId]);
+        const [movedContent] = contents.splice(sourceIndex, 1);
+        contents.splice(destinationIndex, 0, movedContent);
+        
+        // Update order numbers to reflect new positions
+        contents.forEach((content, index) => {
+          content.order = index + 1;
+          content.orderNumber = index + 1;
+        });
+        
+        state.contentsBySection[sectionId] = contents;
+        
+        // Mark as requiring sync with server
+        state.pendingReorders = state.pendingReorders || [];
+        state.pendingReorders.push({
+          sectionId,
+          contents: contents.map(c => ({ id: c.id, order: c.order }))
+        });
+      }
+    },
+
+    // Clear pending reorders after successful sync
+    clearPendingReorders: (state) => {
+      state.pendingReorders = [];
+    },
+
+    // ENHANCED: Better content removal with cleanup
+    removeContentFromSection: (state, action) => {
+      const { sectionId, contentId } = action.payload;
+      
+      if (state.contentsBySection[sectionId]) {
+        const originalLength = state.contentsBySection[sectionId].length;
+        
+        state.contentsBySection[sectionId] = state.contentsBySection[sectionId].filter(
+          c => (c.id || c.contentId) !== contentId
+        );
+        
+        // Only reorder if content was actually removed
+        if (state.contentsBySection[sectionId].length < originalLength) {
+          // Update order numbers for remaining content
+          state.contentsBySection[sectionId].forEach((content, index) => {
+            content.order = index + 1;
+            content.orderNumber = index + 1;
+          });
+        }
+      }
+      
+      // Enhanced cleanup
+      const cleanupKeys = [
+        'videoStreamingData', 'videoPaths', 'videoStreams', 'commentsByContent', 
+        'meetingsByContent', 'videoInteractions'
+      ];
+      
+      cleanupKeys.forEach(key => {
+        if (state[key] && state[key][contentId]) {
+          delete state[key][contentId];
+        }
+      });
+      
+      // Reset current content if it's the deleted one
+      if (state.currentContent?.id === contentId || 
+          state.currentContent?.contentId === contentId) {
+        state.currentContent = null;
+      }
+      
+      courseContentSlice.caseReducers.updateStatistics(state);
+    },
+
+    // NEW: Optimistic content addition
+    addContentOptimistic: (state, action) => {
+      const { sectionId, content } = action.payload;
+      
+      if (!state.contentsBySection[sectionId]) {
+        state.contentsBySection[sectionId] = [];
+      }
+      
+      const newOrder = state.contentsBySection[sectionId].length + 1;
+      const optimisticContent = {
+        ...content,
+        id: content.id || `temp_${Date.now()}_${Math.random()}`,
+        order: newOrder,
+        orderNumber: newOrder,
+        _isOptimistic: true
+      };
+      
+      state.contentsBySection[sectionId].push(optimisticContent);
+      courseContentSlice.caseReducers.updateStatistics(state);
+    },
+
+    // NEW: Replace optimistic content with real data
+    replaceOptimisticContent: (state, action) => {
+      const { sectionId, tempId, realContent } = action.payload;
+      
+      if (state.contentsBySection[sectionId]) {
+        const contentIndex = state.contentsBySection[sectionId].findIndex(
+          c => c.id === tempId || c._isOptimistic
+        );
+        
+        if (contentIndex >= 0) {
+          state.contentsBySection[sectionId][contentIndex] = {
+            ...realContent,
+            _isOptimistic: false
+          };
+        }
+      }
+    },
+
+    // ENHANCED: Better loading states
+    setContentLoading: (state, action) => {
+      const { sectionId, isLoading } = action.payload;
+      
+      if (sectionId) {
+        state.sectionLoadingStates = state.sectionLoadingStates || {};
+        state.sectionLoadingStates[sectionId] = isLoading;
+      } else {
+        state.contentLoading = isLoading;
+      }
+    },
+
+    // NEW: Track content operation status
+    setContentOperationStatus: (state, action) => {
+      const { operation, status, sectionId, contentId } = action.payload;
+      
+      state.operationStatus = state.operationStatus || {};
+      const key = `${operation}_${sectionId}_${contentId || 'all'}`;
+      
+      if (status === 'completed' || status === 'failed') {
+        delete state.operationStatus[key];
+      } else {
+        state.operationStatus[key] = {
+          operation,
+          status,
+          timestamp: Date.now()
+        };
+      }
+    },
+ 
     removeContentFromSection: (state, action) => {
       const { sectionId, contentId } = action.payload;
       
@@ -752,6 +1018,17 @@ const courseContentSlice = createSlice({
         state.contentsBySection[sectionId].forEach((content, index) => {
           content.orderNumber = index + 1;
         });
+      }
+      
+      // FIXED: Clean up video streaming data
+      if (state.videoStreamingData[contentId]) {
+        delete state.videoStreamingData[contentId];
+      }
+      if (state.videoPaths[contentId]) {
+        delete state.videoPaths[contentId];
+      }
+      if (state.videoStreams[contentId]) {
+        delete state.videoStreams[contentId];
       }
       
       courseContentSlice.caseReducers.updateStatistics(state);
@@ -1091,10 +1368,20 @@ const courseContentSlice = createSlice({
         case 'comment':
           state.analytics.commentCounts[contentId] = (state.analytics.commentCounts[contentId] || 0) + value;
           break;
+        case 'buffer':
+          courseContentSlice.caseReducers.updateStreamingMetrics(state, {
+            payload: { videoId: contentId, metrics: { bufferEvents: (state.analytics.streamingMetrics[contentId]?.bufferEvents || 0) + 1 } }
+          });
+          break;
+        case 'qualityChange':
+          courseContentSlice.caseReducers.updateStreamingMetrics(state, {
+            payload: { videoId: contentId, metrics: { qualityChanges: (state.analytics.streamingMetrics[contentId]?.qualityChanges || 0) + 1 } }
+          });
+          break;
       }
     },
     
-    // Statistics calculation (FIXED: Use proper enum values)
+    // FIXED: Enhanced statistics calculation with streaming support
     updateStatistics: (state) => {
       const allContents = Object.values(state.contentsBySection).flat();
       const allComments = Object.values(state.commentsByContent).flat();
@@ -1116,6 +1403,13 @@ const courseContentSlice = createSlice({
       });
       
       const totalVideos = allContents.filter(c => c.type === CONTENT_TYPES.VIDEO).length;
+      const totalStreamingVideos = Object.keys(state.videoStreamingData).filter(
+        id => state.videoStreamingData[id]?.ready
+      ).length;
+      const totalHLSStreams = Object.keys(state.videoPaths).filter(
+        id => state.videoPaths[id]?.playlistPath
+      ).length;
+      
       const totalFileSize = Object.values(state.uploadedFiles).reduce(
         (sum, file) => sum + (file.size || 0), 0
       );
@@ -1128,12 +1422,25 @@ const courseContentSlice = createSlice({
       const totalInteractions = Object.values(state.analytics.interactionCounts).reduce((sum, count) => sum + count, 0);
       const engagementRate = totalViews > 0 ? (totalInteractions / totalViews) * 100 : 0;
       
+      // Calculate streaming success rate
+      const totalStreamingAttempts = Object.keys(state.videoStreamingData).length;
+      const successfulStreams = Object.values(state.videoStreamingData).filter(
+        data => data.ready && !data.error
+      ).length;
+      const streamingSuccessRate = totalStreamingAttempts > 0 
+        ? (successfulStreams / totalStreamingAttempts) * 100 
+        : 0;
+      
       state.statistics = {
         totalContents: allContents.length,
         totalVideos,
         totalComments: allComments.length,
         totalMeetings: allMeetings.length,
         totalFileSize,
+        totalStreamingVideos,
+        totalHLSStreams,
+        averageBufferTime: 0, // Would be calculated from streaming metrics
+        streamingSuccessRate,
         contentTypes,
         averageDuration: Math.round(averageDuration),
         engagementRate: Math.round(engagementRate * 10) / 10,
@@ -1145,6 +1452,7 @@ const courseContentSlice = createSlice({
       state.error = null;
       state.contentError = null;
       state.videoError = null;
+      state.streamingError = null;
       state.commentError = null;
       state.meetingError = null;
       state.fileError = null;
@@ -1272,17 +1580,32 @@ const courseContentSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Add content
-      .addCase(addContentAsync.pending, (state) => {
-        state.contentLoading = true;
+      .addCase(addContentAsync.pending, (state, action) => {
+        const { sectionId } = action.meta.arg;
+        
+        courseContentSlice.caseReducers.setContentLoading(state, {
+          payload: { sectionId, isLoading: true }
+        });
+        
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'add', status: 'pending', sectionId }
+        });
+        
         state.contentError = null;
       })
       .addCase(addContentAsync.fulfilled, (state, action) => {
-        state.contentLoading = false;
-        
-        // Add to appropriate section
         const content = action.payload;
         const sectionId = content.sectionId;
         
+        courseContentSlice.caseReducers.setContentLoading(state, {
+          payload: { sectionId, isLoading: false }
+        });
+        
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'add', status: 'completed', sectionId }
+        });
+
+        // Add to appropriate section
         if (sectionId) {
           courseContentSlice.caseReducers.addContentToSection(state, {
             payload: { sectionId, content },
@@ -1293,48 +1616,81 @@ const courseContentSlice = createSlice({
         courseContentSlice.caseReducers.resetContentForm(state);
       })
       .addCase(addContentAsync.rejected, (state, action) => {
-        state.contentLoading = false;
+        const { sectionId } = action.meta.arg;
+        
+        courseContentSlice.caseReducers.setContentLoading(state, {
+          payload: { sectionId, isLoading: false }
+        });
+        
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'add', status: 'failed', sectionId }
+        });
+        
         state.contentError = action.payload;
       })
-      
-      // Update content
-      .addCase(updateContentAsync.pending, (state) => {
-        state.contentLoading = true;
+
+      // ENHANCED: Update content with better error handling
+       .addCase(updateContentAsync.pending, (state, action) => {
+        const { contentId, courseSectionId } = action.meta.arg;
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'update', status: 'pending', sectionId: courseSectionId, contentId }
+        });
         state.contentError = null;
       })
       .addCase(updateContentAsync.fulfilled, (state, action) => {
-        state.contentLoading = false;
+        const { contentId, sectionId, updatedContent, contentData } = action.payload;
         
-        const content = action.payload;
-        const sectionId = content.sectionId;
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'update', status: 'completed', sectionId, contentId }
+        });
         
-        if (sectionId) {
-          courseContentSlice.caseReducers.updateContentInSection(state, {
-            payload: { sectionId, contentId: content.id, updates: content },
-          });
+        // Update content in state
+        if (state.contentsBySection[sectionId]) {
+          const contentIndex = state.contentsBySection[sectionId].findIndex(
+            c => (c.id || c.contentId) === contentId
+          );
+          
+          if (contentIndex >= 0) {
+            // Merge the updated data
+            state.contentsBySection[sectionId][contentIndex] = {
+              ...state.contentsBySection[sectionId][contentIndex],
+              ...contentData, // Include the data that was sent to API
+              ...updatedContent // Include the response data
+            };
+            
+            // Re-sort contents by order if order was updated
+            if (contentData.order !== undefined) {
+              state.contentsBySection[sectionId].sort((a, b) => (a.order || 0) - (b.order || 0));
+            }
+          }
         }
         
-        if (state.currentContent?.id === content.id) {
-          state.currentContent = content;
-        }
-        
-        state.modals.editContent = false;
-        courseContentSlice.caseReducers.markAsSaved(state);
+        courseContentSlice.caseReducers.updateStatistics(state);
       })
       .addCase(updateContentAsync.rejected, (state, action) => {
-        state.contentLoading = false;
+        const { contentId, courseSectionId } = action.meta.arg;
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'update', status: 'failed', sectionId: courseSectionId, contentId }
+        });
         state.contentError = action.payload;
       })
       
       // Delete content
-      .addCase(deleteContentAsync.pending, (state) => {
-        state.contentLoading = true;
+      .addCase(deleteContentAsync.pending, (state, action) => {
+        const contentId = action.meta.arg;
+        
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'delete', status: 'pending', contentId }
+        });
+        
         state.contentError = null;
       })
       .addCase(deleteContentAsync.fulfilled, (state, action) => {
-        state.contentLoading = false;
-        
         const contentId = action.payload;
+        
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'delete', status: 'completed', contentId }
+        });
         
         // Remove from all sections
         Object.keys(state.contentsBySection).forEach(sectionId => {
@@ -1343,48 +1699,76 @@ const courseContentSlice = createSlice({
           });
         });
         
-        // Clean up related data
-        Object.keys(state.commentsByContent).forEach(key => {
-          if (key === contentId) {
-            delete state.commentsByContent[key];
+        // Enhanced cleanup
+        const cleanupKeys = [
+          'commentsByContent', 'meetingsByContent', 'videoStreamingData', 
+          'videoPaths', 'videoStreams', 'videoInteractions'
+        ];
+        
+        cleanupKeys.forEach(key => {
+          if (state[key] && state[key][contentId]) {
+            delete state[key][contentId];
           }
         });
         
-        Object.keys(state.meetingsByContent).forEach(key => {
-          if (key === contentId) {
-            delete state.meetingsByContent[key];
-          }
-        });
-        
-        if (state.currentContent?.id === contentId) {
+        if (state.currentContent?.id === contentId || 
+            state.currentContent?.contentId === contentId) {
           state.currentContent = null;
         }
         
         state.modals.deleteContent = false;
+        
+        // Clear any pending operations for this content
+        if (state.operationStatus) {
+          Object.keys(state.operationStatus).forEach(key => {
+            if (key.includes(`_${contentId}`)) {
+              delete state.operationStatus[key];
+            }
+          });
+        }
       })
       .addCase(deleteContentAsync.rejected, (state, action) => {
-        state.contentLoading = false;
+        const contentId = action.meta.arg;
+        
+        courseContentSlice.caseReducers.setContentOperationStatus(state, {
+          payload: { operation: 'delete', status: 'failed', contentId }
+        });
+        
         state.contentError = action.payload;
       })
       
       // Get contents by section
+      .addCase(getContentsBySectionAsync.pending, (state, action) => {
+        const sectionId = action.meta.arg;
+        
+        courseContentSlice.caseReducers.setContentLoading(state, {
+          payload: { sectionId, isLoading: true }
+        });
+      })
       .addCase(getContentsBySectionAsync.fulfilled, (state, action) => {
         const { sectionId, contents } = action.payload;
-        state.contentsBySection[sectionId] = contents;
+        
+        courseContentSlice.caseReducers.setContentLoading(state, {
+          payload: { sectionId, isLoading: false }
+        });
+        
+        // Ensure contents are properly ordered
+        const sortedContents = (contents || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        state.contentsBySection[sectionId] = sortedContents;
         courseContentSlice.caseReducers.updateStatistics(state);
+        
+        // Cache timestamp for this section
+        state.sectionLoadTimestamps = state.sectionLoadTimestamps || {};
+        state.sectionLoadTimestamps[sectionId] = Date.now();
       })
-      
-      // Get content by ID
-      .addCase(getContentByIdAsync.pending, (state) => {
-        state.contentLoading = true;
-        state.contentError = null;
-      })
-      .addCase(getContentByIdAsync.fulfilled, (state, action) => {
-        state.contentLoading = false;
-        state.currentContent = action.payload;
-      })
-      .addCase(getContentByIdAsync.rejected, (state, action) => {
-        state.contentLoading = false;
+      .addCase(getContentsBySectionAsync.rejected, (state, action) => {
+        const sectionId = action.meta.arg;
+        
+        courseContentSlice.caseReducers.setContentLoading(state, {
+          payload: { sectionId, isLoading: false }
+        });
+        
         state.contentError = action.payload;
       })
       
@@ -1421,6 +1805,73 @@ const courseContentSlice = createSlice({
             payload: { sectionId: video.sectionId, contentId: video.id, updates: video },
           });
         }
+      })
+      
+      // FIXED: Enhanced video streaming operations
+      .addCase(getVideoPathsAsync.pending, (state) => {
+        state.streamingLoading = true;
+        state.streamingError = null;
+      })
+      .addCase(getVideoPathsAsync.fulfilled, (state, action) => {
+        state.streamingLoading = false;
+        const { contentId, pathsData } = action.payload;
+        state.videoPaths[contentId] = pathsData;
+        
+        console.log('📁 Redux: Video paths loaded for content:', contentId, pathsData);
+      })
+      .addCase(getVideoPathsAsync.rejected, (state, action) => {
+        state.streamingLoading = false;
+        state.streamingError = action.payload;
+        console.error('❌ Redux: Failed to load video paths:', action.payload);
+      })
+      
+      .addCase(getVideoStreamingUrlAsync.pending, (state) => {
+        state.streamingLoading = true;
+        state.streamingError = null;
+      })
+      .addCase(getVideoStreamingUrlAsync.fulfilled, (state, action) => {
+        state.streamingLoading = false;
+        const { contentId, streamingData } = action.payload;
+        
+        state.videoStreamingData[contentId] = {
+          ...state.videoStreamingData[contentId],
+          ...streamingData,
+          ready: streamingData.success,
+          loadedAt: new Date().toISOString()
+        };
+        
+        console.log('🎥 Redux: Video streaming URL loaded for content:', contentId, streamingData);
+        
+        // Update video player state if this is the current video
+        if (state.currentContent?.id === contentId && streamingData.success) {
+          state.videoPlayer.streamingReady = true;
+          state.videoPlayer.streamUrl = streamingData.streamingUrl;
+        }
+      })
+      .addCase(getVideoStreamingUrlAsync.rejected, (state, action) => {
+        state.streamingLoading = false;
+        state.streamingError = action.payload;
+        console.error('❌ Redux: Failed to get video streaming URL:', action.payload);
+      })
+      
+      .addCase(getContentStreamAsync.pending, (state) => {
+        state.streamingLoading = true;
+      })
+      .addCase(getContentStreamAsync.fulfilled, (state, action) => {
+        state.streamingLoading = false;
+        const { contentId, file, streamData } = action.payload;
+        
+        if (!state.videoStreams[contentId]) {
+          state.videoStreams[contentId] = {};
+        }
+        state.videoStreams[contentId][file] = streamData;
+        
+        console.log('📡 Redux: Content stream loaded:', contentId, file);
+      })
+      .addCase(getContentStreamAsync.rejected, (state, action) => {
+        state.streamingLoading = false;
+        state.streamingError = action.payload;
+        console.error('❌ Redux: Failed to get content stream:', action.payload);
       })
       
       // Video interactions
@@ -1608,6 +2059,11 @@ export const {
   toggleFullscreen,
   toggleSubtitles,
   setSubtitleLanguage,
+  setStreamingState,
+  setStreamingReady,
+  setStreamingError,
+  clearStreamingError,
+  updateStreamingMetrics,
   addContentToSection,
   updateContentInSection,
   removeContentFromSection,
@@ -1676,12 +2132,17 @@ export const selectEditorProgress = (state) => {
   };
 };
 
-// Video selectors
+// FIXED: Enhanced video selectors with streaming support
 export const selectVideos = (state) => state.courseContent.videos;
 export const selectVideoPlayer = (state) => state.courseContent.videoPlayer;
 export const selectVideoInteractions = (state) => state.courseContent.videoInteractions;
 export const selectCurrentInteractions = (state) => state.courseContent.currentInteractions;
 export const selectSubtitles = (state) => state.courseContent.subtitles;
+export const selectVideoStreamingData = (state) => state.courseContent.videoStreamingData;
+export const selectVideoPaths = (state) => state.courseContent.videoPaths;
+export const selectVideoStreams = (state) => state.courseContent.videoStreams;
+export const selectStreamingLoading = (state) => state.courseContent.streamingLoading;
+export const selectStreamingError = (state) => state.courseContent.streamingError;
 
 // Comments and meetings
 export const selectCommentsByContent = (state) => state.courseContent.commentsByContent;
@@ -1738,6 +2199,29 @@ export const selectCommentsByContentId = (contentId) => (state) => {
 
 export const selectMeetingsByContentId = (contentId) => (state) => {
   return state.courseContent.meetingsByContent[contentId] || [];
+};
+
+// FIXED: Enhanced video streaming selectors
+export const selectVideoStreamingDataById = (videoId) => (state) => {
+  return state.courseContent.videoStreamingData[videoId] || {};
+};
+
+export const selectVideoPathsById = (videoId) => (state) => {
+  return state.courseContent.videoPaths[videoId] || {};
+};
+
+export const selectVideoStreamsById = (videoId) => (state) => {
+  return state.courseContent.videoStreams[videoId] || {};
+};
+
+export const selectIsVideoStreamingReady = (videoId) => (state) => {
+  const streamingData = state.courseContent.videoStreamingData[videoId];
+  return streamingData?.ready && streamingData?.streamingUrl && !streamingData?.error;
+};
+
+export const selectVideoStreamingUrl = (videoId) => (state) => {
+  const streamingData = state.courseContent.videoStreamingData[videoId];
+  return streamingData?.streamingUrl || null;
 };
 
 export const selectContentProgress = (contentId) => (state) => {
@@ -1811,5 +2295,30 @@ export const selectContentTypeOptions = () => {
   }));
 };
 
-export default courseContentSlice.reducer;
+// FIXED: Enhanced streaming analytics selectors
+export const selectStreamingAnalytics = (state) => {
+  const analytics = state.courseContent.analytics;
+  const statistics = state.courseContent.statistics;
   
+  return {
+    totalStreamingVideos: statistics.totalStreamingVideos,
+    totalHLSStreams: statistics.totalHLSStreams,
+    streamingSuccessRate: statistics.streamingSuccessRate,
+    averageBufferTime: statistics.averageBufferTime,
+    streamingMetrics: analytics.streamingMetrics,
+    playbackMetrics: analytics.playbackMetrics,
+    qualityMetrics: analytics.qualityMetrics,
+  };
+};
+
+export const selectStreamingMetricsById = (videoId) => (state) => {
+  return state.courseContent.analytics.streamingMetrics[videoId] || {
+    bufferEvents: 0,
+    qualityChanges: 0,
+    errors: 0,
+    totalPlayTime: 0,
+    averageQuality: 0
+  };
+};
+
+export default courseContentSlice.reducer;

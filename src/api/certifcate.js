@@ -1,3 +1,4 @@
+// api/certificate.js
 import axios from 'axios';
 import { getToken } from '@/authtoken/auth.js';
 
@@ -19,6 +20,7 @@ export const fetchCertificates = async (params = {}) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append("Page", params.page);
     if (params.take) queryParams.append("ShowMore.Take", params.take);
+    if (params.search) queryParams.append("Search", params.search);
 
     const url = `${API_URL}Certificate${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -58,6 +60,11 @@ export const createCertificate = async (certificateData) => {
     formData.append("Name", certificateData.name || "");
     formData.append("CertificateTypeId", (certificateData.certificateTypeId || "").toString());
     
+    // Optional language field
+    if (certificateData.language) {
+      formData.append("Language", certificateData.language);
+    }
+    
     // Template file
     if (certificateData.templateFile && certificateData.templateFile instanceof File) {
       formData.append("TemplateFile", certificateData.templateFile);
@@ -86,6 +93,11 @@ export const updateCertificate = async (certificateData) => {
     formData.append("Id", certificateData.id.toString());
     formData.append("Name", certificateData.name || "");
     formData.append("CertificateTypeId", (certificateData.certificateTypeId || "").toString());
+    
+    // Optional language field
+    if (certificateData.language) {
+      formData.append("Language", certificateData.language);
+    }
     
     // Template file (optional for update)
     if (certificateData.templateFile && certificateData.templateFile instanceof File) {
@@ -136,6 +148,7 @@ export const fetchCertificateTypes = async (params = {}) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append("Page", params.page);
     if (params.take) queryParams.append("ShowMore.Take", params.take);
+    if (params.search) queryParams.append("Search", params.search);
 
     const url = `${API_URL}CertificateType${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -241,54 +254,65 @@ export const getCertificatesByCertificateTypeId = async (certificateTypeId) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching certificates by type:', error);
-    // API-də problem olduğuna görə, empty array qaytarırıq
-    if (error.response?.status === 500) {
-      console.warn('GetCertificateByCertificateTypeId endpoint has issues, returning empty array');
-      return [];
-    }
-    throw new Error("Failed to fetch certificates by type: " + (error.response?.data?.detail || error.message));
+    // Return empty array instead of throwing error to prevent crashes
+    console.warn('Could not fetch certificates for type ID:', certificateTypeId);
+    return [];
   }
 };
 
-// ======================== VALIDATION HELPERS ========================
+// ======================== VALIDATION FUNCTIONS ========================
 
-// Validate certificate data
+// Validate certificate data before API call
 export const validateCertificateData = (certificateData) => {
   const errors = [];
-
+  
   if (!certificateData.name || !certificateData.name.trim()) {
-    errors.push("Certificate name is required");
+    errors.push('Certificate name is required');
   }
-
-  if (!certificateData.certificateTypeId) {
-    errors.push("Certificate type is required");
-  }
-
+  
   if (certificateData.name && certificateData.name.length > 100) {
-    errors.push("Certificate name must be less than 100 characters");
+    errors.push('Certificate name must be less than 100 characters');
   }
-
+  
+  if (!certificateData.certificateTypeId) {
+    errors.push('Certificate type is required');
+  }
+  
+  if (certificateData.templateFile && certificateData.templateFile instanceof File) {
+    // Check file size (5MB max)
+    const maxSize = 5 * 1024 * 1024;
+    if (certificateData.templateFile.size > maxSize) {
+      errors.push('Template file must be less than 5MB');
+    }
+    
+    // Check file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(certificateData.templateFile.type)) {
+      errors.push('Template file must be PDF, JPEG, or PNG');
+    }
+  }
+  
   return errors;
 };
 
 // Validate certificate type data
 export const validateCertificateTypeData = (typeData) => {
   const errors = [];
-
+  
   if (!typeData.name || !typeData.name.trim()) {
-    errors.push("Certificate type name is required");
+    errors.push('Certificate type name is required');
   }
-
+  
   if (typeData.name && typeData.name.length > 50) {
-    errors.push("Certificate type name must be less than 50 characters");
+    errors.push('Certificate type name must be less than 50 characters');
   }
-
+  
   return errors;
 };
 
-// ======================== HELPER FUNCTIONS ========================
+// ======================== UTILITY FUNCTIONS ========================
 
-// Get certificate status
+// Get certificate status based on template availability
 export const getCertificateStatus = (certificate) => {
   if (!certificate) return 'unknown';
   
@@ -309,6 +333,7 @@ export const formatCertificateForDisplay = (certificate) => {
     hasTemplate: Boolean(certificate.templateFilePath),
     templateUrl: certificate.templateFilePath || null,
     formattedName: certificate.name || 'Unnamed Certificate',
+    createdDate: certificate.createdDate || new Date().toISOString(),
   };
 };
 
@@ -327,6 +352,22 @@ export const getCertificateTypeStats = async (typeId) => {
   }
 };
 
+// Format file size for display
+export const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B';
+  
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+};
+
+// Check if certificate has valid template
+export const hasValidTemplate = (certificate) => {
+  return certificate && certificate.templateFilePath && certificate.templateFilePath.trim() !== '';
+};
+
+// Export all functions as default object
 export default {
   // Certificate operations
   fetchCertificates,
@@ -351,4 +392,6 @@ export default {
   getCertificateStatus,
   formatCertificateForDisplay,
   getCertificateTypeStats,
+  formatFileSize,
+  hasValidTemplate,
 };

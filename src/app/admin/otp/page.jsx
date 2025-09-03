@@ -3,15 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import Image from "next/image";
+
 import { getUserId, getPhoneNumber } from "@/authtoken/auth";
 import BrandingSlider from "@/components/brandingSlider"; // Import the reusable component
 
 //style
 import "./otp.scss";
 
-//images
-import logo from "@/images/logo.png";
 
 export default function Page() {
   const router = useRouter();

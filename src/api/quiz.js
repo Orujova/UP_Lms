@@ -13,18 +13,20 @@ const getHeaders = () => {
 
 // ======================== QUIZ MANAGEMENT ========================
 
-// Add quiz to content - multipart/form-data format
 export const addQuiz = async (quizData) => {
   try {
     const formData = new FormData();
     formData.append("ContentId", quizData.contentId.toString());
     
-    // Duration object with ticks - API documentation shows it should be object format
-    const durationObject = {
-      ticks: parseDurationToTicks(quizData.duration || 60)
-    };
-    formData.append("Duration", JSON.stringify(durationObject));
+    // FIXED: Duration is just a simple number (minutes), not ticks object!
+    formData.append("Duration", (quizData.duration || 60).toString());
     formData.append("CanSkip", (quizData.canSkip || false).toString());
+
+    console.log('FIXED: Sending simple duration format:', {
+      contentId: quizData.contentId,
+      duration: quizData.duration, // Simple number
+      canSkip: quizData.canSkip
+    });
 
     const response = await axios.post(`${API_URL}Course/AddQuiz`, formData, {
       headers: {
@@ -35,26 +37,27 @@ export const addQuiz = async (quizData) => {
     return response.data;
   } catch (error) {
     console.error("Error adding quiz:", error);
+    console.error("Request payload:", {
+      ContentId: quizData.contentId,
+      Duration: quizData.duration,
+      CanSkip: quizData.canSkip
+    });
     throw new Error("Failed to add quiz: " + (error.response?.data?.detail || error.message));
   }
 };
-
 // Add questions to quiz - application/json format (FIXED STRUCTURE)
 export const addQuestions = async (questionsData) => {
   try {
-    // FIXED: API expects questions array directly, not nested in object
     const payload = {
       questions: questionsData.questions.map(question => ({
         quizId: question.quizId,
         text: question.text || "",
         title: question.title || "",
         questionRate: question.questionRate || 1,
-        duration: {
-          ticks: parseDurationToTicks(question.duration || 30)
-        },
-        hasDuration: question.hasDuration !== undefined ? question.hasDuration : true,
+          duration: (question.duration || 30), // Əvvəlki `ticks` əvəzinə string format
+          hasDuration: question.hasDuration !== undefined ? question.hasDuration : true,
         canSkip: question.canSkip || false,
-        questionType: question.questionType || 1, // 1=Single choice, 2=Multiple choice, 3=Reorder, 4=Fill gap, 5=Categorize
+        questionType: question.questionType || 1,
         categories: question.categories || [],
       }))
     };
@@ -75,6 +78,7 @@ export const addQuestions = async (questionsData) => {
     throw new Error("Failed to add questions: " + (error.response?.data?.detail || error.message));
   }
 };
+
 
 // Add options to questions - application/json format (FIXED STRUCTURE)
 export const addOptions = async (optionsData) => {

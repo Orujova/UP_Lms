@@ -34,7 +34,7 @@ const NotificationsPage = () => {
       if (!userId) throw new Error("User ID not found");
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Notification/getAllUserNotifications?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}`,
+        `https://bravoadmin.uplms.org/api/Notification/?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}`,
         {
           headers: {
             accept: "application/json",
@@ -72,7 +72,7 @@ const NotificationsPage = () => {
       const response = await fetch(
         "https://bravoadmin.uplms.org/api/Notification/updateReadStatus",
         {
-          method: "PATCH",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,

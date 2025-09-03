@@ -194,9 +194,9 @@ const UserSettings = () => {
       if (!response.ok) {
         throw new Error("Failed to fetch all positions");
       }
-
+      
       const data = await response.json();
-      setAllPositions(data[0].positions);
+      setAllPositions(data.positions);
     } catch (error) {
       console.error("Error fetching all positions:", error);
     }
@@ -249,9 +249,9 @@ const UserSettings = () => {
       }
 
       const data = await response.json();
-      setPositions(data[0].positions);
-      setFilteredPositions(data[0].positions);
-      setTotalPositions(data[0].totalPositionCount);
+      setPositions(data.positions);
+      setFilteredPositions(data.positions);
+      setTotalPositions(data.totalPositionCount);
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     } finally {

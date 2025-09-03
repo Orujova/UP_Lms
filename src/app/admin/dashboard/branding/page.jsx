@@ -1,4 +1,3 @@
-// src/pages/BrandingPage.jsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,17 +5,27 @@ import {
   Upload,
   Trash2,
   Save,
-  RotateCcw,
   Plus,
   X,
+  Edit3,
+  FileText,
+  Award,
   AlertTriangle,
+  Eye,
+  Search,
+  RotateCcw,
   Info,
+  Settings,
+  Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import brandingService from "@/api/branding";
 import EventCropModal from "@/components/event/CropModal";
 import AnnouncementCropModal from "@/components/announcement/CropModal";
 import NewsCropModal from "../news/CropModal";
+import CertificateManagement from "./CertificateManagement";
+import BadgeManagement from './BadgeManagement'; // Adjust path as needed
+
 
 // Component for single image uploads with preview
 const ImageUploadSection = ({
@@ -26,7 +35,7 @@ const ImageUploadSection = ({
   onFileChange,
   onRemove,
   isDeleteEntireBranding,
-  showDeleteButton = true, // New prop to control delete button visibility
+  showDeleteButton = true,
 }) => {
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 bg-white">
@@ -172,7 +181,7 @@ export default function BrandingPage() {
   );
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("appUser");
+  const [activeTab, setActiveTab] = useState("customer");
   const [fileUploads, setFileUploads] = useState({});
   const [previews, setPreviews] = useState({});
   const [tabData, setTabData] = useState({
@@ -187,7 +196,7 @@ export default function BrandingPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [cropModal, setCropModal] = useState({
     isOpen: false,
-    type: null, // 'event', 'announcement', 'news', or 'profile'
+    type: null,
     imageUrl: null,
     fieldKey: null,
   });
@@ -253,7 +262,6 @@ export default function BrandingPage() {
       }
 
       if (!tabData.id) {
-        // Handle deletion for unsaved data
         setFileUploads((prev) => {
           const newUploads = { ...prev };
           if (newUploads[type] && Array.isArray(newUploads[type])) {
@@ -295,14 +303,11 @@ export default function BrandingPage() {
           type === "uploadedImages" &&
           index !== null
         ) {
-          // Use the correct OTP ID from otpAndLoginIds array
           if (tabData.otpAndLoginIds && tabData.otpAndLoginIds[index]) {
             const imageId = tabData.otpAndLoginIds[index].toString();
             formData.append("OTPAndLoginImageIdsToDelete", imageId);
-            console.log("Deleting OTP image with ID:", imageId);
             setDeletedOtpImages((prev) => [...prev, imageId]);
           } else {
-            // Fallback to URL-based ID extraction if no otpAndLoginIds
             const imageUrl = previews[type][index];
             if (typeof imageUrl === "string") {
               const imageId = brandingService.extractImageId(imageUrl);
@@ -313,7 +318,6 @@ export default function BrandingPage() {
             }
           }
         } else if (activeTab === "appUser") {
-          // For app user, we need to send empty file to clear the image
           const formFieldName = getFormNameForType(type);
           if (formFieldName) {
             const emptyBlob = new Blob([""], {
@@ -326,7 +330,6 @@ export default function BrandingPage() {
           }
         }
 
-     
         await brandingService.updateBrandingSetting(formData, activeTab);
 
         const refreshedData = await brandingService.fetchBrandingByType(
@@ -334,7 +337,6 @@ export default function BrandingPage() {
         );
         setTabData(refreshedData);
 
-        // Update previews after successful deletion
         setPreviews((prev) => {
           const newPreviews = { ...prev };
           if (activeTab === "otpLogin" && Array.isArray(newPreviews[type])) {
@@ -353,7 +355,6 @@ export default function BrandingPage() {
         setLoading(false);
       }
     } else {
-      // For other branding types, delete the entire branding setting
       if (!tabData.id) {
         toast.error("No branding setting exists to delete.");
         return;
@@ -411,20 +412,18 @@ export default function BrandingPage() {
     );
     const isMultiUpload = imageField?.isMultiple || false;
 
-    // Determine if cropping is needed
     let cropType = null;
     if (activeTab === "event" && type === "coverPhoto") {
-      cropType = "event"; // 1:1
+      cropType = "event";
     } else if (activeTab === "announcement" && type === "bgImage") {
-      cropType = "announcement"; // 9:16
+      cropType = "announcement";
     } else if (activeTab === "news" && type === "image") {
-      cropType = "news"; // 16:9
+      cropType = "news";
     } else if (activeTab === "appUser" && type === "image") {
-      cropType = "profile"; // 1:1
+      cropType = "profile";
     }
 
     if (cropType) {
-      // Open crop modal
       setCropModal({
         isOpen: true,
         type: cropType,
@@ -432,7 +431,6 @@ export default function BrandingPage() {
         fieldKey: type,
       });
     } else {
-      // No cropping needed, proceed with upload
       if (isMultiUpload) {
         setFileUploads((prev) => {
           const currentFiles = prev[type] || [];
@@ -553,7 +551,6 @@ export default function BrandingPage() {
             formData.append(field.formName, file);
           });
 
-          // Add deleted OTP image IDs
           if (deletedOtpImages.length > 0) {
             deletedOtpImages.forEach((imageId) => {
               formData.append("OTPAndLoginImageIdsToDelete", imageId);
@@ -727,7 +724,7 @@ export default function BrandingPage() {
             Branding Settings
           </h1>
           <p className="text-sm text-gray-600">
-            Customize and manage your application's branding assets
+            Customize and manage your application's branding assets and certificates
           </p>
         </div>
 
@@ -754,7 +751,7 @@ export default function BrandingPage() {
                 key={tab.key}
                 onClick={() => handleTabChange(tab.key)}
                 className={`
-                  px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300
+                  px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 relative
                   ${
                     activeTab === tab.key
                       ? "bg-teal-600 text-white shadow-md"
@@ -763,6 +760,7 @@ export default function BrandingPage() {
                 `}
               >
                 {tab.label}
+                
               </button>
             ))}
           </nav>
@@ -770,7 +768,8 @@ export default function BrandingPage() {
 
         <div className="bg-white shadow-lg rounded-lg p-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 capitalize">
+            <h2 className="text-lg font-semibold text-gray-900 capitalize flex items-center gap-2">
+              {activeTab === 'customer' && <Settings className="w-5 h-5 text-teal-600" />}
               {currentTab.label} Branding
             </h2>
             {tabData.id && ["appUser", "otpLogin"].includes(activeTab) && (
@@ -811,7 +810,7 @@ export default function BrandingPage() {
                         onFileChange={(e) => handleFileChange("image", e)}
                         onRemove={() => handleRemoveFile("image")}
                         isDeleteEntireBranding={false}
-                        showDeleteButton={false} // Hide delete button for app user images
+                        showDeleteButton={false}
                       />
                       <ImageUploadSection
                         title="Cover Photo"
@@ -820,7 +819,7 @@ export default function BrandingPage() {
                         onFileChange={(e) => handleFileChange("coverPhoto", e)}
                         onRemove={() => handleRemoveFile("coverPhoto")}
                         isDeleteEntireBranding={false}
-                        showDeleteButton={false} // Hide delete button for app user images
+                        showDeleteButton={false}
                       />
                     </div>
                   );
@@ -904,32 +903,47 @@ export default function BrandingPage() {
                         onRemove={() => handleRemoveFile("logo")}
                         isDeleteEntireBranding={true}
                       />
+
+                        <div className="border-t border-gray-200 pt-8">
+        <BadgeManagement />
+      </div>
                     </>
                   );
                 case "customer":
                   return (
-                    <>
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Customer Name
-                        </label>
-                        <input
-                          type="text"
-                          value={tabData.name || ""}
-                          onChange={(e) => handleNameChange(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 transition-all duration-200"
-                          placeholder="Enter customer name"
+                    <div className="space-y-8">
+                      {/* Customer Branding Section */}
+                      <div className="space-y-4">
+                       
+                        
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Customer Name
+                          </label>
+                          <input
+                            type="text"
+                            value={tabData.name || ""}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                            placeholder="Enter customer name"
+                          />
+                        </div>
+                        
+                        <ImageUploadSection
+                          title="Customer Logo"
+                          description="Logo for customer-specific branding"
+                          previewUrl={previews.logo}
+                          onFileChange={(e) => handleFileChange("logo", e)}
+                          onRemove={() => handleRemoveFile("logo")}
+                          isDeleteEntireBranding={true}
                         />
                       </div>
-                      <ImageUploadSection
-                        title="Customer Logo"
-                        description="Logo for customer-specific branding"
-                        previewUrl={previews.logo}
-                        onFileChange={(e) => handleFileChange("logo", e)}
-                        onRemove={() => handleRemoveFile("logo")}
-                        isDeleteEntireBranding={true}
-                      />
-                    </>
+
+                      {/* Certificate Management Section */}
+                      <div className="border-t border-gray-200 pt-8">
+                        <CertificateManagement />
+                      </div>
+                    </div>
                   );
                 case "cluster":
                   return (
@@ -948,38 +962,41 @@ export default function BrandingPage() {
             })()}
           </div>
 
-          <div className="mt-6 flex justify-between">
-            <button
-              onClick={handleReset}
-              disabled={loading || !hasUnsavedChanges}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RotateCcw className="mr-1" size={16} />
-              Reset Changes
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-1" size={16} />
-                  Save Changes
-                </>
-              )}
-            </button>
-          </div>
+          {/* Save/Reset buttons only show for non-customer tabs */}
+          {activeTab !== "customer" && (
+            <div className="mt-6 flex justify-between">
+              <button
+                onClick={handleReset}
+                disabled={loading || !hasUnsavedChanges}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RotateCcw className="mr-1" size={16} />
+                Reset Changes
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-1" size={16} />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Crop Modals */}
         {cropModal.isOpen && cropModal.type === "event" && (
-          <EventCropModal // Reuse EventCropModal for 1:1 profile photo
+          <EventCropModal
             image={cropModal.imageUrl}
             onCancel={handleCropCancel}
             onCrop={(file, previewUrl) =>
@@ -1006,7 +1023,7 @@ export default function BrandingPage() {
           />
         )}
         {cropModal.isOpen && cropModal.type === "profile" && (
-          <EventCropModal // Reuse EventCropModal for 1:1 profile photo
+          <EventCropModal
             image={cropModal.imageUrl}
             onCancel={handleCropCancel}
             onCrop={(file, previewUrl) =>

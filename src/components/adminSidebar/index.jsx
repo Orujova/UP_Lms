@@ -198,6 +198,12 @@ const AdminSidebar = () => {
                 indent
               />
               <NavLink
+                href="/admin/dashboard/cluster"
+                icon={BookOpen}
+                label="Cluster"
+                indent
+              />
+              <NavLink
                 href="/admin/dashboard/trainings"
                 icon={GraduationCap}
                 label="Trainings"

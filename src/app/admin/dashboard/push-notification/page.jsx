@@ -89,7 +89,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Notification/SendMobileNotification",
+        "https://bravoadmin.uplms.org/api/Notification/SendMobile",
         {
           method: "POST",
           headers: {
@@ -105,6 +105,11 @@ export default function Page() {
               additionalProp2: "",
               additionalProp3: "",
             },
+            notificationType: "string",
+
+  notificationIds: [
+    0
+  ],
           }),
         }
       );

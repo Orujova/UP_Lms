@@ -17,9 +17,9 @@ import {
   getCourseSyllabus,
   getCourseLearners,
   assignUsersToCourse,
-  checkUserInTargetGroup,
+
   getQuizzesByContentId,
-  createCourseEvaluation,
+ 
   validateCourseData,
   validateSectionData,
   formatCourseForDisplay,
@@ -68,69 +68,127 @@ export const addQuizAsync = createAsyncThunk(
   "course/addQuiz",
   async (quizData, { rejectWithValue }) => {
     try {
-      // FIXED: Ensure proper data structure for quiz API
-      const apiData = {
-        contentId: quizData.contentId,
-        duration: quizData.duration || 60,
-        canSkip: quizData.canSkip || false
-      };
+      console.log('🚀 Redux: Adding Quiz with data:', quizData);
       
-      const response = await apiAddQuiz(apiData);
-      return response;
+      // Validate required fields
+      if (!quizData.contentId) {
+        throw new Error("Content ID is required");
+      }
+
+      // Call the API
+      const result = await apiAddQuiz({
+        contentId: quizData.contentId,
+        duration: quizData.duration || 60, // Keep as minutes - API handles conversion
+        canSkip: quizData.canSkip || false
+      });
+
+      console.log('✅ Redux: Quiz added successfully:', result);
+
+      // Return the result which should contain quizId
+      return {
+        id: result.quizId,
+        quizId: result.quizId,
+        contentId: quizData.contentId,
+        duration: quizData.duration,
+        canSkip: quizData.canSkip,
+        success: result.success,
+        message: result.message
+      };
     } catch (error) {
+      console.error('❌ Redux: Failed to add quiz:', error);
       return rejectWithValue(error.message || "Failed to add quiz");
     }
   }
 );
 
+// Enhanced Add Questions Async Thunk
 export const addQuestionsAsync = createAsyncThunk(
   "course/addQuestions",
   async (questionsData, { rejectWithValue }) => {
     try {
-      // FIXED: Ensure proper data structure - API expects { questions: [...] }
-      const apiData = {
-        questions: questionsData.questions.map(question => ({
-          quizId: question.quizId,
-          text: question.text || "",
-          title: question.title || "",
-          questionRate: question.questionRate || 1,
-          duration: {
-            ticks: question.duration ? question.duration * 10000000 : 300000000 // 30 seconds default
-          },
-          hasDuration: question.hasDuration !== undefined ? question.hasDuration : true,
-          canSkip: question.canSkip || false,
-          questionType: question.questionType || 1,
-          categories: question.categories || [],
-        }))
-      };
+      console.log('🚀 Redux: Adding Questions with data:', questionsData);
       
-      const response = await apiAddQuestions(apiData);
-      return response;
+      // Validate questions data
+      if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
+        throw new Error("Questions array is required");
+      }
+
+      if (questionsData.questions.length === 0) {
+        throw new Error("At least one question is required");
+      }
+
+      // Validate each question
+      questionsData.questions.forEach((question, index) => {
+        if (!question.quizId) {
+          throw new Error(`Question ${index + 1}: Quiz ID is required`);
+        }
+        if (!question.text?.trim()) {
+          throw new Error(`Question ${index + 1}: Question text is required`);
+        }
+        if (!question.title?.trim()) {
+          throw new Error(`Question ${index + 1}: Question title is required`);
+        }
+      });
+
+      // Call the API
+      const result = await apiAddQuestions(questionsData);
+
+      console.log('✅ Redux: Questions added successfully:', result);
+
+      // Return the result which should contain questionIds array
+      return {
+        questionIds: result.questionIds,
+        questions: questionsData.questions,
+        success: result.success,
+        message: result.message
+      };
     } catch (error) {
+      console.error('❌ Redux: Failed to add questions:', error);
       return rejectWithValue(error.message || "Failed to add questions");
     }
   }
 );
 
+// Enhanced Add Options Async Thunk
 export const addOptionsAsync = createAsyncThunk(
   "course/addOptions",
   async (optionsData, { rejectWithValue }) => {
     try {
-      // FIXED: Ensure proper data structure - API expects { options: [...] }
-      const apiData = {
-        options: optionsData.options.map(option => ({
-          questionId: option.questionId,
-          text: option.text || "",
-          isCorrect: option.isCorrect || false,
-          order: option.order || 0,
-          gapText: option.gapText || option.text,
-          category: option.category || "",
-        }))
-      };
+      console.log('🚀 Redux: Adding Options with data:', optionsData);
       
-      const response = await apiAddOptions(apiData);
-      return response;
+      // Validate options data
+      if (!optionsData.options || !Array.isArray(optionsData.options)) {
+        throw new Error("Options array is required");
+      }
+
+      if (optionsData.options.length === 0) {
+        throw new Error("At least one option is required");
+      }
+
+      // Validate each option
+      optionsData.options.forEach((option, index) => {
+        if (!option.questionId) {
+          throw new Error(`Option ${index + 1}: Question ID is required`);
+        }
+        if (!option.text?.trim()) {
+          throw new Error(`Option ${index + 1}: Option text is required`);
+        }
+      });
+
+      // Call the API
+      const result = await apiAddOptions(optionsData);
+
+      console.log('✅ Redux: Options added successfully:', result);
+
+      // Return the result which should contain optionIds array
+      return {
+        optionIds: result.optionIds,
+        options: optionsData.options,
+        success: result.success,
+        message: result.message
+      };
     } catch (error) {
+      console.error('❌ Redux: Failed to add options:', error);
       return rejectWithValue(error.message || "Failed to add options");
     }
   }
@@ -148,10 +206,9 @@ export const fetchCourseByIdAsync = createAsyncThunk(
   }
 );
 
-// Fixed createCourseAsync in courseSlice.js
 export const createCourseAsync = createAsyncThunk(
   "course/createCourse",
-  async (courseData, { getState, rejectWithValue }) => {
+  async (courseData, { getState, rejectWithValue, dispatch }) => {
     try {
       const state = getState().course;
       const userId = getUserId();
@@ -171,7 +228,6 @@ export const createCourseAsync = createAsyncThunk(
       const rawSuccessionRates = courseData.successionRates || state.formData.successionRates || [];
       const cleanSuccessionRates = rawSuccessionRates
         .filter(rate => {
-          // Only keep rates that have valid ranges
           return rate.minRange !== null && rate.minRange !== undefined && 
                  rate.maxRange !== null && rate.maxRange !== undefined &&
                  typeof rate.minRange === 'number' && typeof rate.maxRange === 'number' &&
@@ -180,7 +236,6 @@ export const createCourseAsync = createAsyncThunk(
         .map(rate => ({
           minRange: parseInt(rate.minRange),
           maxRange: parseInt(rate.maxRange),
-          // Only include badgeId if it's a valid number
           badgeId: (rate.badgeId && typeof rate.badgeId === 'number' && !isNaN(rate.badgeId)) 
             ? parseInt(rate.badgeId) 
             : null
@@ -200,7 +255,7 @@ export const createCourseAsync = createAsyncThunk(
         .map(id => parseInt(id))
         .filter(id => !isNaN(id));
 
-      // Prepare API data with proper validation and defaults
+      // Prepare API data with proper validation and defaults - INCLUDING NEW FIELDS
       const apiData = {
         userId: userId,
         name: (courseData.name || state.formData.name || "").trim(),
@@ -220,7 +275,13 @@ export const createCourseAsync = createAsyncThunk(
         deadline: (courseData.deadline || state.formData.deadline) 
           ? parseInt(courseData.deadline || state.formData.deadline) 
           : null,
+        // NEW FIELD: expirationDate
+        expirationDate: (courseData.expirationDate || state.formData.expirationDate) 
+          ? parseInt(courseData.expirationDate || state.formData.expirationDate) 
+          : null,
         autoReassign: Boolean(courseData.autoReassign ?? state.formData.autoReassign ?? false),
+        // NEW FIELD: hasNotification
+        hasNotification: Boolean(courseData.hasNotification ?? state.formData.hasNotification ?? false),
         clusterId: (courseData.clusterId || state.formData.clusterId) 
           ? parseInt(courseData.clusterId || state.formData.clusterId) 
           : null,
@@ -243,25 +304,151 @@ export const createCourseAsync = createAsyncThunk(
         return rejectWithValue("Please select a valid category");
       }
 
-      // Log the clean data being sent
       console.log("Sending clean API data:", apiData);
 
       const response = await apiCreateCourse(apiData);
 
-      // Check if the API returned a business logic error
-      if (response && response.success === false) {
-        return rejectWithValue(response.message || "Course creation failed");
-      }
-
       console.log("Course created successfully:", response);
-      return formatCourseForDisplay(response);
+
+      // Handle the response properly - now includes real course ID and new fields
+      if (response?.success) {
+        let courseId = response.id || response.courseId;
+        
+        // If we got a real course ID from the response
+        if (courseId && !courseId.toString().startsWith('temp_')) {
+          console.log('Got real course ID from response:', courseId);
+          
+          const realCourse = {
+            id: courseId,
+            courseId: courseId,
+            name: apiData.name,
+            description: apiData.description,
+            duration: apiData.duration,
+            categoryId: apiData.categoryId,
+            verifiedCertificate: apiData.verifiedCertificate,
+            targetGroupIds: apiData.targetGroupIds,
+            certificateId: apiData.certificateId,
+            tagIds: apiData.tagIds,
+            startDuration: apiData.startDuration,
+            deadline: apiData.deadline,
+            expirationDate: apiData.expirationDate, // NEW FIELD
+            autoReassign: apiData.autoReassign,
+            hasNotification: apiData.hasNotification, // NEW FIELD
+            clusterId: apiData.clusterId,
+            clusterOrderNumber: apiData.clusterOrderNumber,
+            clusterCoefficient: apiData.clusterCoefficient,
+            clusterIsMandatory: apiData.clusterIsMandatory,
+            successionRates: apiData.successionRates,
+            success: true,
+            message: response.message,
+            createdDate: new Date().toISOString(),
+            isPublished: false,
+            sections: [],
+            contents: [],
+            totalSection: 0,
+            totalContent: 0,
+            totalVideos: 0,
+            totalQuizzes: 0,
+            courseProgress: 0,
+            topAssignedUsers: [],
+            courseTags: [],
+            imageUrl: response.imageUrl || null,
+            formattedDuration: formatDuration(apiData.duration),
+            formattedCreatedDate: new Date().toLocaleDateString(),
+            publishCourse: false
+          };
+          
+          // Update formData with the real course ID for immediate use
+          dispatch(setFormData({ 
+            ...state.formData, 
+            courseId: courseId,
+            id: courseId 
+          }));
+          
+          return realCourse;
+        }
+        
+        // If no real ID in response, we need to handle this differently
+        console.log('No real course ID in response, course creation successful but ID pending');
+        
+        const pendingCourse = {
+          id: null,
+          courseId: null,
+          name: apiData.name,
+          description: apiData.description,
+          duration: apiData.duration,
+          categoryId: apiData.categoryId,
+          verifiedCertificate: apiData.verifiedCertificate,
+          targetGroupIds: apiData.targetGroupIds,
+          certificateId: apiData.certificateId,
+          tagIds: apiData.tagIds,
+          startDuration: apiData.startDuration,
+          deadline: apiData.deadline,
+          expirationDate: apiData.expirationDate, // NEW FIELD
+          autoReassign: apiData.autoReassign,
+          hasNotification: apiData.hasNotification, // NEW FIELD
+          clusterId: apiData.clusterId,
+          clusterOrderNumber: apiData.clusterOrderNumber,
+          clusterCoefficient: apiData.clusterCoefficient,
+          clusterIsMandatory: apiData.clusterIsMandatory,
+          successionRates: apiData.successionRates,
+          success: true,
+          message: response.message,
+          createdDate: new Date().toISOString(),
+          isPublished: false,
+          sections: [],
+          contents: [],
+          needsRefresh: response.needsRefresh || false,
+          totalSection: 0,
+          totalContent: 0,
+          totalVideos: 0,
+          totalQuizzes: 0,
+          courseProgress: 0,
+          topAssignedUsers: [],
+          courseTags: [],
+          imageUrl: response.imageUrl || null,
+          formattedDuration: formatDuration(apiData.duration),
+          formattedCreatedDate: new Date().toLocaleDateString(),
+          publishCourse: false
+        };
+        
+        return pendingCourse;
+      }
+      
+      throw new Error('Course creation did not return success');
     } catch (error) {
       console.error("Course creation failed:", error);
       return rejectWithValue(error.message || "Failed to create course");
     }
   }
-
-   
+);
+export const fetchCreatedCourseIdAsync = createAsyncThunk(
+  "course/fetchCreatedCourseId",
+  async ({ name, description }, { rejectWithValue, dispatch }) => {
+    try {
+      // Import the find function
+      const { findCourseByDetails } = await import("@/api/course");
+      
+      const foundCourse = await findCourseByDetails(name, description);
+      
+      if (foundCourse && foundCourse.id) {
+        console.log('Successfully found created course:', foundCourse);
+        
+        // Update the current course with real ID
+        dispatch(setFormData({ 
+          courseId: foundCourse.id,
+          id: foundCourse.id 
+        }));
+        
+        return foundCourse;
+      }
+      
+      throw new Error('Could not find created course');
+    } catch (error) {
+      console.error("Error fetching created course ID:", error);
+      return rejectWithValue(error.message || "Failed to fetch created course ID");
+    }
+  }
 );
 export const updateCourseAsync = createAsyncThunk(
   "course/updateCourse",
@@ -483,14 +670,26 @@ export const assignUsersAsync = createAsyncThunk(
   }
 );
 
-export const checkUserInTargetGroupAsync = createAsyncThunk(
-  "course/checkUserInTargetGroup",
-  async ({ userId, targetGroupId }, { rejectWithValue }) => {
+export const reorderSectionsAsync = createAsyncThunk(
+  "course/reorderSections",
+  async ({ courseId, sectionOrders }, { rejectWithValue }) => {
     try {
-      const response = await checkUserInTargetGroup(userId, targetGroupId);
-      return { userId, targetGroupId, ...response };
+      console.log('🔄 Redux: Reordering sections:', { courseId, sectionOrders });
+      
+      const { reorderSections } = await import("@/api/course");
+      const result = await reorderSections(courseId, sectionOrders);
+
+      console.log('✅ Redux: Sections reordered successfully:', result);
+
+      return {
+        courseId,
+        sectionOrders,
+        success: result.success,
+        message: result.message
+      };
     } catch (error) {
-      return rejectWithValue(error.message || "Failed to check user in target group");
+      console.error('❌ Redux: Failed to reorder sections:', error);
+      return rejectWithValue(error.message || "Failed to reorder sections");
     }
   }
 );
@@ -508,18 +707,7 @@ export const getQuizzesByContentIdAsync = createAsyncThunk(
   }
 );
 
-// Evaluation
-export const createCourseEvaluationAsync = createAsyncThunk(
-  "course/createCourseEvaluation",
-  async (evaluationData, { rejectWithValue }) => {
-    try {
-      const response = await createCourseEvaluation(evaluationData);
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message || "Failed to create course evaluation");
-    }
-  }
-);
+
 
 // ======================== INITIAL STATE ========================
 
@@ -546,7 +734,7 @@ const initialState = {
 
   // Form state
   currentStep: 1,
-  formData: {
+    formData: {
     // Basic Info
     name: "",
     description: "",
@@ -562,7 +750,9 @@ const initialState = {
     targetGroupIds: [],
     startDuration: null,
     deadline: null,
+    expirationDate: null, // NEW FIELD
     autoReassign: false,
+    hasNotification: false, // NEW FIELD
     hasEvaluation: false,
     publishCourse: false,
     
@@ -572,7 +762,7 @@ const initialState = {
     clusterCoefficient: null,
     clusterIsMandatory: false,
     
-    // FIXED: Succession rates with proper structure
+    // Succession rates with proper structure
     successionRates: [],
   },
 
@@ -580,7 +770,7 @@ const initialState = {
   sections: [],
   activeSection: null,
   sectionContents: {}, // { sectionId: [contents] }
-
+ lastSectionUpdate: null, 
   // Content editing
   editingContent: null,
   contentModalType: null,
@@ -606,6 +796,8 @@ const initialState = {
     isEditing: false,
     contentId: null,
   },
+
+  
 
   // Analytics data
   analytics: {
@@ -771,48 +963,131 @@ const courseSlice = createSlice({
         });
       }
     },
-
-    // Sections management
+ updateCourseWithRealId: (state, action) => {
+      const { courseId, courseData } = action.payload;
+      
+      if (state.currentCourse) {
+        state.currentCourse.id = courseId;
+        state.currentCourse.courseId = courseId;
+        
+        if (courseData) {
+          Object.assign(state.currentCourse, courseData);
+        }
+      }
+      
+      if (state.formData) {
+        state.formData.id = courseId;
+        state.formData.courseId = courseId;
+      }
+    },
+    
+    // FIXED: Better course ID extraction from various sources
+    extractCourseId: (state) => {
+      // Try to extract course ID from available sources
+      let courseId = null;
+      
+      if (state.currentCourse?.id && !state.currentCourse.id.toString().startsWith('temp_')) {
+        courseId = state.currentCourse.id;
+      } else if (state.formData?.id && !state.formData.id.toString().startsWith('temp_')) {
+        courseId = state.formData.id;
+      } else if (state.formData?.courseId && !state.formData.courseId.toString().startsWith('temp_')) {
+        courseId = state.formData.courseId;
+      }
+      
+      if (courseId) {
+        // Update all relevant places with the found ID
+        if (state.currentCourse) {
+          state.currentCourse.id = courseId;
+          state.currentCourse.courseId = courseId;
+        }
+        if (state.formData) {
+          state.formData.id = courseId;
+          state.formData.courseId = courseId;
+        }
+      }
+      
+      return courseId;
+    },
+  
     addSection: (state) => {
-      const newSection = {
-        id: `temp-${Date.now()}`,
-        description: `Section ${state.sections.length + 1}`,
-        duration: 60,
-        hideSection: false,
-        mandatory: false,
-        contents: [],
-        isTemp: true,
-      };
-      state.sections.push(newSection);
-      state.activeSection = newSection.id;
-    },
+  const newSection = {
+    id: `temp-${Date.now()}`,
+    description: `Section ${state.sections.length + 1}`,
+    duration: 60,
+    hideSection: false,
+    mandatory: false,
+    contents: [],
+    isTemp: true,
+  };
+  state.sections.push(newSection);
+  // FIXED: Always set the new section as active
+  state.activeSection = newSection.id;
+},
 
-    updateSection: (state, action) => {
-      const { sectionId, updates } = action.payload;
-      const sectionIndex = state.sections.findIndex((s) => s.id === sectionId);
-      if (sectionIndex !== -1) {
-        state.sections[sectionIndex] = {
-          ...state.sections[sectionIndex],
-          ...updates,
-        };
-      }
-    },
+updateSection: (state, action) => {
+  const { sectionId, updates } = action.payload;
+  const sectionIndex = state.sections.findIndex((s) => s.id === sectionId);
+  if (sectionIndex !== -1) {
+    state.sections[sectionIndex] = {
+      ...state.sections[sectionIndex],
+      ...updates,
+    };
+  }
+},
 
-    removeSection: (state, action) => {
-      const sectionId = action.payload;
-      state.sections = state.sections.filter((s) => s.id !== sectionId);
-      
-      // Remove section contents
-      delete state.sectionContents[sectionId];
-      
-      if (state.activeSection === sectionId) {
-        state.activeSection = state.sections.length > 0 ? state.sections[0].id : null;
-      }
-    },
+// FIXED: Enhanced section removal with active section handling
+removeSection: (state, action) => {
+  const sectionId = action.payload;
+  const sectionIndex = state.sections.findIndex(s => s.id === sectionId);
+  
+  // Remove the section
+  state.sections = state.sections.filter((s) => s.id !== sectionId);
+  
+  // Remove section contents
+  delete state.sectionContents[sectionId];
+  
+  // FIXED: Handle active section when removing
+  if (state.activeSection === sectionId) {
+    if (state.sections.length > 0) {
+      // Set the first available real section as active
+      const firstRealSection = state.sections.find(s => 
+        s.id && !s.id.toString().startsWith('temp_')
+      );
+      state.activeSection = firstRealSection ? firstRealSection.id : state.sections[0].id;
+    } else {
+      state.activeSection = null;
+    }
+  }
+},
 
-    setActiveSection: (state, action) => {
-      state.activeSection = action.payload;
-    },
+setActiveSection: (state, action) => {
+  const sectionId = action.payload;
+  console.log('Setting active section:', sectionId);
+  
+  // Validate that the section exists
+  const sectionExists = state.sections.find(s => s.id === sectionId);
+  if (sectionExists || sectionId === null) {
+    state.activeSection = sectionId;
+  } else {
+    console.warn('Trying to set non-existent section as active:', sectionId);
+  }
+},
+
+// FIXED: Add a new action to set editing section specifically for modal
+setEditingSection: (state, action) => {
+  const sectionId = action.payload;
+  console.log('Setting editing section:', sectionId);
+  
+  // Set both active section and ensure modal knows we're editing
+  state.activeSection = sectionId;
+  
+  // Make sure the section exists in our state
+  const section = state.sections.find(s => s.id === sectionId);
+  if (section) {
+    console.log('Found section for editing:', section);
+  }
+},
+
 
     reorderSections: (state, action) => {
       const { sourceIndex, destinationIndex } = action.payload;
@@ -896,6 +1171,37 @@ const courseSlice = createSlice({
       state.editingContent = null;
       state.contentModalType = null;
     },
+
+
+    setQuizBuilder: (state, action) => {
+      state.quizBuilder = { ...state.quizBuilder, ...action.payload };
+    },
+
+    resetQuizBuilder: (state) => {
+      state.quizBuilder = {
+        quizId: null,
+        contentId: null,
+        questions: [],
+        currentStep: 'settings'
+      };
+    },
+
+    addQuestionToBuilder: (state, action) => {
+      state.quizBuilder.questions.push(action.payload);
+    },
+
+    updateQuestionInBuilder: (state, action) => {
+      const { index, question } = action.payload;
+      if (state.quizBuilder.questions[index]) {
+        state.quizBuilder.questions[index] = question;
+      }
+    },
+
+    removeQuestionFromBuilder: (state, action) => {
+      const index = action.payload;
+      state.quizBuilder.questions.splice(index, 1);
+    },
+  
 
     // Quiz builder
     setQuizQuestions: (state, action) => {
@@ -1098,6 +1404,62 @@ const courseSlice = createSlice({
         state.courseLoading = true;
         state.courseError = null;
       })
+       .addCase(createCourseAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentCourse = action.payload;
+        
+        // If we have a real course ID, update everything
+        if (action.payload.id && !action.payload.id.toString().startsWith('temp_')) {
+          state.formData.id = action.payload.id;
+          state.formData.courseId = action.payload.id;
+        }
+        
+        // Add to courses list if not already there
+        const existingIndex = state.courses.findIndex(c => c.id === action.payload.id);
+        if (existingIndex === -1) {
+          state.courses.unshift(action.payload);
+          state.totalCourseCount += 1;
+        }
+        
+        courseSlice.caseReducers.updateStatistics(state);
+      })
+      
+      // FIXED: Handle fetched course ID
+      .addCase(fetchCreatedCourseIdAsync.fulfilled, (state, action) => {
+        const foundCourse = action.payload;
+        
+        if (foundCourse && foundCourse.id) {
+          // Update current course with real data
+          state.currentCourse = {
+            ...state.currentCourse,
+            ...foundCourse,
+            id: foundCourse.id,
+            courseId: foundCourse.id
+          };
+          
+          // Update formData
+          state.formData.id = foundCourse.id;
+          state.formData.courseId = foundCourse.id;
+          
+          // Update in courses list
+          const existingIndex = state.courses.findIndex(c => 
+            (c.id === foundCourse.id) || 
+            (c.name === foundCourse.name && c.description === foundCourse.description)
+          );
+          
+          if (existingIndex !== -1) {
+            state.courses[existingIndex] = foundCourse;
+          } else {
+            state.courses.unshift(foundCourse);
+            state.totalCourseCount += 1;
+          }
+        }
+      })
+      
+      .addCase(fetchCreatedCourseIdAsync.rejected, (state, action) => {
+        console.warn('Could not fetch created course ID:', action.payload);
+        // Don't treat this as a fatal error - course was created successfully
+      })
       .addCase(fetchCourseByIdAsync.fulfilled, (state, action) => {
         state.courseLoading = false;
         state.currentCourse = action.payload;
@@ -1124,13 +1486,7 @@ const courseSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(createCourseAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentCourse = action.payload;
-        state.courses.unshift(action.payload);
-        state.totalCourseCount += 1;
-        courseSlice.caseReducers.updateStatistics(state);
-      })
+      
       .addCase(createCourseAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
@@ -1190,38 +1546,189 @@ const courseSlice = createSlice({
         state.error = action.payload || action.error.message;
       })
 
-      // Section management
-      .addCase(addSectionAsync.fulfilled, (state, action) => {
-        // Replace temp section with real section
-        if (state.activeSection?.toString().startsWith('temp-')) {
-          const tempIndex = state.sections.findIndex(s => s.id === state.activeSection);
-          if (tempIndex !== -1) {
-            state.sections[tempIndex] = { ...action.payload, contents: [] };
-            state.activeSection = action.payload.id;
-          }
-        } else {
-          state.sections.push({ ...action.payload, contents: [] });
-        }
-      })
 
-      .addCase(updateSectionAsync.fulfilled, (state, action) => {
-        const sectionIndex = state.sections.findIndex(s => s.id === action.payload.id);
-        if (sectionIndex !== -1) {
-          state.sections[sectionIndex] = { ...state.sections[sectionIndex], ...action.payload };
-        }
-      })
+      
 
-      .addCase(deleteSectionAsync.fulfilled, (state, action) => {
-        courseSlice.caseReducers.removeSection(state, action);
-      })
+     
+      .addCase(addSectionAsync.pending, (state) => {
+  state.loading = true;
+  state.error = null;
+})
 
-      .addCase(getSectionsByCourseIdAsync.fulfilled, (state, action) => {
-        const { courseId, sections } = action.payload;
-        if (state.currentCourse?.id === courseId) {
-          state.sections = sections;
-          state.activeSection = sections.length > 0 ? sections[0].id : null;
-        }
-      })
+
+.addCase(addSectionAsync.fulfilled, (state, action) => {
+  state.loading = false;
+  
+  const newSection = action.payload;
+  console.log('Section created successfully:', newSection);
+  
+  // FIXED: API cavabından düzgün ID götürmək
+  const sectionId = newSection?.id || newSection?.sectionId || newSection?.data?.id;
+  
+  if (!sectionId) {
+    console.error('No section ID returned from API:', newSection);
+    return;
+  }
+  
+  // FIXED: Section obyektini düzgün strukturda saxlamaq
+  const formattedSection = {
+    id: sectionId,
+    description: newSection.description || newSection.title || `Section ${state.sections.length + 1}`,
+    duration: newSection.duration || 60,
+    hideSection: newSection.hideSection || false,
+    mandatory: newSection.mandatory || false,
+    contents: []
+  };
+  
+  // FIXED: Temp section-u real section ilə əvəz etmək
+  if (state.activeSection?.toString().startsWith('temp-')) {
+    const tempIndex = state.sections.findIndex(s => s.id === state.activeSection);
+    if (tempIndex !== -1) {
+      state.sections[tempIndex] = formattedSection;
+    }
+  } else {
+    state.sections.push(formattedSection);
+  }
+  
+  // FIXED: Active section-u real ID ilə yeniləmək
+  state.activeSection = sectionId;
+  
+  console.log('Section added to state:', formattedSection);
+  console.log('Active section set to:', sectionId);
+})
+.addCase(addSectionAsync.rejected, (state, action) => {
+  state.loading = false;
+  state.error = action.payload;
+})
+
+.addCase(updateSectionAsync.pending, (state) => {
+  state.loading = true;
+  state.error = null;
+})
+.addCase(updateSectionAsync.fulfilled, (state, action) => {
+  state.loading = false;
+  
+  const updatedSection = action.payload;
+  console.log('Section updated successfully:', updatedSection);
+  console.log('Full action meta:', action.meta);
+  
+  // FIXED: Get the section data from the original request (meta.arg)
+  const formData = action.meta.arg;
+  const sectionId = formData.sectionId || formData.id || state.activeSection;
+  
+  console.log('Form data sent to API:', formData);
+  console.log('Extracted section ID for update:', sectionId);
+  
+  if (!sectionId) {
+    console.error('No section ID found in form data or active section');
+    return;
+  }
+  
+  const sectionIndex = state.sections.findIndex(s => s.id == sectionId);
+  
+  if (sectionIndex !== -1) {
+    const existingSection = state.sections[sectionIndex];
+    
+    // FIXED: Use form data to update section (since API only returns success message)
+    const newSection = { 
+      ...existingSection,
+      // Update with form data that was sent to API
+      description: formData.description || existingSection.description,
+      duration: formData.duration || existingSection.duration,
+      hideSection: formData.hideSection !== undefined ? formData.hideSection : existingSection.hideSection,
+      mandatory: formData.mandatory !== undefined ? formData.mandatory : existingSection.mandatory,
+      courseId: formData.courseId || existingSection.courseId,
+      // Preserve existing fields
+      id: sectionId,
+      contents: formData.contents || existingSection.contents || [],
+      courseContentIds: formData.courseContentIds || existingSection.courseContentIds || [],
+      // Add success indicators
+      success: updatedSection.success,
+      message: updatedSection.message,
+      lastUpdated: Date.now() // Force unique reference for React re-render
+    };
+    
+    // FIXED: Create new sections array to ensure immutability
+    state.sections = [
+      ...state.sections.slice(0, sectionIndex),
+      newSection,
+      ...state.sections.slice(sectionIndex + 1)
+    ];
+    
+    console.log('Section updated in state at index:', sectionIndex);
+    console.log('Updated section data:', newSection);
+  } else {
+    console.warn('Could not find section to update:', sectionId);
+    console.log('Available section IDs:', state.sections.map(s => ({ id: s.id, desc: s.description })));
+  }
+  
+  // FIXED: Close edit modal after successful update
+  state.modals.editSection = false;
+  
+  // FIXED: Force component re-render by updating a timestamp
+  state.lastSectionUpdate = Date.now();
+})
+
+.addCase(updateSectionAsync.rejected, (state, action) => {
+  state.loading = false;
+  state.error = action.payload;
+})
+
+.addCase(deleteSectionAsync.pending, (state) => {
+  state.loading = true;
+  state.error = null;
+})
+.addCase(deleteSectionAsync.fulfilled, (state, action) => {
+  state.loading = false;
+  const deletedSectionId = action.payload;
+  
+  // Use the existing removeSection reducer
+  courseSlice.caseReducers.removeSection(state, { payload: deletedSectionId });
+})
+.addCase(deleteSectionAsync.rejected, (state, action) => {
+  state.loading = false;
+  state.error = action.payload;
+})
+
+// FIXED: Enhanced getSectionsByCourseId with proper section loading
+.addCase(getSectionsByCourseIdAsync.pending, (state) => {
+  state.loading = true;
+  state.error = null;
+})
+.addCase(getSectionsByCourseIdAsync.fulfilled, (state, action) => {
+  state.loading = false;
+  
+  const { courseId, sections } = action.payload;
+  console.log('Loaded sections for course:', courseId, sections);
+  
+  if (state.currentCourse?.id === courseId) {
+    state.sections = sections || [];
+    
+    // FIXED: Set first section as active if none is set
+    if (state.sections.length > 0 && !state.activeSection) {
+      const firstRealSection = state.sections.find(s => 
+        s.id && !s.id.toString().startsWith('temp_')
+      );
+      state.activeSection = firstRealSection ? firstRealSection.id : state.sections[0].id;
+    }
+    
+    // FIXED: Load section contents
+    state.sections.forEach(section => {
+      if (section.contents && section.contents.length > 0) {
+        state.sectionContents[section.id] = section.contents;
+      }
+    });
+  }
+})
+.addCase(getSectionsByCourseIdAsync.rejected, (state, action) => {
+  state.loading = false;
+  state.error = action.payload;
+})
+      
+
+      
+
+   
 
       .addCase(getCourseSyllabusAsync.fulfilled, (state, action) => {
         state.syllabus = action.payload;
@@ -1325,21 +1832,32 @@ const courseSlice = createSlice({
         });
       })
 
-      // FIXED: Quiz operations with proper data handling
       .addCase(addQuizAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(addQuizAsync.fulfilled, (state, action) => {
         state.loading = false;
+        console.log('📝 Redux State: Quiz added successfully:', action.payload);
+        
         // Update quiz builder with created quiz ID
         if (state.quizBuilder.contentId) {
-          state.quizBuilder.quizId = action.payload.id;
+          state.quizBuilder.quizId = action.payload.quizId;
         }
+
+        // Update content in sections if exists
+        Object.values(state.sectionContents).forEach(contents => {
+          const content = contents.find(c => c.id === action.payload.contentId);
+          if (content) {
+            content.quiz = action.payload;
+            content.quizId = action.payload.quizId;
+          }
+        });
       })
       .addCase(addQuizAsync.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || action.error.message;
+        console.error('❌ Redux State: Quiz addition failed:', action.payload);
       })
 
       // Add questions
@@ -1349,18 +1867,22 @@ const courseSlice = createSlice({
       })
       .addCase(addQuestionsAsync.fulfilled, (state, action) => {
         state.loading = false;
+        console.log('📝 Redux State: Questions added successfully:', action.payload);
+        
         // Update questions with returned IDs
-        if (action.payload && Array.isArray(action.payload)) {
-          action.payload.forEach((returnedQuestion, index) => {
+        if (action.payload?.questionIds && Array.isArray(action.payload.questionIds)) {
+          action.payload.questionIds.forEach((questionId, index) => {
             if (state.quizBuilder.questions[index]) {
-              state.quizBuilder.questions[index].id = returnedQuestion.id;
+              state.quizBuilder.questions[index].id = questionId;
+              state.quizBuilder.questions[index].questionId = questionId;
             }
           });
         }
       })
       .addCase(addQuestionsAsync.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || action.error.message;
+        console.error('❌ Redux State: Questions addition failed:', action.payload);
       })
 
       // Add options
@@ -1370,21 +1892,15 @@ const courseSlice = createSlice({
       })
       .addCase(addOptionsAsync.fulfilled, (state, action) => {
         state.loading = false;
-        // Options added successfully
+        console.log('📝 Redux State: Options added successfully:', action.payload);
+        // Options added successfully - no specific state updates needed
       })
       .addCase(addOptionsAsync.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || action.error.message;
+        console.error('❌ Redux State: Options addition failed:', action.payload);
       })
-
-      // Evaluation
-      .addCase(createCourseEvaluationAsync.fulfilled, (state, action) => {
-        state.modals.evaluation = false;
-        // Update course with evaluation data if needed
-        if (state.currentCourse) {
-          state.currentCourse.hasEvaluation = true;
-        }
-      });
+      
   },
 });
 
@@ -1395,6 +1911,7 @@ export const {
   nextStep,
   prevStep,
   setFormData,
+  setEditingSection,
   resetFormData,
   setImagePreview,
   setImageFile,
@@ -1441,6 +1958,13 @@ export const {
   clearCourseData,
   calculateCourseDifficulty,
   calculateCourseCompletionRate,
+   updateCourseWithRealId,
+  extractCourseId,
+  setQuizBuilder,
+  resetQuizBuilder,
+  addQuestionToBuilder,
+  updateQuestionInBuilder,
+  removeQuestionFromBuilder,
 } = courseSlice.actions;
 
 // ======================== SELECTORS ========================
@@ -1460,7 +1984,7 @@ export const selectSectionContents = (state) => state.course.sectionContents;
 
 // UI selectors
 export const selectModals = (state) => state.course.modals;
-export const selectQuizBuilder = (state) => state.course.quizBuilder;
+
 export const selectFilters = (state) => state.course.filters;
 
 // Data selectors
@@ -1507,7 +2031,9 @@ export const selectFilteredCourses = (state) => {
     return true;
   });
 };
-
+export const selectQuizBuilder = (state) => state.course.quizBuilder;
+export const selectQuizBuilderQuestions = (state) => state.course.quizBuilder.questions;
+export const selectQuizBuilderStep = (state) => state.course.quizBuilder.currentStep;
 export const selectActiveSectionContents = (state) => {
   const activeSection = state.course.activeSection;
   const sectionContents = state.course.sectionContents;

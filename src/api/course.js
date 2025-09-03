@@ -131,7 +131,8 @@ export const fetchCourseById = async (courseId, userId = null) => {
   }
 };
 
-// Fixed createCourse function in course.js
+
+// Fixed createCourse function with ID fetching
 export const createCourse = async (courseData) => {
   try {
     const token = getToken();
@@ -156,6 +157,9 @@ export const createCourse = async (courseData) => {
     formData.append("VerifiedCertificate", (courseData.verifiedCertificate || false).toString());
     formData.append("AutoReassign", (courseData.autoReassign || false).toString());
     formData.append("ClusterIsMandatory", (courseData.clusterIsMandatory || false).toString());
+    
+    // NEW: Added HasNotification field
+    formData.append("HasNotification", (courseData.hasNotification || false).toString());
 
     // Optional integer fields - only add if they have valid values
     if (courseData.certificateId && courseData.certificateId !== null && courseData.certificateId !== "") {
@@ -170,17 +174,18 @@ export const createCourse = async (courseData) => {
       formData.append("DeadLine", courseData.deadline.toString());
     }
 
-    // Cluster settings - DÜZƏLDILMIŞ HISSƏ
+    // NEW: Added ExpirationDate field
+    if (courseData.expirationDate && courseData.expirationDate !== null && courseData.expirationDate !== "") {
+      formData.append("ExpirationDate", courseData.expirationDate.toString());
+    }
+
+    // Cluster settings
     if (courseData.clusterId && courseData.clusterId !== null && courseData.clusterId !== "") {
       formData.append("ClusterId", courseData.clusterId.toString());
       
-      // ClusterCoefficient - BURA ƏHƏMİYYƏTLİDİR: 0 dəyərini də daxil et
       if (courseData.clusterCoefficient !== null && courseData.clusterCoefficient !== undefined) {
-        console.log('🔧 Adding ClusterCoefficient to FormData:', courseData.clusterCoefficient);
         formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
       } else {
-        // Əgər clusterId var amma coefficient yoxdursa, avtomatik 0 təyin et
-        console.log('🔧 No coefficient provided for cluster, setting to 0');
         formData.append("ClusterCoefficient", "0");
       }
     }
@@ -194,7 +199,7 @@ export const createCourse = async (courseData) => {
       formData.append("ImageFile", courseData.imageFile);
     }
 
-    // Arrays - Target Groups (only add if array has items)
+    // Arrays - Target Groups
     if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds) && courseData.targetGroupIds.length > 0) {
       courseData.targetGroupIds.forEach((id) => {
         if (id !== null && id !== undefined && id !== "") {
@@ -203,7 +208,7 @@ export const createCourse = async (courseData) => {
       });
     }
 
-    // Arrays - Tags (only add if array has items)  
+    // Arrays - Tags
     if (courseData.tagIds && Array.isArray(courseData.tagIds) && courseData.tagIds.length > 0) {
       courseData.tagIds.forEach((id) => {
         if (id !== null && id !== undefined && id !== "") {
@@ -212,41 +217,25 @@ export const createCourse = async (courseData) => {
       });
     }
 
+    // FIXED: Succession rates now uses SuccessionRatesJson as string
     if (courseData.successionRates && Array.isArray(courseData.successionRates) && courseData.successionRates.length > 0) {
-  console.log('🔧 Processing SuccessionRates:', courseData.successionRates);
-  
-  // Her bir succession rate üçün JSON formatda göndər
-  courseData.successionRates.forEach((rate, index) => {
-    // Only add succession rates that have valid data
-    if (rate.minRange !== null && rate.minRange !== undefined && 
-        rate.maxRange !== null && rate.maxRange !== undefined) {
-      
-      // JSON obyekti yarad
-      const rateObject = {
+      const validRates = courseData.successionRates.filter(rate => 
+        rate.minRange !== null && rate.minRange !== undefined && 
+        rate.maxRange !== null && rate.maxRange !== undefined
+      ).map(rate => ({
         minRange: parseInt(rate.minRange),
-        maxRange: parseInt(rate.maxRange)
-      };
-      
-      // Badge ID - yalnız valid olanları əlavə et
-      if (rate.badgeId && rate.badgeId !== null && rate.badgeId !== undefined && 
-          typeof rate.badgeId === 'number' && !isNaN(rate.badgeId)) {
-        rateObject.badgeId = parseInt(rate.badgeId);
+        maxRange: parseInt(rate.maxRange),
+        badgeId: (rate.badgeId && typeof rate.badgeId === 'number' && !isNaN(rate.badgeId)) 
+          ? parseInt(rate.badgeId) 
+          : null
+      }));
+
+      if (validRates.length > 0) {
+        formData.append("SuccessionRatesJson", JSON.stringify(validRates));
       }
-      
-      console.log(`🔧 Adding SuccessionRate[${index}]:`, rateObject);
-      
-      // JSON string kimi göndər - Swagger-də olduğu kimi
-      formData.append(`SuccessionRates`, JSON.stringify(rateObject));
-    }
-  });
-}
-
-    // Debug: Log what we're sending
-    console.log("FormData contents:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
     }
 
+    // Create course
     const response = await axios.post(`${API_URL}Course/AddCourse`, formData, {
       headers: {
         ...getHeaders(),
@@ -258,26 +247,65 @@ export const createCourse = async (courseData) => {
 
     // Handle API response - check if it's actually successful
     if (response.data && response.data.success === false) {
-      // This is a business logic error, not a technical error
       throw new Error(response.data.message || "Course creation failed due to business rules");
+    }
+
+    // FIXED: Since API only returns success message, fetch the created course
+    if (response.data?.success) {
+      // Wait a moment for the course to be fully created
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        // Fetch latest courses to find the one we just created
+        const latestCoursesResponse = await fetchCourses({ 
+          orderBy: 'datedesc', 
+          take: 10,
+          page: 1 
+        });
+        
+        if (latestCoursesResponse.courses && latestCoursesResponse.courses.length > 0) {
+          // Find the course with matching name and description
+          const createdCourse = latestCoursesResponse.courses.find(course => 
+            course.name === courseData.name && 
+            course.description === courseData.description
+          );
+          
+          if (createdCourse) {
+            console.log('Found created course with ID:', createdCourse.id);
+            
+            // Return the full course object with real ID
+            return {
+              ...response.data,
+              id: createdCourse.id,
+              courseId: createdCourse.id,
+              ...createdCourse,
+              success: true,
+              message: response.data.message
+            };
+          }
+        }
+      } catch (fetchError) {
+        console.warn('Could not fetch created course details:', fetchError);
+      }
+      
+      // If we can't fetch the course, return success with a note
+      return {
+        ...response.data,
+        id: null,
+        courseId: null,
+        success: true,
+        message: response.data.message,
+        needsRefresh: true // Flag to indicate we need to refresh course list
+      };
     }
 
     return response.data;
   } catch (error) {
     console.error("Error creating course:", error);
     
-    // Log more details about the error
-    if (error.response) {
-      console.error("Error response status:", error.response.status);
-      console.error("Error response data:", error.response.data);
-      console.error("Error response headers:", error.response.headers);
-    }
-    
-    // Provide more specific error messages
     let errorMessage = "Failed to create course";
     
     if (error.message && error.message.includes("katsayısı")) {
-      // Turkish cluster coefficient error
       errorMessage = "Cannot add course: Adding this course would exceed the cluster's maximum coefficient limit (100). Please reduce the coefficient or choose a different cluster.";
     } else if (error.response?.data?.detail) {
       errorMessage += ": " + error.response.data.detail;
@@ -294,8 +322,41 @@ export const createCourse = async (courseData) => {
     throw new Error(errorMessage);
   }
 };
+export const findCourseByDetails = async (name, description, userId = null) => {
+  try {
+    // Search for courses with the given name
+    const response = await fetchCourses({
+      search: name,
+      orderBy: 'datedesc',
+      take: 20,
+      page: 1
+    });
 
-// Update course using UpdateCourse endpoint - DÜZƏLDILMIŞ
+    if (response.courses && response.courses.length > 0) {
+      // Find exact match by name and description
+      const exactMatch = response.courses.find(course => 
+        course.name.trim() === name.trim() && 
+        course.description.trim() === description.trim()
+      );
+
+      if (exactMatch) {
+        return exactMatch;
+      }
+
+      // If no exact match, try to find by name only (in case description was truncated)
+      const nameMatch = response.courses.find(course => 
+        course.name.trim() === name.trim()
+      );
+
+      return nameMatch || null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error finding course by details:", error);
+    return null;
+  }
+};
 export const updateCourse = async (courseData) => {
   try {
     const formData = new FormData();
@@ -342,8 +403,18 @@ export const updateCourse = async (courseData) => {
       formData.append("DeadLine", courseData.deadline.toString());
     }
 
+    // NEW: Added ExpirationDate field
+    if (courseData.expirationDate) {
+      formData.append("ExpirationDate", courseData.expirationDate.toString());
+    }
+
     if (courseData.autoReassign !== undefined) {
       formData.append("AutoReassign", courseData.autoReassign.toString());
+    }
+
+    // NEW: Added HasNotification field
+    if (courseData.hasNotification !== undefined) {
+      formData.append("HasNotification", courseData.hasNotification.toString());
     }
 
     if (courseData.publishCourse !== undefined) {
@@ -354,7 +425,7 @@ export const updateCourse = async (courseData) => {
       formData.append("UserId", courseData.userId.toString());
     }
 
-    // Cluster settings - DÜZƏLDILMIŞ
+    // Cluster settings
     if (courseData.clusterId) {
       formData.append("ClusterId", courseData.clusterId.toString());
       
@@ -372,15 +443,20 @@ export const updateCourse = async (courseData) => {
       formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
     }
 
-    // FIXED: Succession rates - proper structure
+    // FIXED: Succession rates - now uses SuccessionRatesJson
     if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
-      courseData.successionRates.forEach((rate, index) => {
-        formData.append(`SuccessionRates[${index}].MinRange`, (rate.minRange || 0).toString());
-        formData.append(`SuccessionRates[${index}].MaxRange`, (rate.maxRange || 100).toString());
-        if (rate.badgeId && rate.badgeId !== null) {
-          formData.append(`SuccessionRates[${index}].BadgeId`, rate.badgeId.toString());
-        }
-      });
+      const validRates = courseData.successionRates.filter(rate => 
+        rate.minRange !== null && rate.minRange !== undefined && 
+        rate.maxRange !== null && rate.maxRange !== undefined
+      ).map(rate => ({
+        minRange: parseInt(rate.minRange),
+        maxRange: parseInt(rate.maxRange),
+        badgeId: rate.badgeId && !isNaN(parseInt(rate.badgeId)) ? parseInt(rate.badgeId) : null
+      }));
+
+      if (validRates.length > 0) {
+        formData.append("SuccessionRatesJson", JSON.stringify(validRates));
+      }
     }
 
     const response = await axios.put(`${API_URL}Course/UpdateCourse`, formData, {
@@ -431,13 +507,14 @@ export const publishCourse = async (courseId) => {
 
 // ======================== SECTION MANAGEMENT ========================
 
-// Add section to course
+// course.js-də addSection funksiyasında
 export const addSection = async (sectionData) => {
   try {
     const formData = new FormData();
     formData.append("CourseId", sectionData.courseId.toString());
     formData.append("Description", sectionData.description || "");
     formData.append("Duration", (sectionData.duration || 0).toString());
+    formData.append("Order", (sectionData.order || 0).toString()); // Add order field
     formData.append("HideSection", (sectionData.hideSection || false).toString());
     formData.append("Mandatory", (sectionData.mandatory || false).toString());
 
@@ -448,7 +525,19 @@ export const addSection = async (sectionData) => {
       },
     });
 
-    return response.data;
+    console.log('API Response for addSection:', response.data);
+    
+    // Return properly structured response
+    return {
+      id: response.data.id || response.data.sectionId,
+      description: sectionData.description,
+      duration: sectionData.duration,
+      order: sectionData.order, // Include order in response
+      hideSection: sectionData.hideSection,
+      mandatory: sectionData.mandatory,
+      courseId: sectionData.courseId,
+      ...response.data
+    };
   } catch (error) {
     console.error("Error adding section:", error);
     throw new Error("Failed to add section: " + (error.response?.data?.detail || error.message));
@@ -463,6 +552,7 @@ export const updateSection = async (sectionData) => {
       courseId: sectionData.courseId,
       description: sectionData.description || "",
       duration: sectionData.duration || 0,
+      order: sectionData.order || 0, // Add order field
       hideSection: sectionData.hideSection || false,
       mandatory: sectionData.mandatory || false,
       courseContentIds: sectionData.courseContentIds || []
@@ -475,11 +565,27 @@ export const updateSection = async (sectionData) => {
       },
     });
 
-    return response.data;
+    return {
+      ...response.data,
+      order: sectionData.order // Ensure order is returned
+    };
   } catch (error) {
     console.error("Error updating section:", error);
     throw new Error("Failed to update section: " + (error.response?.data?.detail || error.message));
   }
+};
+
+
+
+export const calculateOptimalSectionOrders = (sections) => {
+  if (!sections || sections.length === 0) return [];
+  
+  return sections
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .map((section, index) => ({
+      sectionId: section.id,
+      order: (index + 1) * 10 // Use increments of 10 for easier reordering
+    }));
 };
 
 // Delete section
@@ -619,22 +725,7 @@ export const assignUsersToCourse = async (assignmentData) => {
   }
 };
 
-// Check if user is in target group
-export const checkUserInTargetGroup = async (userId, targetGroupId) => {
-  try {
-    const response = await axios.get(`${API_URL}Course/check-user-in-target-group`, {
-      params: { 
-        UserId: parseInt(userId),
-        TargetGroupId: parseInt(targetGroupId)
-      },
-      headers: getHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error checking user in target group:", error);
-    throw new Error("Failed to check user in target group: " + (error.response?.data?.detail || error.message));
-  }
-};
+
 
 // ======================== QUIZ MANAGEMENT ========================
 
@@ -652,33 +743,7 @@ export const getQuizzesByContentId = async (courseContentId) => {
   }
 };
 
-// ======================== EVALUATION ========================
 
-// Create course evaluation
-export const createCourseEvaluation = async (evaluationData) => {
-  try {
-    const payload = {
-      appUserId: evaluationData.appUserId,
-      courseId: evaluationData.courseId,
-      contentRichnessRating: evaluationData.contentRichnessRating || 0,
-      contentDesignRating: evaluationData.contentDesignRating || 0,
-      topicRelevanceRating: evaluationData.topicRelevanceRating || 0,
-      currentRequirementsResponseRating: evaluationData.currentRequirementsResponseRating || 0,
-    };
-
-    const response = await axios.post(`${API_URL}Course/create-evalution`, payload, {
-      headers: {
-        ...getHeaders(),
-        "Content-Type": "application/json",
-      },
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error("Error creating course evaluation:", error);
-    throw new Error("Failed to create course evaluation: " + (error.response?.data?.detail || error.message));
-  }
-};
 
 // ======================== VALIDATION HELPERS ========================
 
@@ -743,9 +808,18 @@ export const validateSectionData = (sectionData) => {
     errors.push("Duration cannot be negative");
   }
 
+  // Validate order
+  if (sectionData.order !== undefined) {
+    if (typeof sectionData.order !== 'number' || sectionData.order < 1) {
+      errors.push("Order must be a positive number");
+    }
+    if (sectionData.order > 999) {
+      errors.push("Order cannot exceed 999");
+    }
+  }
+
   return errors;
 };
-
 // ======================== HELPER FUNCTIONS ========================
 
 // Format course for display
@@ -858,13 +932,11 @@ export default {
   // User management
   getCourseLearners,
   assignUsersToCourse,
-  checkUserInTargetGroup,
-  
+ 
   // Quiz management
   getQuizzesByContentId,
   
-  // Evaluation
-  createCourseEvaluation,
+  
   
   // Validation
   validateCourseData,

@@ -27,12 +27,12 @@ export const fetchUserData = async (userId) => {
 };
 
 export const fetchNotifications = async (userId) => {
-  return fetchApi(`Notification/getAllUserNotifications?UserId=${userId}`);
+  return fetchApi(`Notification/?UserId=${userId}`);
 };
 
 export const updateNotificationReadStatus = async (notificationId, isRead) => {
   return fetchApi("Notification/updateReadStatus", {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify({ notificationId, isRead }),
   });
 };
