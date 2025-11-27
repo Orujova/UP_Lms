@@ -134,61 +134,61 @@ const AddTarget = () => {
       try {
         await Promise.all([
           fetchData(
-            "https://bravoadmin.uplms.org/api/FunctionalArea",
+            "https://demoadmin.databyte.app/api/FunctionalArea",
             setFunctionalAreas,
             (data) => data[0]?.functionalAreas || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/Department",
+            "https://demoadmin.databyte.app/api/Department",
             setDepartments,
             (data) => data[0]?.departments || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/Project",
+            "https://demoadmin.databyte.app/api/Project",
             setProjects,
             (data) => data[0]?.projects || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/Division",
+            "https://demoadmin.databyte.app/api/Division",
             setDivisions,
             (data) => data[0]?.divisions || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/SubDivision",
+            "https://demoadmin.databyte.app/api/SubDivision",
             setSubDivisions,
             (data) => data[0]?.subDivisions || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/Position",
+            "https://demoadmin.databyte.app/api/Position",
             setPositions,
             (data) => data[0]?.positions || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/PositionGroup",
+            "https://demoadmin.databyte.app/api/PositionGroup",
             setPositionGroups,
             (data) => data[0]?.positionGroups || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/Gender",
+            "https://demoadmin.databyte.app/api/Gender",
             setGenders,
             (data) => data || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/Role",
+            "https://demoadmin.databyte.app/api/Role",
             setRoles,
             (data) => data[0]?.roles || []
           ),
 
           fetchData(
-            "https://bravoadmin.uplms.org/api/ResidentalArea",
+            "https://demoadmin.databyte.app/api/ResidentalArea",
             setResidentalAreas,
             (data) => data[0]?.residentalAreas || []
           ),
@@ -347,7 +347,7 @@ const AddTarget = () => {
 
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/CreateTargetGroup",
+        "https://demoadmin.databyte.app/api/TargetGroup/CreateTargetGroup",
         {
           method: "POST",
           headers: {

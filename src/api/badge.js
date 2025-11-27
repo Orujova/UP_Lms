@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { getToken } from '@/authtoken/auth.js';
 
-const API_URL = 'https://bravoadmin.uplms.org/api/';
+const API_URL = 'https://demoadmin.databyte.app/api/';
 
 const getHeaders = () => {
   const token = getToken();
@@ -33,7 +33,7 @@ export const fetchBadges = async (params = {}) => {
     const badges = response.data.map(badge => ({
       ...badge,
       badgePhoto: badge.badgePhoto ? 
-        badge.badgePhoto.replace('https://100.42.179.27:7198/', 'https://bravoadmin.uplms.org/') 
+        badge.badgePhoto.replace('https://100.42.179.27:7298/', 'https://demoadmin.databyte.app/') 
         : null
     }));
 
@@ -54,7 +54,7 @@ export const fetchBadgeById = async (badgeId) => {
     // Process badge photo URL
     const badge = response.data;
     if (badge.badgePhoto) {
-      badge.badgePhoto = badge.badgePhoto.replace('https://100.42.179.27:7198/', 'https://bravoadmin.uplms.org/');
+      badge.badgePhoto = badge.badgePhoto.replace('https://100.42.179.27:7298/', 'https://demoadmin.databyte.app/');
     }
     
     return badge;
@@ -170,7 +170,7 @@ export const formatBadgeForDisplay = (badge) => {
   return {
     ...badge,
     badgePhoto: badge.badgePhoto ? 
-      badge.badgePhoto.replace('https://100.42.179.27:7198/', 'https://bravoadmin.uplms.org/') 
+      badge.badgePhoto.replace('https://100.42.179.27:7298/', 'https://demoadmin.databyte.app/') 
       : null
   };
 };

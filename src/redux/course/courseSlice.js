@@ -4,6 +4,8 @@ import {
   // Core CRUD operations
   fetchCourses,
   fetchCourseById,
+    getDistinctCourseNames,
+  getCoursePositionsInfo,
   createCourse as apiCreateCourse,
   updateCourse as apiUpdateCourse,
   deleteCourse as apiDeleteCourse,
@@ -43,22 +45,69 @@ import { getUserId } from "@/authtoken/auth.js";
 
 // ======================== ASYNC THUNKS ========================
 
+// Add new async thunks
+export const fetchDistinctCourseNamesAsync = createAsyncThunk(
+  "course/fetchDistinctCourseNames",
+  async (language = null, { rejectWithValue }) => {
+    try {
+      const response = await getDistinctCourseNames(language);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch course names");
+    }
+  }
+);
+
+export const fetchCoursePositionsInfoAsync = createAsyncThunk(
+  "course/fetchCoursePositionsInfo",
+  async ({ courseName, language = null }, { rejectWithValue }) => {
+    try {
+      const response = await getCoursePositionsInfo(courseName, language);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch positions info");
+    }
+  }
+);
+
 export const fetchCoursesAsync = createAsyncThunk(
   "course/fetchCourses",
   async (params = {}, { rejectWithValue }) => {
     try {
-      // FIXED: Ensure proper orderBy parameter
+      console.log('🔍 Redux: Fetching courses with params:', params);
+      
+      // FIXED: Ensure proper orderBy parameter mapping
       const apiParams = {
-        ...params,
-        orderBy: params.orderBy ? COURSE_ORDER_OPTIONS[params.orderBy.toUpperCase()] || COURSE_ORDER_OPTIONS.NAME_ASC : undefined
+        ...params
       };
+
+      // Map frontend sort values to backend values if needed
+      if (params.orderBy) {
+        const sortMapping = {
+          'newest': 'datedesc',
+          'oldest': 'dateasc',
+          'nameAsc': 'nameasc',
+          'nameDesc': 'namedesc',
+          'durationAsc': 'durationasc',
+          'durationDesc': 'durationdesc'
+        };
+        
+        // Use mapping or keep original if already correct
+        apiParams.orderBy = sortMapping[params.orderBy] || params.orderBy;
+      }
+      
+      console.log('🔄 Redux: Processed API params:', apiParams);
       
       const response = await fetchCourses(apiParams);
+      
+      console.log('✅ Redux: Courses fetched successfully:', response);
+      
       return {
         courses: response.courses.map(course => formatCourseForDisplay(course)),
         totalCourseCount: response.totalCourseCount,
       };
     } catch (error) {
+      console.error('❌ Redux: Failed to fetch courses:', error);
       return rejectWithValue(error.message || "Failed to fetch courses");
     }
   }
@@ -241,13 +290,7 @@ export const createCourseAsync = createAsyncThunk(
             : null
         }));
 
-      // Clean target group IDs
-      const rawTargetGroupIds = courseData.targetGroupIds || state.formData.targetGroupIds || [];
-      const cleanTargetGroupIds = rawTargetGroupIds
-        .filter(id => id !== null && id !== undefined && id !== "")
-        .map(id => parseInt(id))
-        .filter(id => !isNaN(id));
-
+   
       // Clean tag IDs
       const rawTagIds = courseData.tagIds || state.formData.tagIds || [];
       const cleanTagIds = rawTagIds
@@ -255,16 +298,17 @@ export const createCourseAsync = createAsyncThunk(
         .map(id => parseInt(id))
         .filter(id => !isNaN(id));
 
-      // Prepare API data with proper validation and defaults - INCLUDING NEW FIELDS
+      // Prepare API data with new fields
       const apiData = {
         userId: userId,
         name: (courseData.name || state.formData.name || "").trim(),
         description: (courseData.description || state.formData.description || "").trim(),
+        aboutCourse: (courseData.aboutCourse || state.formData.aboutCourse || "").trim(), // NEW FIELD
         duration: parseInt(courseData.duration || state.formData.duration || 60),
         verifiedCertificate: Boolean(courseData.verifiedCertificate ?? state.formData.verifiedCertificate ?? false),
         categoryId: parseInt(courseData.categoryId || state.formData.categoryId),
         imageFile: courseData.imageFile || state.formData.imageFile,
-        targetGroupIds: cleanTargetGroupIds,
+    
         certificateId: (courseData.certificateId || state.formData.certificateId) 
           ? parseInt(courseData.certificateId || state.formData.certificateId) 
           : null,
@@ -275,13 +319,13 @@ export const createCourseAsync = createAsyncThunk(
         deadline: (courseData.deadline || state.formData.deadline) 
           ? parseInt(courseData.deadline || state.formData.deadline) 
           : null,
-        // NEW FIELD: expirationDate
         expirationDate: (courseData.expirationDate || state.formData.expirationDate) 
           ? parseInt(courseData.expirationDate || state.formData.expirationDate) 
-          : null,
+          : null, // Now in months
         autoReassign: Boolean(courseData.autoReassign ?? state.formData.autoReassign ?? false),
-        // NEW FIELD: hasNotification
         hasNotification: Boolean(courseData.hasNotification ?? state.formData.hasNotification ?? false),
+        isPromoted: Boolean(courseData.isPromoted ?? state.formData.isPromoted ?? false), // NEW FIELD
+        publishCourse: Boolean(courseData.publishCourse ?? state.formData.publishCourse ?? false), // NEW FIELD
         clusterId: (courseData.clusterId || state.formData.clusterId) 
           ? parseInt(courseData.clusterId || state.formData.clusterId) 
           : null,
@@ -291,7 +335,6 @@ export const createCourseAsync = createAsyncThunk(
         clusterCoefficient: (courseData.clusterCoefficient || state.formData.clusterCoefficient) 
           ? parseFloat(courseData.clusterCoefficient || state.formData.clusterCoefficient) 
           : null,
-        clusterIsMandatory: Boolean(courseData.clusterIsMandatory ?? state.formData.clusterIsMandatory ?? false),
         successionRates: cleanSuccessionRates,
       };
 
@@ -310,11 +353,10 @@ export const createCourseAsync = createAsyncThunk(
 
       console.log("Course created successfully:", response);
 
-      // Handle the response properly - now includes real course ID and new fields
+      // Handle the response properly with new fields
       if (response?.success) {
         let courseId = response.id || response.courseId;
         
-        // If we got a real course ID from the response
         if (courseId && !courseId.toString().startsWith('temp_')) {
           console.log('Got real course ID from response:', courseId);
           
@@ -323,26 +365,27 @@ export const createCourseAsync = createAsyncThunk(
             courseId: courseId,
             name: apiData.name,
             description: apiData.description,
+            aboutCourse: apiData.aboutCourse, // NEW FIELD
             duration: apiData.duration,
             categoryId: apiData.categoryId,
             verifiedCertificate: apiData.verifiedCertificate,
-            targetGroupIds: apiData.targetGroupIds,
+           
             certificateId: apiData.certificateId,
             tagIds: apiData.tagIds,
             startDuration: apiData.startDuration,
             deadline: apiData.deadline,
-            expirationDate: apiData.expirationDate, // NEW FIELD
+            expirationDate: apiData.expirationDate, // Updated field
             autoReassign: apiData.autoReassign,
-            hasNotification: apiData.hasNotification, // NEW FIELD
+            hasNotification: apiData.hasNotification,
+            isPromoted: apiData.isPromoted, // NEW FIELD
+            publishCourse: apiData.publishCourse, // NEW FIELD
             clusterId: apiData.clusterId,
             clusterOrderNumber: apiData.clusterOrderNumber,
             clusterCoefficient: apiData.clusterCoefficient,
-            clusterIsMandatory: apiData.clusterIsMandatory,
             successionRates: apiData.successionRates,
             success: true,
             message: response.message,
             createdDate: new Date().toISOString(),
-            isPublished: false,
             sections: [],
             contents: [],
             totalSection: 0,
@@ -355,10 +398,8 @@ export const createCourseAsync = createAsyncThunk(
             imageUrl: response.imageUrl || null,
             formattedDuration: formatDuration(apiData.duration),
             formattedCreatedDate: new Date().toLocaleDateString(),
-            publishCourse: false
           };
           
-          // Update formData with the real course ID for immediate use
           dispatch(setFormData({ 
             ...state.formData, 
             courseId: courseId,
@@ -368,34 +409,33 @@ export const createCourseAsync = createAsyncThunk(
           return realCourse;
         }
         
-        // If no real ID in response, we need to handle this differently
-        console.log('No real course ID in response, course creation successful but ID pending');
-        
+        // If no real ID in response
         const pendingCourse = {
           id: null,
           courseId: null,
           name: apiData.name,
           description: apiData.description,
+          aboutCourse: apiData.aboutCourse, // NEW FIELD
           duration: apiData.duration,
           categoryId: apiData.categoryId,
           verifiedCertificate: apiData.verifiedCertificate,
-          targetGroupIds: apiData.targetGroupIds,
+      
           certificateId: apiData.certificateId,
           tagIds: apiData.tagIds,
           startDuration: apiData.startDuration,
           deadline: apiData.deadline,
-          expirationDate: apiData.expirationDate, // NEW FIELD
+          expirationDate: apiData.expirationDate, // Updated field
           autoReassign: apiData.autoReassign,
-          hasNotification: apiData.hasNotification, // NEW FIELD
+          hasNotification: apiData.hasNotification,
+          isPromoted: apiData.isPromoted, // NEW FIELD
+          publishCourse: apiData.publishCourse, // NEW FIELD
           clusterId: apiData.clusterId,
           clusterOrderNumber: apiData.clusterOrderNumber,
           clusterCoefficient: apiData.clusterCoefficient,
-          clusterIsMandatory: apiData.clusterIsMandatory,
           successionRates: apiData.successionRates,
           success: true,
           message: response.message,
           createdDate: new Date().toISOString(),
-          isPublished: false,
           sections: [],
           contents: [],
           needsRefresh: response.needsRefresh || false,
@@ -409,7 +449,6 @@ export const createCourseAsync = createAsyncThunk(
           imageUrl: response.imageUrl || null,
           formattedDuration: formatDuration(apiData.duration),
           formattedCreatedDate: new Date().toLocaleDateString(),
-          publishCourse: false
         };
         
         return pendingCourse;
@@ -717,7 +756,10 @@ const initialState = {
   totalCourseCount: 0,
   loading: false,
   error: null,
-
+  availableCourseNames: [],
+  selectedCoursePositionsInfo: null,
+  courseNamesLoading: false,
+  positionsInfoLoading: false,
   // Single course state
   currentCourse: null,
   courseLoading: false,
@@ -734,12 +776,13 @@ const initialState = {
 
   // Form state
   currentStep: 1,
-    formData: {
+      formData: {
     // Basic Info
     name: "",
     description: "",
+    aboutCourse: "", // NEW FIELD: Rich text content
     categoryId: "",
-    duration: 200,
+    duration: 60,
     verifiedCertificate: false,
     imageFile: null,
     imagePreview: null,
@@ -750,17 +793,16 @@ const initialState = {
     targetGroupIds: [],
     startDuration: null,
     deadline: null,
-    expirationDate: null, // NEW FIELD
+    expirationDate: null, // UPDATED: Now in months
     autoReassign: false,
-    hasNotification: false, // NEW FIELD
-    hasEvaluation: false,
-    publishCourse: false,
+    hasNotification: false,
+    isPromoted: false, // NEW FIELD
+    publishCourse: false, // NEW FIELD
     
-    // Cluster settings
+    // Cluster settings (removed clusterIsMandatory)
     clusterId: null,
     clusterOrderNumber: null,
     clusterCoefficient: null,
-    clusterIsMandatory: false,
     
     // Succession rates with proper structure
     successionRates: [],
@@ -823,6 +865,7 @@ const initialState = {
   filters: {
     search: '',
     categoryId: '',
+    isPromoted: null, // NEW FILTER
     tagId: '',
     hasCertificate: null,
     minDuration: '',
@@ -1498,14 +1541,31 @@ setEditingSection: (state, action) => {
         state.error = null;
       })
       .addCase(updateCourseAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentCourse = action.payload;
-        const courseIndex = state.courses.findIndex((c) => c.id === action.payload.id);
-        if (courseIndex !== -1) {
-          state.courses[courseIndex] = action.payload;
-        }
-        courseSlice.caseReducers.updateStatistics(state);
-      })
+  state.loading = false;
+  
+  // FIXED: API response yalnız success message qayıdırsa
+  if (action.payload && action.payload.success === true && 
+      (!action.payload.id && !action.payload.name)) {
+    console.log('Update success - preserving current course and form data');
+    
+    // Form data-nı preserve et, reset etmə
+    // currentCourse-u da əvvəlki halında saxla
+    return;
+  }
+  
+  // Əgər real course data qayıdırsa, update et
+  if (action.payload && action.payload.id) {
+    state.currentCourse = action.payload;
+    
+    // Course list-də də update et
+    const courseIndex = state.courses.findIndex((c) => c.id === action.payload.id);
+    if (courseIndex !== -1) {
+      state.courses[courseIndex] = action.payload;
+    }
+    
+    courseSlice.caseReducers.updateStatistics(state);
+  }
+})
       .addCase(updateCourseAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
@@ -1885,6 +1945,32 @@ setEditingSection: (state, action) => {
         console.error('❌ Redux State: Questions addition failed:', action.payload);
       })
 
+      // Add to extraReducers
+.addCase(fetchDistinctCourseNamesAsync.pending, (state) => {
+  state.courseNamesLoading = true;
+})
+.addCase(fetchDistinctCourseNamesAsync.fulfilled, (state, action) => {
+  state.courseNamesLoading = false;
+  state.availableCourseNames = action.payload;
+})
+.addCase(fetchDistinctCourseNamesAsync.rejected, (state, action) => {
+  state.courseNamesLoading = false;
+  state.error = action.payload;
+})
+
+.addCase(fetchCoursePositionsInfoAsync.pending, (state) => {
+  state.positionsInfoLoading = true;
+})
+.addCase(fetchCoursePositionsInfoAsync.fulfilled, (state, action) => {
+  state.positionsInfoLoading = false;
+  state.selectedCoursePositionsInfo = action.payload;
+})
+.addCase(fetchCoursePositionsInfoAsync.rejected, (state, action) => {
+  state.positionsInfoLoading = false;
+  state.error = action.payload;
+})
+
+
       // Add options
       .addCase(addOptionsAsync.pending, (state) => {
         state.loading = true;
@@ -1997,7 +2083,10 @@ export const selectStatistics = (state) => state.course.statistics;
 export const selectSuccessionRates = (state) => state.course.formData.successionRates;
 export const selectSuccessionRateByIndex = (index) => (state) => state.course.formData.successionRates[index];
 export const selectSuccessionRatesCount = (state) => state.course.formData.successionRates.length;
-
+export const selectAvailableCourseNames = (state) => state.course.availableCourseNames;
+export const selectSelectedCoursePositionsInfo = (state) => state.course.selectedCoursePositionsInfo;
+export const selectCourseNamesLoading = (state) => state.course.courseNamesLoading;
+export const selectPositionsInfoLoading = (state) => state.course.positionsInfoLoading;
 // Computed selectors
 export const selectFilteredCourses = (state) => {
   const courses = state.course.courses;
@@ -2011,7 +2100,12 @@ export const selectFilteredCourses = (state) => {
     if (filters.categoryId && course.courseCategoryId !== parseInt(filters.categoryId)) {
       return false;
     }
-    
+    if (filters.isPromoted !== null && filters.isPromoted !== undefined) {
+      const courseIsPromoted = course.isPromoted || course.isPromotedCourse || false;
+      if (courseIsPromoted !== filters.isPromoted) {
+        return false;
+      }
+    }
     if (filters.tagId && !course.courseTags?.some(tag => tag.id === parseInt(filters.tagId))) {
       return false;
     }

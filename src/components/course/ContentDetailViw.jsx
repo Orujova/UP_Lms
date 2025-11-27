@@ -109,47 +109,9 @@ const UpdatedContentDetailView = ({ contentId, sectionId, onBack }) => {
     return content ? getContentTypeConfig(content.type || content.contentType) : null;
   }, [content, getContentTypeConfig]);
 
-  // Handle edit mode toggle
-  const handleEditToggle = useCallback(() => {
-    if (editMode) {
-      setEditMode(false);
-      setEditFormData({
-        description: content.description || '',
-        contentString: content.contentString || content.data || '',
-        hideContent: Boolean(content.hideContent),
-        isDiscussionEnabled: Boolean(content.isDiscussionEnabled),
-        isMeetingAllowed: Boolean(content.isMeetingAllowed)
-      });
-    } else {
-      setEditMode(true);
-    }
-  }, [editMode, content]);
 
-  // Handle edit submission
-  const handleEditSubmit = useCallback(async () => {
-    if (!content) return;
-    
-    setIsSubmitting(true);
-    try {
-      const updateData = {
-        contentId: content.id || content.contentId,
-        sectionId: content.sectionId || sectionId,
-        type: content.type || content.contentType,
-        ...editFormData
-      };
 
-      await dispatch(updateContentAsync(updateData)).unwrap();
-      setEditMode(false);
-      
-      if (sectionId) {
-        dispatch(getContentsBySectionAsync(sectionId));
-      }
-    } catch (error) {
-      console.error('Failed to update content:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [content, editFormData, dispatch, sectionId]);
+  
 
   // Handle input changes
   const handleInputChange = useCallback((field, value) => {
@@ -204,49 +166,8 @@ const UpdatedContentDetailView = ({ contentId, sectionId, onBack }) => {
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-2.5">
-            <div className="flex items-center mb-1.5">
-             <div><Info className="w-4 h-3 mr-1 text-[#0AAC9E]" /></div> 
-              <span className="text-xs font-medium text-gray-800">Video Details</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-gray-500">Status:</span>
-                <div className="flex items-center space-x-1 mt-0.5">
-                  {content.uploadStatus === 3 ? (
-                    <>
-                     <div><CheckCircle className="w-4 h-3 text-emerald-600" /></div> 
-                      <span className="text-emerald-700">Ready</span>
-                    </>
-                  ) : (
-                    <>
-                     <div><Clock className="w-4 h-3 text-amber-600" /></div> 
-                      <span className="text-amber-700">Processing</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-500">File:</span>
-                <p className="text-gray-800 truncate mt-0.5">{contentData?.split('/').pop() || 'Video file'}</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-1.5">
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 text-center">
-              <div><Languages className="w-4 h-3 text-blue-600 mx-auto mb-0.5" /></div>
-              <span className="text-xs font-medium text-blue-800">Subtitles</span>
-            </div>
-            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-1.5 text-center">
-            <div> <Target className="w-4 h-3 text-emerald-600 mx-auto mb-0.5" /></div> 
-              <span className="text-xs font-medium text-emerald-800">Interactive</span>
-            </div>
-            <div className="bg-purple-50 border border-purple-100 rounded-lg p-1.5 text-center">
-             <div><BarChart3 className="w-4 h-3 text-purple-600 mx-auto mb-0.5" /></div> 
-              <span className="text-xs font-medium text-purple-800">Analytics</span>
-            </div>
-          </div>
+        
         </div>
       );
     }
@@ -447,14 +368,9 @@ const UpdatedContentDetailView = ({ contentId, sectionId, onBack }) => {
           </div>
 
           <div className="flex items-center space-x-1">
-            {!editMode ? (
+    
               <>
-                <button
-                  onClick={handleEditToggle}
-                  className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                >
-                  <Edit3 className="w-4 h-3" />
-                </button>
+                
                 
                 {isVideoType && (
                   <button
@@ -474,34 +390,7 @@ const UpdatedContentDetailView = ({ contentId, sectionId, onBack }) => {
                   <Trash2 className="w-4 h-3" />
                 </button>
               </>
-            ) : (
-              <>
-                <button
-                  onClick={handleEditToggle}
-                  disabled={isSubmitting}
-                  className="px-1.5 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleEditSubmit}
-                  disabled={isSubmitting}
-                  className="flex items-center px-1.5 py-1 text-xs font-medium text-white bg-[#0AAC9E] rounded hover:bg-[#0AAC9E]/90 disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-3 mr-0.5 animate-spin" />
-                      Saving
-                    </>
-                  ) : (
-                    <>
-                    <div><Save className="w-4 h-3 mr-0.5" /></div>  
-                      Save
-                    </>
-                  )}
-                </button>
-              </>
-            )}
+            
           </div>
         </div>
       </div>
@@ -539,47 +428,7 @@ const UpdatedContentDetailView = ({ contentId, sectionId, onBack }) => {
             <div className="space-y-3">
               <h3 className="text-xs font-medium text-gray-900">Content Details</h3>
               
-              {editMode ? (
-                <div className="space-y-2.5">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Description</label>
-                    <input
-                      type="text"
-                      value={editFormData.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                      className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-                    />
-                  </div>
-                  
-                  {(content.type === 1 || content.type === 3 || content.contentType === 'TextBox' || content.contentType === 'WebURL') && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                        {(content.type === 3 || content.contentType === 'WebURL') ? 'URL' : 'Content Text'}
-                      </label>
-                      <textarea
-                        value={editFormData.contentString}
-                        onChange={(e) => handleInputChange('contentString', e.target.value)}
-                        rows={3}
-                        className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0AAC9E] resize-none"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div>
-                      <label htmlFor="isMeetingAllowed" className="text-xs font-medium text-gray-800">Allow Meetings</label>
-                      <p className="text-xs text-gray-500">Enable meeting requests</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      id="isMeetingAllowed"
-                      checked={editFormData.isMeetingAllowed}
-                      onChange={(e) => handleInputChange('isMeetingAllowed', e.target.checked)}
-                      className="w-3 h-3 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-                    />
-                  </div>
-                </div>
-              ) : (
+             
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     {[
@@ -611,7 +460,7 @@ const UpdatedContentDetailView = ({ contentId, sectionId, onBack }) => {
                     ))}
                   </div>
                 </div>
-              )}
+              
 
               {(content.contentString || content.data || isQuizType || isVideoType) && (
                 <div className="mt-3 space-y-2">

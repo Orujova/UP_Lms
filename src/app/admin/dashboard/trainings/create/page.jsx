@@ -56,7 +56,7 @@ const TrainingCreatePage = () => {
       setLoading(true);
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups",
+        "https://demoadmin.databyte.app/api/TargetGroup/GetAllTargetGroups",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -228,60 +228,90 @@ const TrainingCreatePage = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) {
-      const firstError = Object.keys(errors)[0];
-      const element =
-        document.querySelector(`[name="${firstError}"]`) ||
-        document.getElementById(firstError);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      return;
+  if (!validateForm()) {
+    const firstError = Object.keys(errors)[0];
+    const element =
+      document.querySelector(`[name="${firstError}"]`) ||
+      document.getElementById(firstError);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+    return;
+  }
 
-    try {
-      setSubmitting(true);
-      setLoadingModal(true);
-      const token = getToken();
-      const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Training",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+  try {
+    setSubmitting(true);
+    setLoadingModal(true);
+    const token = getToken();
+    
+    // Format the datetime to ISO 8601 with timezone
+    const formattedDatetime = new Date(formData.datetime).toISOString();
+    
+    // Prepare the data with proper formatting
+    const submitData = {
+      subject: formData.subject.trim(),
+      location: formData.location.trim(),
+      datetime: formattedDatetime,
+      duration: parseFloat(formData.duration).toString(),
+      isOnline: formData.isOnline,
+      hyperlink: formData.hyperlink.trim(),
+      targetGroupIds: formData.targetGroupIds.map(id => parseInt(id))
+    };
 
-      if (response.ok) {
-        router.push("/admin/dashboard/trainings");
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to create training:", errorData);
-        alert("Failed to create training. Please try again.");
+    const response = await fetch(
+      "https://demoadmin.databyte.app/api/Training",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submitData),
       }
-    } catch (error) {
-      console.error("Error creating training:", error);
-      alert("An error occurred. Please try again.");
-    } finally {
-      setSubmitting(false);
-      setLoadingModal(false);
-    }
-  };
-
-  const renderTooltip = (content) => {
-    return (
-      <div className="absolute z-10 top-0 left-full ml-2 w-64 p-3 bg-gray-800 text-white text-sm rounded-lg shadow-lg">
-        {content}
-        <div className="absolute left-0 top-3 transform -translate-x-full border-8 border-transparent border-r-gray-800"></div>
-      </div>
     );
-  };
+
+    if (response.ok) {
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const responseData = await response.json();
+        console.log("Response:", responseData);
+      }
+      
+      // Success - redirect to trainings page
+      router.push("/admin/dashboard/trainings");
+    } else {
+      // Try to parse error response
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { detail: "Unknown error occurred" };
+      }
+      
+      console.error("Failed to create training:", errorData);
+      
+      if (errorData.errors) {
+        const errorMessages = Object.values(errorData.errors).flat().join(', ');
+        alert(`Validation errors: ${errorMessages}`);
+      } else if (errorData.detail) {
+        alert(`Error: ${errorData.detail}`);
+      } else {
+        alert("Failed to create training. Please check all fields and try again.");
+      }
+    }
+  } catch (error) {
+    console.error("Error creating training:", error);
+    alert("An error occurred. Please try again.");
+  } finally {
+    setSubmitting(false);
+    setLoadingModal(false);
+  }
+};
+  
 
   return (
     <div className="min-h-screen bg-gray-50 pt-14 ">

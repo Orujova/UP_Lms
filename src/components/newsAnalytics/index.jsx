@@ -167,7 +167,7 @@ const NewsAnalytics = () => {
       }
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewsinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewsinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -213,7 +213,7 @@ const NewsAnalytics = () => {
       if (filters.interestLevel) queryParams.append("InterestLevel", filters.interestLevel);
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewslikeinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewslikeinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -257,7 +257,7 @@ const NewsAnalytics = () => {
       if (filters.interestLevel) queryParams.append("InterestLevel", filters.interestLevel);
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewssaveinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewssaveinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -307,7 +307,7 @@ const NewsAnalytics = () => {
       }
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewscategoryinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewscategoryinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -355,7 +355,7 @@ const NewsAnalytics = () => {
       }
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewsinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewsinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -389,7 +389,7 @@ const NewsAnalytics = () => {
       if (filters.interestLevel) queryParams.append("InterestLevel", filters.interestLevel);
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewslikeinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewslikeinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -423,7 +423,7 @@ const NewsAnalytics = () => {
       if (filters.interestLevel) queryParams.append("InterestLevel", filters.interestLevel);
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewssaveinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewssaveinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -463,7 +463,7 @@ const NewsAnalytics = () => {
       }
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News/getallnewscategoryinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/News/getallnewscategoryinterestanalysis/reporting?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -492,7 +492,7 @@ const NewsAnalytics = () => {
   const fetchCategories = async () => {
     try {
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/NewsCategory`,
+        `https://demoadmin.databyte.app/api/NewsCategory`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -537,19 +537,19 @@ const NewsAnalytics = () => {
       let exportUrl = "";
       switch (activeTab) {
         case "views":
-          exportUrl = `https://bravoadmin.uplms.org/api/News/exportnewsinterestanalysis/reporting?${queryParams}`;
+          exportUrl = `https://demoadmin.databyte.app/api/News/exportnewsinterestanalysis/reporting?${queryParams}`;
           break;
         case "likes":
-          exportUrl = `https://bravoadmin.uplms.org/api/News/exportnewslikeinterestanalysis/reporting?${queryParams}`;
+          exportUrl = `https://demoadmin.databyte.app/api/News/exportnewslikeinterestanalysis/reporting?${queryParams}`;
           break;
         case "saves":
-          exportUrl = `https://bravoadmin.uplms.org/api/News/exportnewssaveinterestanalysis/reporting?${queryParams}`;
+          exportUrl = `https://demoadmin.databyte.app/api/News/exportnewssaveinterestanalysis/reporting?${queryParams}`;
           break;
         case "categories":
-          exportUrl = `https://bravoadmin.uplms.org/api/News/exportnewscategoryinterestanalysis/reporting?${queryParams}`;
+          exportUrl = `https://demoadmin.databyte.app/api/News/exportnewscategoryinterestanalysis/reporting?${queryParams}`;
           break;
         default:
-          exportUrl = `https://bravoadmin.uplms.org/api/News/exportnewsinterestanalysis/reporting?${queryParams}`;
+          exportUrl = `https://demoadmin.databyte.app/api/News/exportnewsinterestanalysis/reporting?${queryParams}`;
       }
 
       const response = await fetch(exportUrl, {

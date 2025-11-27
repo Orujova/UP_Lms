@@ -15,7 +15,6 @@ import {
   AlertCircle,
   Edit2,
   Check,
-  MapPin,
   Bell,
   Clock,
   Users,
@@ -31,7 +30,7 @@ import TargetGroupSelector from "@/components/targetSelect";
 import PollUnitSelector from "@/components/polUnits";
 import CropModal from "@/components/event/CropModal";
 import LoadingSpinner from "@/components/loadingSpinner";
-import LocationSelector from "@/components/locationSelector"; // Assuming this component exists
+import LocationSelector from "@/components/locationSelector";
 
 // Auth and API
 import { getToken, getUserId } from "@/authtoken/auth.js";
@@ -72,9 +71,9 @@ const EditEventForm = ({ params }) => {
     pollUnitId: "",
     hasNotification: false,
     eventId: id,
-    requirements: [], // Add requirements array
-    location: "", // Add location field
-    locationCoordinates: null, // Add coordinates field
+    requirements: [],
+    location: "",
+    locationCoordinates: null,
   });
 
   const [errors, setErrors] = useState({});
@@ -115,7 +114,7 @@ const EditEventForm = ({ params }) => {
   useEffect(() => {
     const calculateProgress = () => {
       let progress = 0;
-      const totalFields = 5; // Count of important fields
+      const totalFields = 5;
 
       if (formData.subject) progress += 1;
       if (formData.eventDateTime) progress += 1;
@@ -129,13 +128,22 @@ const EditEventForm = ({ params }) => {
     setFormProgress(calculateProgress());
   }, [formData, imagePreview]);
 
-  // Fetch event data
+  // Fetch event data with UPDATED API
   useEffect(() => {
     const fetchEventData = async () => {
       try {
         const userId = getUserId();
+        
+        // UPDATED API endpoint: GET /api/Event/GetById
+        const queryParams = new URLSearchParams({
+          Id: id,
+          UserId: userId,
+          Device: '1', // 1 for web, 2 for mobile
+          Language: 'az',
+        });
+
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/Event/${id}?userid=${userId}`,
+          `https://demoadmin.databyte.app/api/Event/GetById?${queryParams.toString()}`,
           {
             headers: {
               Authorization: `Bearer ${getToken()}`,
@@ -252,7 +260,6 @@ const EditEventForm = ({ params }) => {
     });
   };
 
-  // Handle location selection from the map component
   const handleLocationSelect = (address, coordinates) => {
     setFormData((prev) => ({
       ...prev,
@@ -310,7 +317,7 @@ const EditEventForm = ({ params }) => {
         ...formData,
         requirements: [...formData.requirements, newRequirement.trim()],
       });
-      setNewRequirement(""); // Clear the input field
+      setNewRequirement("");
     }
   };
 
@@ -423,7 +430,6 @@ const EditEventForm = ({ params }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Prepare API data
     const apiEventRequirements = formData.requirements.map((req) => req);
 
     const apiData = {
@@ -486,7 +492,6 @@ const EditEventForm = ({ params }) => {
               </div>
 
               <div className="space-y-4">
-                {/* Subject */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
                     Event Title
@@ -507,7 +512,6 @@ const EditEventForm = ({ params }) => {
                   )}
                 </div>
 
-                {/* Description */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
                     Description
@@ -537,7 +541,6 @@ const EditEventForm = ({ params }) => {
               </div>
 
               <div className="space-y-4">
-                {/* Date & Time */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
                     Event Date & Time
@@ -557,7 +560,6 @@ const EditEventForm = ({ params }) => {
                   )}
                 </div>
 
-                {/* Location with Map Integration */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
                     Event Location
@@ -573,7 +575,6 @@ const EditEventForm = ({ params }) => {
                   )}
                 </div>
 
-                {/* Count Down Format */}
                 <div>
                   <label className="block text-xs font-medium text-[#202939] mb-1">
                     Countdown Format
@@ -670,7 +671,6 @@ const EditEventForm = ({ params }) => {
                 <h2 className="text-sm font-medium">Audience Targeting</h2>
               </div>
 
-              {/* Target Group Selector */}
               <div className="mb-4 relative">
                 <TargetGroupSelector
                   targetGroups={targetGroups || []}
@@ -684,7 +684,6 @@ const EditEventForm = ({ params }) => {
                 />
               </div>
 
-              {/* Poll Unit Selector */}
               <div className="relative">
                 <PollUnitSelector
                   pollUnits={pollUnits || []}
@@ -765,7 +764,6 @@ const EditEventForm = ({ params }) => {
                 </span>
               </div>
 
-              {/* Add new requirement */}
               <div className="flex gap-2 mb-4">
                 <div className="flex-1 relative">
                   <input
@@ -797,7 +795,6 @@ const EditEventForm = ({ params }) => {
                 </button>
               </div>
 
-              {/* Requirements list */}
               {formData.requirements.length > 0 ? (
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">

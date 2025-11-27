@@ -1,7 +1,7 @@
 // api.js
 import { getToken } from "@/authtoken/auth.js";
 
-const API_BASE_URL = "https://bravoadmin.uplms.org/api";
+const API_BASE_URL = "https://demoadmin.databyte.app/api";
 
 const fetchApi = async (endpoint, options = {}) => {
   const token = getToken();

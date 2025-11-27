@@ -34,7 +34,7 @@ const NotificationsPage = () => {
       if (!userId) throw new Error("User ID not found");
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Notification/?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}`,
+        `https://demoadmin.databyte.app/api/Notification/?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}`,
         {
           headers: {
             accept: "application/json",
@@ -70,7 +70,7 @@ const NotificationsPage = () => {
   const markAsRead = async (notificationId) => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Notification/updateReadStatus",
+        "https://demoadmin.databyte.app/api/Notification/updateReadStatus",
         {
           method: "PUT",
           headers: {

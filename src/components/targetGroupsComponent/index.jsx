@@ -230,7 +230,7 @@ export default function TargetGroupsComponent({
       }
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/TargetGroup/GetFilteredUsersByTargetGroupId?Page=1&TargetGroupId=${groupId}`,
+        `https://demoadmin.databyte.app/api/TargetGroup/GetFilteredUsersByTargetGroupId?Page=1&TargetGroupId=${groupId}`,
         {
           method: "GET",
           headers: {

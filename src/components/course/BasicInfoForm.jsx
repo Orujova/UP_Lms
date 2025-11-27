@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { 
   X, 
@@ -16,14 +16,17 @@ import {
   Plus,
   Trash2,
   ArrowRight,
-  Bell ,
+  Bell,
   Camera,
   Eye,
   Users,
   AlertTriangle,
   Info,
   Upload,
-  FileImage
+  FileImage,
+  TrendingUp,
+  Calendar,
+  Briefcase
 } from "lucide-react";
 import {
   setFormData,
@@ -34,18 +37,39 @@ import {
   removeSuccessionRate,
   createCourseAsync,
   updateCourseAsync,
-  nextStep
+  nextStep,
+  fetchDistinctCourseNamesAsync,
+  fetchCoursePositionsInfoAsync,
+  selectAvailableCourseNames,
+  selectSelectedCoursePositionsInfo,
+  selectCourseNamesLoading,
+  selectPositionsInfoLoading
 } from "@/redux/course/courseSlice";
+import dynamic from "next/dynamic";
 import { fetchCourseCategoriesAsync } from "@/redux/courseCategory/courseCategorySlice";
 import { fetchCourseTagsAsync } from "@/redux/courseTag/courseTagSlice";
 import { fetchCertificatesAsync } from "@/redux/certificate/certificateSlice";
 import { fetchClustersAsync } from "@/redux/cluster/clusterSlice";
 import { fetchBadgesAsync } from "@/redux/badge/badgeSlice";
-import { getAllTargetGroupsAsync } from "@/redux/getAllTargetGroups/getAllTargetGroups";
 import { getToken } from "@/authtoken/auth.js";
-import SimpleRichTextEditor from "@/components/SimpleRichText";
 
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const PageTextComponent = dynamic(
+  () => import("@/components/pageTextComponent"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border rounded p-4 min-h-[300px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-2 text-gray-600 text-sm">Loading editor...</p>
+        </div>
+      </div>
+    ),
+  }
+);
+
+import { getUserId } from "@/authtoken/auth.js";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 const BasicInfoForm = ({ isEditing = false }) => {
   const dispatch = useDispatch();
@@ -63,14 +87,15 @@ const BasicInfoForm = ({ isEditing = false }) => {
   const [completedTabs, setCompletedTabs] = useState(new Set());
   const [visitedTabs, setVisitedTabs] = useState(new Set(['basic']));
   
-  // Persistent image state - survives tab changes
+  // Persistent image state
   const [persistentImagePreview, setPersistentImagePreview] = useState(null);
   const [persistentImageFile, setPersistentImageFile] = useState(null);
   const [defaultBrandingImage, setDefaultBrandingImage] = useState(null);
 
-  // Target Group states
-  const [targetGroupSearch, setTargetGroupSearch] = useState("");
-  const [showTargetDropdown, setShowTargetDropdown] = useState(false);
+  // Course name search state
+  const [courseNameSearch, setCourseNameSearch] = useState("");
+  const [showCourseNameDropdown, setShowCourseNameDropdown] = useState(false);
+  const courseNameRef = useRef(null);
 
   // Tag/Category creation states
   const [showCreateTag, setShowCreateTag] = useState(false);
@@ -79,6 +104,12 @@ const BasicInfoForm = ({ isEditing = false }) => {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [showOptionalSettings, setShowOptionalSettings] = useState(false);
+  // Refs for outside click detection
+  const categoryDropdownRef = useRef(null);
+  const tagsDropdownRef = useRef(null);
+  const certificateDropdownRef = useRef(null);
+  const clusterDropdownRef = useRef(null);
 
   // Redux selectors
   const { 
@@ -94,12 +125,26 @@ const BasicInfoForm = ({ isEditing = false }) => {
   const { certificates = [], loading: certificatesLoading } = useSelector((state) => state.certificate || {});
   const { clusters = [], loading: clustersLoading } = useSelector((state) => state.cluster || {});
   const { badges = [], loading: badgesLoading } = useSelector((state) => state.badge || {});
-  const { data: targetGroupsData } = useSelector((state) => state.getAllTargetGroups || {});
+  
+  // Position-Course selectors
+  const availableCourseNames = useSelector(selectAvailableCourseNames);
+  const coursePositionsInfo = useSelector(selectSelectedCoursePositionsInfo);
+  const courseNamesLoading = useSelector(selectCourseNamesLoading);
+  const positionsInfoLoading = useSelector(selectPositionsInfoLoading);
 
-  const targetGroups = targetGroupsData?.[0]?.targetGroups || [];
-  const selectedTargetGroups = targetGroups.filter(group => 
-    (formData.targetGroupIds || []).includes(group.id)
-  );
+  // Outside click handler for course name dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (courseNameRef.current && !courseNameRef.current.contains(event.target)) {
+        setShowCourseNameDropdown(false);
+      }
+    };
+
+    if (showCourseNameDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCourseNameDropdown]);
 
   // Track tab visits
   useEffect(() => {
@@ -117,23 +162,28 @@ const BasicInfoForm = ({ isEditing = false }) => {
       newCompletedTabs.delete('basic');
     }
     
-    // Check if settings tab is complete (requires visit and target groups)
-    if (visitedTabs.has('settings') && (formData.targetGroupIds || []).length > 0) {
+    // Settings tab is now optional
+    if (visitedTabs.has('settings')) {
       newCompletedTabs.add('settings');
-    } else {
-      newCompletedTabs.delete('settings');
     }
     
     // Check if badges tab is complete
     if (formData.verifiedCertificate) {
-      if (isBadgesTabValid() && visitedTabs.has('badges')) {
-        newCompletedTabs.add('badges');
+      if (isEditing) {
+        if (isBadgesTabValid()) {
+          newCompletedTabs.add('badges');
+        } else {
+          newCompletedTabs.delete('badges');
+        }
       } else {
-        newCompletedTabs.delete('badges');
+        if (isBadgesTabValid() && visitedTabs.has('badges')) {
+          newCompletedTabs.add('badges');
+        } else {
+          newCompletedTabs.delete('badges');
+        }
       }
     } else {
-      // If verified certificates is disabled, badges tab is not required but mark as complete if visited
-      if (visitedTabs.has('badges')) {
+      if (isEditing || visitedTabs.has('badges')) {
         newCompletedTabs.add('badges');
       }
     }
@@ -142,21 +192,156 @@ const BasicInfoForm = ({ isEditing = false }) => {
         [...newCompletedTabs].some(tab => !completedTabs.has(tab))) {
       setCompletedTabs(newCompletedTabs);
     }
-  }, [formData, visitedTabs, completedTabs]);
+  }, [formData, visitedTabs, completedTabs, isEditing]);
 
-  // Get required tabs based on current form state
-  const getRequiredTabs = () => {
-    const required = ['basic', 'settings'];
-    if (formData.verifiedCertificate) {
-      required.push('badges');
+  // Load course names on mount
+  useEffect(() => {
+    dispatch(fetchDistinctCourseNamesAsync());
+  }, [dispatch]);
+
+  // Fetch positions info when course name is selected
+  useEffect(() => {
+    if (formData.name && availableCourseNames.includes(formData.name)) {
+      dispatch(fetchCoursePositionsInfoAsync({ courseName: formData.name }));
     }
-    return required;
+  }, [formData.name, dispatch, availableCourseNames]);
+
+  // Initialize form data for editing
+  useEffect(() => {
+    if (isEditing && currentCourse && Object.keys(currentCourse).length > 0) {
+      console.log('EDITING MODE: Current course data:', currentCourse);
+      
+      if (currentCourse.success === true && currentCourse.message && 
+          (!currentCourse.id && !currentCourse.name)) {
+        console.log('Update success message received, preserving form data');
+        return;
+      }
+      
+      if (currentCourse.success === false) {
+        console.warn('Course fetch failed:', currentCourse.message);
+        return;
+      }
+      
+      if (!currentCourse.id && !currentCourse.name && !currentCourse.description) {
+        console.warn('Invalid course data received, skipping form reset');
+        return;
+      }
+      
+      if (formData.id === currentCourse.id && formData.name && formData.name === currentCourse.name) {
+        console.log('Form data already initialized for this course, skipping...');
+        return;
+      }
+      
+      let clusterId = null;
+      let clusterOrderNumber = null;
+      let clusterCoefficient = null;
+
+      if (currentCourse.clusters && Array.isArray(currentCourse.clusters) && currentCourse.clusters.length > 0) {
+        const cluster = currentCourse.clusters[0];
+        clusterId = cluster.id || null;
+        
+        if (cluster.hasOwnProperty('orderNumber')) {
+          clusterOrderNumber = Number(cluster.orderNumber);
+        } else if (cluster.hasOwnProperty('clusterOrderNumber')) {
+          clusterOrderNumber = Number(cluster.clusterOrderNumber);
+        }
+        
+        if (cluster.hasOwnProperty('coefficient')) {
+          clusterCoefficient = Number(cluster.coefficient);
+        } else if (cluster.hasOwnProperty('clusterCoefficient')) {
+          clusterCoefficient = Number(cluster.clusterCoefficient);
+        }
+      }
+      
+      const comprehensiveFormData = {
+        id: currentCourse.id,
+        courseId: currentCourse.id,
+        name: currentCourse.name || "",
+        description: currentCourse.description || "",
+        aboutCourse: currentCourse.aboutCourse || "",
+        duration: currentCourse.duration || 60,
+        categoryId: currentCourse.courseCategoryId || currentCourse.categoryId || "",
+        verifiedCertificate: Boolean(currentCourse.verifiedCertificate),
+        certificateId: currentCourse.courseCertificateId || currentCourse.certificateId || null,
+        tagIds: currentCourse.courseTags?.map(tag => tag.id) || currentCourse.tagIds || [],
+        startDuration: currentCourse.startDuration,
+        deadline: currentCourse.deadLine !== undefined ? currentCourse.deadLine : currentCourse.deadline,
+        expirationDate: currentCourse.expirationDate,
+        hasNotification: Boolean(currentCourse.hasNotification),
+        isPromoted: Boolean(currentCourse.isPromoted),
+        publishCourse: Boolean(currentCourse.publishCourse),
+        autoReassign: Boolean(currentCourse.autoReassign),
+        clusterId: clusterId,
+        clusterOrderNumber: clusterOrderNumber,
+        clusterCoefficient: clusterCoefficient,
+        successionRates: (currentCourse.successionRates || []).map(rate => ({
+          minRange: rate.minRange,
+          maxRange: rate.maxRange,
+          badgeId: rate.badgeId
+        })),
+        imageFile: null,
+      };
+      
+      console.log('Setting comprehensive form data:', comprehensiveFormData);
+      dispatch(setFormData(comprehensiveFormData));
+
+      if (currentCourse.imageUrl) {
+        const transformedImageUrl = transformCourseImageUrl(currentCourse.imageUrl);
+        setPersistentImagePreview(transformedImageUrl);
+        dispatch(setImagePreview(transformedImageUrl));
+      }
+    }
+  }, [dispatch, isEditing, currentCourse, formData.id]);
+
+  // Transform image URL helpers
+  const transformImageUrl = (urlStr) => {
+    if (!urlStr) return null;
+   
+    if (urlStr.includes("100.42.179.27:7198")) {
+      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+      const fileName = urlStr.split("/").pop();
+      return `https://demoadmin.databyte.app/uploads/brending/${baseDir}${fileName}`;
+    }
+   
+    if (urlStr.startsWith("https://demoadmin.databyte.app/uploads/brending/")) {
+      return urlStr;
+    }
+   
+    if (urlStr.startsWith("brending/")) {
+      return `https://demoadmin.databyte.app/uploads/${urlStr}`;
+    }
+   
+    if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
+      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
+      const cleanPath = urlStr.replace(/^\/+/, "");
+      return `https://demoadmin.databyte.app/uploads/brending/${baseDir}${cleanPath}`;
+    }
+   
+    return urlStr;
   };
 
-  // Check if all required tabs are completed
-  const areAllRequiredTabsCompleted = () => {
-    const requiredTabs = getRequiredTabs();
-    return requiredTabs.every(tab => completedTabs.has(tab));
+  const transformCourseImageUrl = (urlStr) => {
+    if (!urlStr) return null;
+
+    if (urlStr.includes("100.42.179.27:7198")) {
+      const fileName = urlStr.split("/").pop();
+      return `https://demoadmin.databyte.app/uploads/course/${fileName}`;
+    }
+
+    if (urlStr.startsWith("https://demoadmin.databyte.app/uploads/course/")) {
+      return urlStr;
+    }
+
+    if (urlStr.startsWith("course/")) {
+      return `https://demoadmin.databyte.app/uploads/${urlStr}`;
+    }
+
+    if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
+      const cleanPath = urlStr.replace(/^\/+/, "");
+      return `https://demoadmin.databyte.app/uploads/course/${cleanPath}`;
+    }
+
+    return urlStr;
   };
 
   // Initialize image from Redux on mount
@@ -169,114 +354,6 @@ const BasicInfoForm = ({ isEditing = false }) => {
     }
   }, [imagePreview, imageFile, persistentImagePreview, persistentImageFile]);
 
-  // Transform image URL helper for branding images
-  const transformImageUrl = (urlStr) => {
-    if (!urlStr) return null;
-   
-    if (urlStr.includes("100.42.179.27:7198")) {
-      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
-      const fileName = urlStr.split("/").pop();
-      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${fileName}`;
-    }
-   
-    if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/brending/")) {
-      return urlStr;
-    }
-   
-    if (urlStr.startsWith("brending/")) {
-      return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
-    }
-   
-    if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
-      const baseDir = urlStr.includes("brending/") ? "" : "brending/";
-      const cleanPath = urlStr.replace(/^\/+/, "");
-      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${cleanPath}`;
-    }
-   
-    return urlStr;
-  };
-
-  // Transform course image URL helper
-  const transformCourseImageUrl = (urlStr) => {
-    if (!urlStr) return null;
-
-    if (urlStr.includes("100.42.179.27:7198")) {
-      const fileName = urlStr.split("/").pop();
-      return `https://bravoadmin.uplms.org/uploads/course/${fileName}`;
-    }
-
-    if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/course/")) {
-      return urlStr;
-    }
-
-    if (urlStr.startsWith("course/")) {
-      return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
-    }
-
-    if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
-      const cleanPath = urlStr.replace(/^\/+/, "");
-      return `https://bravoadmin.uplms.org/uploads/course/${cleanPath}`;
-    }
-
-    return urlStr;
-  };
-
-  // Initialize form data for editing
-  useEffect(() => {
-    if (isEditing && currentCourse) {
-      // Populate form with existing course data
-      dispatch(setFormData({
-        name: currentCourse.name || "",
-        description: currentCourse.description || "",
-        duration: currentCourse.duration || 60,
-        categoryId: currentCourse.courseCategoryId || "",
-        verifiedCertificate: currentCourse.verifiedCertificate || false,
-        imageFile: null,
-        targetGroupIds: currentCourse.targetGroupIds || [],
-        certificateId: currentCourse.courseCertificateId || null,
-        tagIds: currentCourse.courseTags?.map(tag => tag.id) || [],
-        startDuration: currentCourse.startDuration || null,
-        expirationDate: currentCourse.expirationDate || null,
-        hasNotification: currentCourse.hasNotification || null,
-        deadline: currentCourse.deadLine || null,
-        autoReassign: currentCourse.autoReassign || false,
-        clusterId: currentCourse.clusterId || null,
-        clusterOrderNumber: currentCourse.clusterOrderNumber || null,
-        clusterCoefficient: currentCourse.clusterCoefficient || null,
-        clusterIsMandatory: currentCourse.clusterIsMandatory || false,
-        successionRates: currentCourse.successionRates || []
-      }));
-
-      // Handle existing course image
-      if (currentCourse.imageUrl) {
-        const transformedImageUrl = transformCourseImageUrl(currentCourse.imageUrl);
-        setPersistentImagePreview(transformedImageUrl);
-        dispatch(setImagePreview(transformedImageUrl));
-      }
-    } else if (!formData.name && !isEditing) {
-      // Initialize empty form for new course
-      dispatch(setFormData({
-        name: "",
-        description: "",
-        duration: 60,
-        categoryId: "",
-        verifiedCertificate: false,
-        imageFile: null,
-        targetGroupIds: [],
-        certificateId: null,
-        tagIds: [],
-        startDuration: null,
-        deadline: null,
-        autoReassign: false,
-        clusterId: null,
-        clusterOrderNumber: null,
-        clusterCoefficient: null,
-        clusterIsMandatory: false,
-        successionRates: []
-      }));
-    }
-  }, [dispatch, isEditing, currentCourse, formData.name]);
-
   // Load required data and branding settings
   useEffect(() => {
     const loadData = async () => {
@@ -286,40 +363,28 @@ const BasicInfoForm = ({ isEditing = false }) => {
           dispatch(fetchCourseTagsAsync({ page: 1, take: 100 })),
           dispatch(fetchCertificatesAsync({ page: 1, take: 100 })),
           dispatch(fetchClustersAsync({ page: 1, take: 100 })),
-          dispatch(fetchBadgesAsync({ page: 1, take: 100 })),
-          dispatch(getAllTargetGroupsAsync())
+          dispatch(fetchBadgesAsync({ page: 1, take: 100 }))
         ]);
 
-        // Fetch branding settings for default course image
         const fetchBrandingSettings = async () => {
           try {
             const token = getToken();
-            if (!token) {
-              console.error("No authorization token found");
-              return;
-            }
+            if (!token) return;
       
-            const response = await fetch(
-              `${API_URL}BrendingSetting?IsCourse=true`,
-              {
-                method: "GET",
-                headers: {
-                  accept: "*/*",
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
+            const response = await fetch(`${API_URL}BrendingSetting?IsCourse=true`, {
+              method: "GET",
+              headers: {
+                accept: "*/*",
+                Authorization: `Bearer ${token}`,
+              },
+            });
       
             if (response.ok) {
               const data = await response.json();
               if (data && data.length > 0 && data[0].courseCoverPhotoUrl) {
                 const transformedUrl = transformImageUrl(data[0].courseCoverPhotoUrl);
                 setDefaultBrandingImage(transformedUrl);
-              } else {
-                console.warn("No course image URL found in branding settings");
               }
-            } else {
-              console.error("Failed to fetch branding settings:", response.status);
             }
           } catch (error) {
             console.error("Error fetching branding settings:", error);
@@ -346,10 +411,16 @@ const BasicInfoForm = ({ isEditing = false }) => {
       case 'categoryId':
         if (!value) return "Please select a category";
         return "";
+        
       case 'duration':
         if (!value || value < 1) return "Duration must be at least 1 minute";
         if (value > 10080) return "Duration cannot exceed 1 week";
         return "";
+        
+      case 'description':
+        if (!value?.trim()) return "Description is required";
+        return "";
+        
       default:
         return "";
     }
@@ -371,9 +442,8 @@ const BasicInfoForm = ({ isEditing = false }) => {
     setSaveSuccess(false);
   };
 
-  // Handler for the rich text editor
-  const handleDescriptionChange = useCallback((editorData) => {
-    handleInputChange('description', editorData);
+  const handleAboutCourseChange = useCallback((editorData) => {
+    handleInputChange('aboutCourse', editorData);
   }, []);
 
   const handleMultipleSelect = (field, optionId) => {
@@ -382,23 +452,6 @@ const BasicInfoForm = ({ isEditing = false }) => {
       ? currentValues.filter(id => id !== optionId)
       : [...currentValues, optionId];
     handleInputChange(field, newValues);
-  };
-
-  // Target Group handlers
-  const handleTargetGroupSelect = (group) => {
-    const currentIds = formData.targetGroupIds || [];
-    const isSelected = currentIds.includes(group.id);
-    
-    if (isSelected) {
-      handleInputChange('targetGroupIds', currentIds.filter(id => id !== group.id));
-    } else {
-      handleInputChange('targetGroupIds', [...currentIds, group.id]);
-    }
-  };
-
-  const handleTargetGroupRemove = (group) => {
-    const currentIds = formData.targetGroupIds || [];
-    handleInputChange('targetGroupIds', currentIds.filter(id => id !== group.id));
   };
 
   // Create new tag handler
@@ -419,16 +472,12 @@ const BasicInfoForm = ({ isEditing = false }) => {
 
       if (response.ok) {
         const newTag = await response.json();
-        // Refresh tags list
         await dispatch(fetchCourseTagsAsync({ page: 1, take: 100 }));
-        // Auto-select the new tag
         if (newTag.id) {
           handleMultipleSelect('tagIds', newTag.id);
         }
         setNewTagName("");
         setShowCreateTag(false);
-      } else {
-        console.error('Failed to create tag:', response.status);
       }
     } catch (error) {
       console.error('Error creating tag:', error);
@@ -455,16 +504,12 @@ const BasicInfoForm = ({ isEditing = false }) => {
 
       if (response.ok) {
         const newCategory = await response.json();
-        // Refresh categories list
         await dispatch(fetchCourseCategoriesAsync({ page: 1, take: 100 }));
-        // Auto-select the new category
         if (newCategory.id) {
           handleInputChange('categoryId', newCategory.id);
         }
         setNewCategoryName("");
         setShowCreateCategory(false);
-      } else {
-        console.error('Failed to create category:', response.status);
       }
     } catch (error) {
       console.error('Error creating category:', error);
@@ -496,7 +541,6 @@ const BasicInfoForm = ({ isEditing = false }) => {
       setPersistentImagePreview(result);
       setPersistentImageFile(file);
       dispatch(setImagePreview(result));
-      // Don't dispatch File object to Redux - keep only in local state
     };
     reader.readAsDataURL(file);
   }, [dispatch]);
@@ -510,7 +554,6 @@ const BasicInfoForm = ({ isEditing = false }) => {
     setPersistentImagePreview(null);
     setPersistentImageFile(null);
     dispatch(setImagePreview(null));
-    // Don't dispatch null File object to Redux - keep only in local state
     setImageUploadError(null);
   };
 
@@ -539,11 +582,10 @@ const BasicInfoForm = ({ isEditing = false }) => {
     return requiredFields.every(field => formData[field] && !validateField(field, formData[field]));
   };
 
-  // Check if badges tab is properly configured (only if verified certificates is enabled)
+  // Check if badges tab is properly configured
   const isBadgesTabValid = () => {
-    if (!formData.verifiedCertificate) return true; // Badges not required if no verified certificates
+    if (!formData.verifiedCertificate) return true;
     
-    // If verified certificates is enabled, check if succession rates are properly configured
     const rates = formData.successionRates || [];
     if (rates.length === 0) return false;
     
@@ -557,57 +599,118 @@ const BasicInfoForm = ({ isEditing = false }) => {
     );
   };
 
-  // Overall form validation - now requires all tabs to be completed
+  // Get required tabs based on current form state
+  const getRequiredTabs = () => {
+    const required = ['basic'];
+    if (formData.verifiedCertificate) {
+      required.push('badges');
+    }
+    return required;
+  };
+
+  // Check if all required tabs are completed
+  const areAllRequiredTabsCompleted = () => {
+    const requiredTabs = getRequiredTabs();
+    
+    if (isEditing) {
+      const basicComplete = isBasicFormValid();
+      const badgesComplete = formData.verifiedCertificate ? isBadgesTabValid() : true;
+      return basicComplete && badgesComplete;
+    } else {
+      return requiredTabs.every(tab => completedTabs.has(tab));
+    }
+  };
+
+  // Overall form validation
   const isFormValid = () => {
     const basicValid = isBasicFormValid();
     const badgesValid = isBadgesTabValid();
     const allTabsCompleted = areAllRequiredTabsCompleted();
-    return basicValid && badgesValid && allTabsCompleted;
+    
+    const startDurationError = validateField('startDuration', formData.startDuration);
+    const deadlineError = validateField('deadline', formData.deadline);
+    
+    return basicValid && badgesValid && allTabsCompleted && !startDurationError && !deadlineError;
   };
 
-  // Save handlers
-  const handleSaveOnly = async () => {
+  const prepareCourseDataForAPI = useCallback(() => {
+    const userId = getUserId();
+    
+    const apiData = {
+      userId: userId,
+      name: (formData.name || "").trim(),
+      description: (formData.description || "").trim(),
+      aboutCourse: (formData.aboutCourse || "").trim(),
+      duration: parseInt(formData.duration) || 60,
+      categoryId: parseInt(formData.categoryId),
+      verifiedCertificate: Boolean(formData.verifiedCertificate),
+      autoReassign: Boolean(formData.autoReassign),
+      hasNotification: Boolean(formData.hasNotification),
+      isPromoted: Boolean(formData.isPromoted),
+      publishCourse: Boolean(formData.publishCourse),
+      certificateId: formData.certificateId ? parseInt(formData.certificateId) : null,
+      clusterId: formData.clusterId ? parseInt(formData.clusterId) : null,
+      tagIds: (formData.tagIds || [])
+        .filter(id => id !== null && id !== undefined && id !== "")
+        .map(id => parseInt(id))
+        .filter(id => !isNaN(id)),
+      startDuration: formData.startDuration !== null && formData.startDuration !== undefined && formData.startDuration !== '' 
+        ? parseInt(formData.startDuration) : null,
+      deadline: formData.deadline !== null && formData.deadline !== undefined && formData.deadline !== '' 
+        ? parseInt(formData.deadline) : null,
+      expirationDate: formData.expirationDate !== null && formData.expirationDate !== undefined && formData.expirationDate !== '' 
+        ? parseInt(formData.expirationDate) : null,
+      clusterOrderNumber: formData.clusterOrderNumber !== null && formData.clusterOrderNumber !== undefined && formData.clusterOrderNumber !== '' 
+        ? parseInt(formData.clusterOrderNumber) : null,
+      clusterCoefficient: formData.clusterCoefficient !== null && formData.clusterCoefficient !== undefined && formData.clusterCoefficient !== '' 
+        ? parseFloat(formData.clusterCoefficient) : null,
+      successionRates: (formData.successionRates || [])
+        .filter(rate => 
+          rate.minRange !== null && rate.minRange !== undefined && 
+          rate.maxRange !== null && rate.maxRange !== undefined
+        )
+        .map(rate => ({
+          minRange: parseInt(rate.minRange),
+          maxRange: parseInt(rate.maxRange),
+          badgeId: rate.badgeId && !isNaN(parseInt(rate.badgeId)) ? parseInt(rate.badgeId) : null
+        })),
+      imageFile: persistentImageFile
+    };
+
+    if (isEditing && currentCourse?.id) {
+      apiData.id = currentCourse.id;
+    }
+
+    console.log('Prepared API data with userId:', apiData);
+    return apiData;
+  }, [formData, persistentImageFile, isEditing, currentCourse]);
+
+   const handleSaveOnly = async () => {
     const requiredFields = ['name', 'description', 'categoryId', 'duration'];
     const newTouched = {};
     requiredFields.forEach(field => {
       newTouched[field] = true;
     });
-    setTouched(newTouched);
-
-    const hasErrors = requiredFields.some(field => validateField(field, formData[field]));
-    if (hasErrors) {
-      setErrors(prev => ({
-        ...prev,
-        ...requiredFields.reduce((acc, field) => {
-          const error = validateField(field, formData[field]);
-          if (error) acc[field] = error;
-          return acc;
-        }, {})
-      }));
-      return;
-    }
-
+    
     setIsSaving(true);
     try {
-      let result;
-      // Use persistent file from local state instead of Redux
-      const formDataWithImage = {
-        ...formData,
-        imageFile: persistentImageFile
-      };
+      const courseDataForAPI = prepareCourseDataForAPI();
+      console.log('Sending course data to API:', courseDataForAPI);
 
+      let result;
       if (isEditing && currentCourse?.id) {
-        result = await dispatch(updateCourseAsync({
-          ...formDataWithImage,
-          id: currentCourse.id
-        })).unwrap();
+        result = await dispatch(updateCourseAsync(courseDataForAPI)).unwrap();
       } else {
-        result = await dispatch(createCourseAsync(formDataWithImage)).unwrap();
+        result = await dispatch(createCourseAsync(courseDataForAPI)).unwrap();
       }
       
       if (result?.success) {
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        
+        // Redirect to home page after short delay
+        setTimeout(() => {
+          router.push(`/admin/dashboard/courses/`);
+        }, 1000);
       }
     } catch (error) {
       console.error('Error saving course:', error);
@@ -617,59 +720,38 @@ const BasicInfoForm = ({ isEditing = false }) => {
   };
 
   const handleSaveAndContinue = async () => {
-  // First save the course
-  const requiredFields = ['name', 'description', 'categoryId', 'duration'];
-  const newTouched = {};
-  requiredFields.forEach(field => {
-    newTouched[field] = true;
-  });
-  setTouched(newTouched);
-
-  const hasErrors = requiredFields.some(field => validateField(field, formData[field]));
-  if (hasErrors) {
-    setErrors(prev => ({
-      ...prev,
-      ...requiredFields.reduce((acc, field) => {
-        const error = validateField(field, formData[field]);
-        if (error) acc[field] = error;
-        return acc;
-      }, {})
-    }));
-    return;
-  }
-
-  setIsSaving(true);
-  try {
-    let result;
-    const formDataWithImage = {
-      ...formData,
-      imageFile: persistentImageFile
-    };
-
-    if (isEditing && currentCourse?.id) {
-      result = await dispatch(updateCourseAsync({
-        ...formDataWithImage,
-        id: currentCourse.id
-      })).unwrap();
-    } else {
-      result = await dispatch(createCourseAsync(formDataWithImage)).unwrap();
-    }
+    const requiredFields = ['name', 'description', 'categoryId', 'duration'];
+    const newTouched = {};
+    requiredFields.forEach(field => {
+      newTouched[field] = true;
+    });
     
-    if (result?.success) {
-      setSaveSuccess(true);
+    setIsSaving(true);
+    try {
+      const courseDataForAPI = prepareCourseDataForAPI();
+      console.log('Sending course data to API:', courseDataForAPI);
+
+      let result;
+      if (isEditing && currentCourse?.id) {
+        result = await dispatch(updateCourseAsync(courseDataForAPI)).unwrap();
+      } else {
+        result = await dispatch(createCourseAsync(courseDataForAPI)).unwrap();
+      }
       
-      // Navigate to course structure step after successful save
-      setTimeout(() => {
-        dispatch(nextStep()); // This will move to step 2 (Content Structure)
-        setSaveSuccess(false);
-      }, 1000);
+      if (result?.success) {
+        setSaveSuccess(true);
+        
+        setTimeout(() => {
+          dispatch(nextStep());
+          setSaveSuccess(false);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error saving course:', error);
+    } finally {
+      setIsSaving(false);
     }
-  } catch (error) {
-    console.error('Error saving course:', error);
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
   const formatDuration = (minutes) => {
     if (!minutes) return '';
@@ -680,7 +762,130 @@ const BasicInfoForm = ({ isEditing = false }) => {
     return `${hours}h ${mins}m`;
   };
 
-  // Enhanced Dropdown Component with search functionality
+  // Filter course names based on search
+  const filteredCourseNames = availableCourseNames.filter(name =>
+    name.toLowerCase().includes(courseNameSearch.toLowerCase())
+  );
+
+  // Position Info Preview Component
+  // Position Info Preview Component - Updated with collapsible design
+const PositionInfoPreview = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!coursePositionsInfo) return null;
+  
+  const totalUsers = coursePositionsInfo.positions?.reduce((sum, pos) => sum + (pos.userCount || 0), 0) || 0;
+  
+  return (
+    <div className="mt-3 bg-gradient-to-br from-[#0AAC9E]/5 to-blue-50 border border-[#0AAC9E]/20 rounded-lg overflow-hidden">
+      {/* Compact Header - Always Visible */}
+      <div 
+        className="p-3 cursor-pointer hover:bg-[#0AAC9E]/5 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-[#0AAC9E] rounded-lg flex items-center justify-center mr-3">
+              <Info className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900">
+                Position Requirements
+              </h4>
+              <p className="text-xs text-gray-600">
+                {coursePositionsInfo.totalPositionCount} positions • {totalUsers} users assigned
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-[#0AAC9E] font-medium">
+              {isExpanded ? 'Hide details' : 'View details'}
+            </span>
+            <ChevronDown 
+              className={`w-5 h-5 text-[#0AAC9E] transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`} 
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Expandable Content */}
+      {isExpanded && (
+        <div className="px-3 pb-3 border-t border-[#0AAC9E]/10">
+          <div className="grid grid-cols-3 gap-3 mt-3 mb-3">
+            <div className="bg-white rounded-lg p-3 border border-[#0AAC9E]/10">
+              <div className="flex items-center mb-1">
+                <BookOpen className="w-4 h-4 text-[#0AAC9E] mr-1" />
+                <span className="text-xs text-gray-600">Course</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {coursePositionsInfo.courseName}
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-3 border border-[#0AAC9E]/10">
+              <div className="flex items-center mb-1">
+                <Briefcase className="w-4 h-4 text-[#0AAC9E] mr-1" />
+                <span className="text-xs text-gray-600">Positions</span>
+              </div>
+              <p className="text-sm font-semibold text-[#0AAC9E]">
+                {coursePositionsInfo.totalPositionCount}
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-3 border border-[#0AAC9E]/10">
+              <div className="flex items-center mb-1">
+                <Users className="w-4 h-4 text-[#0AAC9E] mr-1" />
+                <span className="text-xs text-gray-600">Total Users</span>
+              </div>
+              <p className="text-sm font-semibold text-[#0AAC9E]">
+                {totalUsers}
+              </p>
+            </div>
+          </div>
+          
+          {coursePositionsInfo.positions && coursePositionsInfo.positions.length > 0 && (
+            <div>
+              <h5 className="text-xs font-medium text-gray-700 mb-2 flex items-center">
+               <div><Briefcase className="w-3.5 h-3 mr-1" />
+                </div> 
+                Position Breakdown
+              </h5>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {coursePositionsInfo.positions.map((position) => (
+                  <div 
+                    key={position.positionId}
+                    className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-100 hover:border-[#0AAC9E]/30 transition-colors"
+                  >
+                    <div className="flex items-center flex-1">
+                      <div className="w-7 h-7 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center mr-2">
+                        <Briefcase className="w-3.5 h-3.5 text-[#0AAC9E]" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-900">
+                        {position.positionName}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center bg-[#0AAC9E]/5 px-2 py-1 rounded">
+                      <Users className="w-3.5 h-3 text-[#0AAC9E] mr-1" />
+                      <span className="text-xs font-semibold text-[#0AAC9E]">
+                        {position.userCount}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+  // Smart Dropdown Component
   const SmartDropdown = ({ 
     label, 
     value, 
@@ -695,10 +900,29 @@ const BasicInfoForm = ({ isEditing = false }) => {
     showSelected = true,
     allowCreate = false,
     createLabel = "Create New",
-    onCreateNew = null
+    onCreateNew = null,
+    dropdownRef = null
   }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const localRef = useRef(null);
+    const effectiveRef = dropdownRef || localRef;
+    
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (effectiveRef.current && !effectiveRef.current.contains(event.target)) {
+          setIsOpen(false);
+          setSearchTerm("");
+        }
+      };
+
+      if (isOpen) {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+      }
+    }, [isOpen, effectiveRef]);
     
     const selectedOptions = multiple 
       ? options.filter(opt => (value || []).includes(opt.id))
@@ -718,9 +942,8 @@ const BasicInfoForm = ({ isEditing = false }) => {
       if (multiple) {
         onChange(optionId);
       } else {
-        // For single select, allow unselecting by clicking same option
         if (value === optionId) {
-          onChange(''); // Unselect
+          onChange('');
         } else {
           onChange(optionId);
         }
@@ -739,12 +962,11 @@ const BasicInfoForm = ({ isEditing = false }) => {
     };
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" ref={effectiveRef}>
         <label className="block text-xs font-medium text-gray-700">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
         
-        {/* Selected items for multiple select */}
         {multiple && showSelected && selectedOptions.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {selectedOptions.map((option) => (
@@ -785,7 +1007,6 @@ const BasicInfoForm = ({ isEditing = false }) => {
           
           {isOpen && !loading && (
             <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-hidden">
-              {/* Search input */}
               <div className="p-3 border-b border-gray-200">
                 <input
                   type="text"
@@ -797,9 +1018,7 @@ const BasicInfoForm = ({ isEditing = false }) => {
                 />
               </div>
               
-              {/* Options list */}
               <div className="max-h-40 overflow-y-auto">
-                {/* Create new option */}
                 {allowCreate && onCreateNew && (
                   <div
                     onClick={() => {
@@ -807,7 +1026,7 @@ const BasicInfoForm = ({ isEditing = false }) => {
                       setIsOpen(false);
                       setSearchTerm("");
                     }}
-                    className="px-4 py-3 text-sm cursor-pointer hover:bg-[#0AAC9E]/10 transition-colors border-b border-gray-200 flex items-center text-[#0AAC9E] font-medium"
+                    className="px-3 py-2 text-xs cursor-pointer hover:bg-[#0AAC9E]/10 transition-colors border-b border-gray-200 flex items-center text-[#0AAC9E] font-medium"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {createLabel}
@@ -824,7 +1043,7 @@ const BasicInfoForm = ({ isEditing = false }) => {
                       <div
                         key={option.id}
                         onClick={() => handleSelect(option.id)}
-                        className={`px-4 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
                           isSelected ? 'bg-[#0AAC9E]/10 text-[#0AAC9E] font-medium' : 'text-gray-900'
                         }`}
                       >
@@ -853,122 +1072,36 @@ const BasicInfoForm = ({ isEditing = false }) => {
     );
   };
 
-  // Target Group Selector Component
-  const TargetGroupSelector = () => {
-    const [isOpen, setIsOpen] = useState(showTargetDropdown);
-    
-    const filteredGroups = targetGroups.filter(group => 
-      group.name.toLowerCase().includes(targetGroupSearch.toLowerCase())
-    );
-
-    return (
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-700">
-          Target Groups <span className="text-red-500">*</span>
-        </label>
-        
-        {/* Selected items */}
-        {selectedTargetGroups.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {selectedTargetGroups.map((group) => (
-              <span
-                key={group.id}
-                className="inline-flex items-center px-3 py-1 text-sm bg-[#0AAC9E]/10 text-[#0AAC9E] rounded border border-[#0AAC9E]/20 font-medium"
-              >
-                {group.name}
-                <button
-                  onClick={() => handleTargetGroupRemove(group)}
-                  className="ml-2 text-[#0AAC9E]/70 hover:text-[#0AAC9E] transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        
-        <div className="relative">
-          <div
-            onClick={() => setIsOpen(!isOpen)}
-            className="relative w-full px-4 py-2 text-sm border rounded-lg cursor-pointer focus:outline-none transition-all duration-200 bg-white flex items-center justify-between border-gray-300 hover:border-[#0AAC9E] hover:shadow-sm"
-          >
-            <div className="flex items-center">
-              <Users className="w-4 h-5 mr-3 text-gray-400" />
-              <span className="text-gray-500">
-                {selectedTargetGroups.length > 0 
-                  ? `${selectedTargetGroups.length} selected`
-                  : 'Select target groups'
-                }
-              </span>
-            </div>
-            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-          </div>
-          
-          {isOpen && (
-            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-hidden">
-              {/* Search input */}
-              <div className="p-3 border-b border-gray-200">
-                <input
-                  type="text"
-                  value={targetGroupSearch}
-                  onChange={(e) => setTargetGroupSearch(e.target.value)}
-                  placeholder="Search target groups..."
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-                />
-              </div>
-              
-              {/* Options list */}
-              <div className="max-h-40 overflow-y-auto">
-                {filteredGroups.length > 0 ? (
-                  filteredGroups.map((group) => {
-                    const isSelected = (formData.targetGroupIds || []).includes(group.id);
-                    
-                    return (
-                      <div
-                        key={group.id}
-                        onClick={() => handleTargetGroupSelect(group)}
-                        className={`px-4 py-3 text-xs cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
-                          isSelected ? 'bg-[#0AAC9E]/10 text-[#0AAC9E] font-medium' : 'text-gray-900'
-                        }`}
-                      >
-                        <span>{group.name}</span>
-                        {isSelected && <CheckCircle className="w-4 h-4 text-[#0AAC9E]" />}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="p-4 text-center text-gray-500 text-sm">
-                    No target groups found
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const tabs = [
+   const tabs = [
     { 
       id: 'basic', 
       label: 'Basic Info', 
       icon: BookOpen,
-      required: true
+      required: true,
+      description: 'Essential course details'
     },
     { 
       id: 'settings', 
-      label: 'Settings', 
+      label: 'Advanced Settings', 
       icon: Settings,
-      required: true
+      required: false,
+      description: 'Optional configurations',
+      badge: 'Optional'
     },
     { 
       id: 'badges', 
-      label: 'Badges', 
+      label: 'Achievement Badges', 
       icon: Award,
-      required: formData.verifiedCertificate
+      required: formData.verifiedCertificate,
+      description: 'Score-based rewards',
+      badge: formData.verifiedCertificate ? 'Required' : 'Optional'
     }
   ];
+
+  // Check if we should show "Configure More" button
+  const shouldShowConfigureMore = () => {
+    return isBasicFormValid() && !showOptionalSettings && activeTab === 'basic';
+  };
 
   return (
     <div className="p-4">
@@ -1001,63 +1134,155 @@ const BasicInfoForm = ({ isEditing = false }) => {
       <div className="border-b border-gray-200 mb-4">
         <nav className="-mb-px flex space-x-6">
           {tabs.map(tab => {
-            const isCompleted = completedTabs.has(tab.id);
-            const isRequired = tab.required;
-            const isActive = activeTab === tab.id;
-            const isVisited = visitedTabs.has(tab.id);
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center transition-colors relative ${
-                  isActive
-                    ? 'border-[#0AAC9E] text-[#0AAC9E]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div><tab.icon className="w-4 h-4 mr-1.5" /></div>
-                {tab.label}
-                
-                {/* Required indicator */}
-                {isRequired && (
-                  <span className="ml-1 text-red-500">*</span>
-                )}
-                
-                {/* Completion indicator */}
-               <div>{isCompleted && (
-                  <CheckCircle className="w-3 h-3 ml-1 text-green-500" />
-                )}</div> 
-                
-                {/* Warning indicator for required incomplete tabs */}
-               <div>{isRequired && isVisited && !isCompleted && (
-                  <AlertTriangle className="w-3 h-3 ml-1 text-orange-500" />
-                )}</div> 
-              </button>
-            );
-          })}
+              const isRequired = tab.required;
+              const isActive = activeTab === tab.id;
+              const isCompleted = completedTabs.has(tab.id);
+              
+              // Hide optional tabs unless explicitly shown
+              if (!tab.required && !showOptionalSettings && !isEditing) {
+                return null;
+              }
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group relative py-3 px-4 border-b-2 font-medium text-sm flex items-center transition-all ${
+                    isActive
+                      ? 'border-[#0AAC9E] text-[#0AAC9E]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full mr-2 ${
+                      isCompleted 
+                        ? 'bg-green-100 text-green-600' 
+                        : isActive 
+                        ? 'bg-[#0AAC9E]/10 text-[#0AAC9E]'
+                        : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {isCompleted ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <tab.icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    
+                    <div className="text-left">
+                      <div className="flex items-center">
+                        <span>{tab.label}</span>
+                        {isRequired && !isCompleted && (
+                          <span className="ml-1 text-red-500">*</span>
+                        )}
+                        {tab.badge && (
+                          <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
+                            tab.badge === 'Required' 
+                              ? 'bg-red-100 text-red-700' 
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {tab.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 font-normal">
+                        {tab.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
         </nav>
       </div>
+
 
       {/* Basic Information Tab */}
       {activeTab === 'basic' && (
         <div className="grid grid-cols-12 gap-3">
           {/* Course Details - 8 columns */}
           <div className="col-span-8 space-y-3">
-            {/* Course Name */}
-            <div>
+            {/* Course Name with Position-Course Integration */}
+            <div ref={courseNameRef}>
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Course Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={formData.name || ''}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Enter course name"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E] transition-all ${
-                  errors.name && touched.name ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
+              
+              <div className="relative">
+                <div
+                  onClick={() => setShowCourseNameDropdown(!showCourseNameDropdown)}
+                  className={`relative w-full px-3 py-2 text-sm border rounded-lg cursor-pointer focus:outline-none transition-all duration-200 bg-white flex items-center justify-between ${
+                    errors.name && touched.name ? 'border-red-300' : 'border-gray-300 hover:border-[#0AAC9E]'
+                  }`}
+                >
+                  <div className="flex items-center flex-1">
+                    <BookOpen className="w-4 h-5 mr-3 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.name || ''}
+                      onChange={(e) => {
+                        handleInputChange('name', e.target.value);
+                        setCourseNameSearch(e.target.value);
+                        setShowCourseNameDropdown(true);
+                      }}
+                      placeholder="Search or enter course name"
+                      className="flex-1 outline-none bg-transparent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCourseNameDropdown(true);
+                      }}
+                    />
+                  </div>
+                  <ChevronDown 
+                    className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                      showCourseNameDropdown ? 'rotate-180' : ''
+                    }`} 
+                  />
+                </div>
+                
+                {showCourseNameDropdown && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                    <div className="max-h-60 overflow-y-auto">
+                      {courseNamesLoading ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin mx-auto mb-1" />
+                          Loading course names...
+                        </div>
+                      ) : filteredCourseNames.length > 0 ? (
+                        filteredCourseNames.map((courseName, index) => {
+                          const isSelected = formData.name === courseName;
+                          
+                          return (
+                            <div
+                              key={index}
+                              onClick={() => {
+                                handleInputChange('name', courseName);
+                                setShowCourseNameDropdown(false);
+                                setCourseNameSearch("");
+                              }}
+                              className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
+                                isSelected ? 'bg-[#0AAC9E]/10 text-[#0AAC9E] font-medium' : 'text-gray-900'
+                              }`}
+                            >
+                              <span>{courseName}</span>
+                              {isSelected && <CheckCircle className="w-4 h-4 text-[#0AAC9E]" />}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="p-4 text-center">
+                          <p className="text-sm text-gray-500 mb-2">
+                            {courseNameSearch ? 'No matching course names found' : 'No course names available'}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            You can enter a custom name
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div className="flex items-center justify-between mt-1">
                 {errors.name && touched.name && (
                   <p className="text-xs text-red-600 flex items-center">
@@ -1065,12 +1290,18 @@ const BasicInfoForm = ({ isEditing = false }) => {
                     {errors.name}
                   </p>
                 )}
-                <p className={`text-xs ml-auto ${
-                  (formData.name?.length || 0) > 80 ? 'text-red-500' : 'text-gray-500'
-                }`}>
-                  {formData.name?.length || 0}/100
-                </p>
+               
               </div>
+              
+              {/* Position Info Preview */}
+              {positionsInfoLoading ? (
+                <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" />
+                  <p className="text-xs text-gray-500 mt-2">Loading position information...</p>
+                </div>
+              ) : (
+                <PositionInfoPreview />
+              )}
             </div>
 
             {/* Category and Duration */}
@@ -1088,6 +1319,7 @@ const BasicInfoForm = ({ isEditing = false }) => {
                 allowCreate={true}
                 createLabel="Create New Category"
                 onCreateNew={() => setShowCreateCategory(true)}
+                dropdownRef={categoryDropdownRef}
               />
 
               <div>
@@ -1215,22 +1447,20 @@ const BasicInfoForm = ({ isEditing = false }) => {
             )}
           </div>
 
-          {/* Description with Simple Rich Text Editor - Full Width */}
+          {/* Description */}
           <div className="col-span-12 mt-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Description <span className="text-red-500">*</span>
             </label>
-            <div className={`transition-all ${
-              errors.description && touched.description ? 'ring-1 ring-red-300 rounded-lg' : ''
-            }`}>
-              <SimpleRichTextEditor
-                value={formData.description || ''}
-                onChange={handleDescriptionChange}
-                placeholder="Describe what students will learn in this course..."
-                minHeight={150}
-                readOnly={false}
-              />
-            </div>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Provide a brief description of the course..."
+              rows={4}
+              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E] transition-all resize-vertical ${
+                errors.description && touched.description ? 'border-red-300' : 'border-gray-300'
+              }`}
+            />
             {errors.description && touched.description && (
               <p className="mt-1 text-xs text-red-600 flex items-center">
                 <AlertTriangle className="w-3 h-3 mr-1" />
@@ -1238,231 +1468,313 @@ const BasicInfoForm = ({ isEditing = false }) => {
               </p>
             )}
           </div>
-        </div>
-      )}
 
-     
-{/* Settings Tab */}
-{activeTab === 'settings' && (
-  <div className="space-y-6">
-    {/* Main settings in 2 columns */}
-    <div className="grid grid-cols-2 gap-6">
-      {/* Left Column */}
-      <div className="space-y-4">
-        <TargetGroupSelector />
-
-        <SmartDropdown
-          label="Tags"
-          value={formData.tagIds}
-          options={tags}
-          onChange={(tagId) => handleMultipleSelect('tagIds', tagId)}
-          placeholder="Select tags"
-          loading={tagsLoading}
-          icon={Tag}
-          multiple={true}
-          allowCreate={true}
-          createLabel="Create New Tag"
-          onCreateNew={() => setShowCreateTag(true)}
-        />
-
-        <SmartDropdown
-          label="Certificate"
-          value={formData.certificateId}
-          options={certificates}
-          onChange={(certificateId) => handleInputChange('certificateId', certificateId)}
-          placeholder="No certificate"
-          loading={certificatesLoading}
-          icon={Award}
-        />
-
-        <SmartDropdown
-          label="Assign to Cluster"
-          value={formData.clusterId}
-          options={clusters.map(cluster => ({ id: cluster.id, name: cluster.subject }))}
-          onChange={(clusterId) => handleInputChange('clusterId', clusterId)}
-          placeholder="No cluster"
-          loading={clustersLoading}
-          icon={Package}
-        />
-      </div>
-
-      {/* Right Column */}
-      <div className="space-y-4">
-        {/* Duration fields in a grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">
-              Start Duration (days)
-            </label>
-            <input
-              type="number"
-              value={formData.startDuration || ''}
-              onChange={(e) => handleInputChange('startDuration', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="0"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">
-              Deadline (days)
-            </label>
-            <input
-              type="number"
-              value={formData.deadline || ''}
-              onChange={(e) => handleInputChange('deadline', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="30"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-            />
-          </div>
-        </div>
-
-        {/* NEW FIELD: Expiration Date */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-2">
-            Expiration Date (days)
-          </label>
-          <input
-            type="number"
-            value={formData.expirationDate || ''}
-            onChange={(e) => handleInputChange('expirationDate', e.target.value ? parseInt(e.target.value) : null)}
-            placeholder="365"
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Days after which the course expires for learners
-          </p>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center">
-                <ArrowRight className="w-4 h-5 text-[#0AAC9E] mr-2" />
-                <label className="text-sm font-medium text-gray-900">Auto reassign on target group changes</label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Automatically reassign course when target groups update
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.autoReassign || false}
-              onChange={(e) => handleInputChange('autoReassign', e.target.checked)}
-              className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-            />
-          </div>
-        </div>
-
-        {/* NEW FIELD: Has Notification */}
-        <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center">
-                <Bell className="w-4 h-5 text-[#0AAC9E] mr-2" />
-                <label className="text-sm font-medium text-gray-900">Enable notifications</label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Send notifications to learners about this course
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.hasNotification || false}
-              onChange={(e) => handleInputChange('hasNotification', e.target.checked)}
-              className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-            />
-          </div>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center">
-                <CheckCircle className="w-4 h-5 text-[#0AAC9E] mr-3" />
-                <label className="text-sm font-medium text-gray-900">Verified certificates</label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Require verification for certificates
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.verifiedCertificate || false}
-              onChange={(e) => handleInputChange('verifiedCertificate', e.target.checked)}
-              className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* Cluster Configuration - Full Width when active */}
-    {formData.clusterId && (
-      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 space-y-3">
-        <div className="flex items-center mb-3">
-          <Info className="w-4 h-5 text-[#0AAC9E] mr-2" />
-          <h4 className="text-sm font-medium text-gray-900">Cluster Configuration</h4>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-4">
-          <div>
+          {/* About Course */}
+          <div className="col-span-12 mt-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Order in Cluster
+              About Course (Detailed Information)
             </label>
-            <input
-              type="number"
-              min="1"
-              value={formData.clusterOrderNumber || ''}
-              onChange={(e) => handleInputChange('clusterOrderNumber', parseInt(e.target.value) || null)}
-              placeholder="1"
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Coefficient
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={formData.clusterCoefficient !== null ? formData.clusterCoefficient : ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                const numValue = value === '' ? null : parseFloat(value);
-                handleInputChange('clusterCoefficient', numValue);
-              }}
-              placeholder="0.0"
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
-            />
-          </div>
-
-          <div className="bg-white rounded-lg px-3 py-2 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center">
-                  <AlertTriangle className="w-4 h-5 text-orange-500 mr-2" />
-                  <label className="text-xs font-medium text-gray-900">Required in cluster</label>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={formData.clusterIsMandatory || false}
-                onChange={(e) => handleInputChange('clusterIsMandatory', e.target.checked)}
-                className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+            <div className="relative">
+              <PageTextComponent
+                desc={formData.aboutCourse || null}
+                onChange={handleAboutCourseChange}
+                readOnly={false}
               />
             </div>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-)}
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+ <>
+<div className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="flex items-start">
+              <Info className="w-5 h-5 text-gray-500 mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-1">
+                  Advanced Settings (Optional)
+                </h4>
+                <p className="text-xs text-gray-600">
+                  These settings are optional but can help you organize courses better, track progress, and provide certificates to learners.
+                </p>
+              </div>
+            </div>
+          </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <SmartDropdown
+                label="Tags"
+                value={formData.tagIds}
+                options={tags}
+                onChange={(tagId) => handleMultipleSelect('tagIds', tagId)}
+                placeholder="Select tags"
+                loading={tagsLoading}
+                icon={Tag}
+                multiple={true}
+                allowCreate={true}
+                createLabel="Create New Tag"
+                onCreateNew={() => setShowCreateTag(true)}
+                dropdownRef={tagsDropdownRef}
+              />
+
+              {formData.verifiedCertificate && (
+                <SmartDropdown
+                  label="Certificate"
+                  value={formData.certificateId}
+                  options={certificates}
+                  onChange={(certificateId) => handleInputChange('certificateId', certificateId)}
+                  placeholder="Select certificate"
+                  loading={certificatesLoading}
+                  icon={Award}
+                  dropdownRef={certificateDropdownRef}
+                />
+              )}
+
+              <SmartDropdown
+                label="Assign to Cluster"
+                value={formData.clusterId}
+                options={clusters.map(cluster => ({ id: cluster.id, name: cluster.subject }))}
+                onChange={(clusterId) => handleInputChange('clusterId', clusterId)}
+                placeholder="No cluster"
+                loading={clustersLoading}
+                icon={Package}
+                dropdownRef={clusterDropdownRef}
+              />
+
+              <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <BookOpen className="w-4 h-5 text-[#0AAC9E] mr-2" />
+                      <label className="text-sm font-medium text-gray-900">Publish course</label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Make this course available to learners
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.publishCourse || false}
+                    onChange={(e) => {
+                      handleInputChange('publishCourse', e.target.checked);
+                      handleInputChange('hasNotification', e.target.checked);
+                    }}
+                    className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                    Start Duration (days)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.startDuration !== null && formData.startDuration !== undefined ? formData.startDuration : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleInputChange('startDuration', value === '' ? null : parseInt(value));
+                    }}
+                    placeholder="0"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                    Deadline (days)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.deadline !== null && formData.deadline !== undefined ? formData.deadline : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleInputChange('deadline', value === '' ? null : parseInt(value));
+                    }}
+                    placeholder="30"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Expiration Date (months)
+                  </div>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.expirationDate !== null && formData.expirationDate !== undefined ? formData.expirationDate : ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleInputChange('expirationDate', value === '' ? null : parseInt(value));
+                  }}
+                  placeholder="12"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Months after which the course expires for learners
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <ArrowRight className="w-4 h-5 text-[#0AAC9E] mr-2" />
+                      <label className="text-sm font-medium text-gray-900">Auto reassign when certificate expired</label>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.autoReassign || false}
+                    onChange={(e) => handleInputChange('autoReassign', e.target.checked)}
+                    className="h-3 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <TrendingUp className="w-4 h-5 text-[#0AAC9E] mr-2" />
+                      <label className="text-sm font-medium text-gray-900">Promoted course</label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Feature this course in promoted sections
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.isPromoted || false}
+                    onChange={(e) => handleInputChange('isPromoted', e.target.checked)}
+                    className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <CheckCircle className="w-4 h-5 text-[#0AAC9E] mr-3" />
+                      <label className="text-sm font-medium text-gray-900">Verified certificates</label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Require verification for certificates
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.verifiedCertificate || false}
+                    onChange={(e) => {
+                      handleInputChange('verifiedCertificate', e.target.checked);
+                      if (!e.target.checked) {
+                        handleInputChange('certificateId', null);
+                      }
+                    }}
+                    className="h-4 w-4 text-[#0AAC9E] border-gray-300 rounded focus:ring-[#0AAC9E]"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {formData.clusterId && (
+            <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 space-y-3">
+              <div className="flex items-center mb-3">
+                <Info className="w-4 h-5 text-[#0AAC9E] mr-2" />
+                <h4 className="text-sm font-medium text-gray-900">Cluster Configuration</h4>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Order in Cluster
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={
+                      formData.clusterOrderNumber !== null && 
+                      formData.clusterOrderNumber !== undefined && 
+                      formData.clusterOrderNumber !== '' 
+                        ? formData.clusterOrderNumber 
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? null : parseInt(value);
+                      handleInputChange('clusterOrderNumber', numValue);
+                    }}
+                    placeholder="1"
+                    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Coefficient
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={
+                      formData.clusterCoefficient !== null && 
+                      formData.clusterCoefficient !== undefined && 
+                      formData.clusterCoefficient !== '' 
+                        ? formData.clusterCoefficient 
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? null : parseFloat(value);
+                      handleInputChange('clusterCoefficient', numValue);
+                    }}
+                    placeholder="0.0"
+                    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+       
+        </>
+      )}
 
       {/* Badges Tab */}
       {activeTab === 'badges' && (
+        <>
+  {formData.verifiedCertificate && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="flex items-start">
+                <Award className="w-5 h-5 text-amber-600 mr-2 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-amber-900 mb-1">
+                    Achievement Badges Setup
+                  </h4>
+                  <p className="text-xs text-amber-700">
+                    Configure score ranges to automatically award badges to learners based on their performance. This is required when verified certificates are enabled.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         <div className="space-y-4">
           {formData.verifiedCertificate ? (
             <>
@@ -1472,13 +1784,10 @@ const BasicInfoForm = ({ isEditing = false }) => {
                     <Award className="w-5 h-5 text-[#0AAC9E] mr-2" />
                     <h3 className="text-base font-medium text-gray-900">Achievement Badges</h3>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    Set score ranges to award badges based on performance
-                  </p>
                 </div>
                 <button
                   onClick={handleAddSuccessionRate}
-                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90"
+                  className="flex items-center px-3 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Range
@@ -1486,17 +1795,15 @@ const BasicInfoForm = ({ isEditing = false }) => {
               </div>
 
               {formData.successionRates && formData.successionRates.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {formData.successionRates.map((rate, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
-                          <div className="w-6 h-6 bg-[#0AAC9E]/10 rounded flex items-center justify-center mr-2">
-                            <span className="text-sm font-bold text-[#0AAC9E]">{index + 1}</span>
+                          <div className="w-5 h-5 bg-[#0AAC9E]/10 rounded flex items-center justify-center mr-2">
+                            <span className="text-xs font-bold text-[#0AAC9E]">{index + 1}</span>
                           </div>
-                          <h4 className="text-sm font-medium text-gray-900">
-                            Range #{index + 1}
-                          </h4>
+                          <h4 className="text-sm font-medium text-gray-900">Range #{index + 1}</h4>
                         </div>
                         <button
                           onClick={() => handleRemoveSuccessionRate(index)}
@@ -1506,45 +1813,39 @@ const BasicInfoForm = ({ isEditing = false }) => {
                         </button>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Min Score (%)
-                          </label>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Min %</label>
                           <input
                             type="number"
                             min="0"
                             max="100"
                             value={rate.minRange === null || rate.minRange === undefined ? '' : rate.minRange}
                             onChange={(e) => handleUpdateSuccessionRate(index, 'minRange', e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
                             placeholder="0"
                           />
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Max Score (%)
-                          </label>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Max %</label>
                           <input
                             type="number"
                             min="0"
                             max="100"
                             value={rate.maxRange === null || rate.maxRange === undefined ? '' : rate.maxRange}
                             onChange={(e) => handleUpdateSuccessionRate(index, 'maxRange', e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
                             placeholder="100"
                           />
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Badge
-                          </label>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Badge</label>
                           <select
                             value={rate.badgeId || ''}
                             onChange={(e) => handleUpdateSuccessionRate(index, 'badgeId', e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#0AAC9E]"
                             disabled={badgesLoading}
                           >
                             <option value="">No badge</option>
@@ -1566,19 +1867,11 @@ const BasicInfoForm = ({ isEditing = false }) => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-                  <Award className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-base font-medium text-gray-900 mb-1">No badge ranges yet</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">No badge ranges yet</h3>
+                  <p className="text-xs text-gray-600">
                     Add score ranges to award badges automatically
                   </p>
-                  <button
-                    onClick={handleAddSuccessionRate}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add First Range
-                  </button>
                 </div>
               )}
             </>
@@ -1598,74 +1891,111 @@ const BasicInfoForm = ({ isEditing = false }) => {
               </button>
             </div>
           )}
-        </div>
+        </div>     </>
       )}
 
-      {/* Save Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-6">
-        <div className="flex items-center">
-          {areAllRequiredTabsCompleted() && isFormValid() ? (
-            <div className="flex items-center text-green-600">
-              <CheckCircle className="w-4 h-5 mr-2" />
-              <div>
-                <span className="text-xs font-medium">Ready to continue</span>
-                <p className="text-xs text-green-500">All required tabs completed</p>
-              </div>
-            </div>
-          ) : isBasicFormValid() ? (
-            <div className="flex items-center text-blue-600">
-              <Info className="w-5 h-5 mr-2" />
-              <div>
-                <span className="text-sm font-medium">Basic info complete</span>
-                <p className="text-sm text-blue-500">
-                  {!visitedTabs.has('settings') ? 'Visit Settings tab to continue' :
-                   !completedTabs.has('settings') ? 'Complete Settings tab (select target groups)' :
-                   formData.verifiedCertificate && !visitedTabs.has('badges') ? 'Visit Badges tab to continue' :
-                   formData.verifiedCertificate && !isBadgesTabValid() ? 'Configure badge ranges to continue' :
-                   'Ready to save'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center text-orange-600">
-              <AlertTriangle className="w-4 h-5 mr-2" />
-              <div>
-                <span className="text-xs font-medium">Complete required fields</span>
-             
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleSaveOnly}
-            disabled={!isBasicFormValid() || isSaving}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Save Draft
-          </button>
-
-          <button
-            onClick={handleSaveAndContinue}
-            disabled={!areAllRequiredTabsCompleted() || !isFormValid() || isSaving}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                {isEditing ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-1" />
-                Save & Continue
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </>
-            )}
-          </button>
-        </div>
+{/* Improved Save Actions - Cleaner Layout */}
+<div className="pt-4 border-t border-gray-200 mt-6">
+  {/* Status Info
+  <div className="mb-3">
+    {areAllRequiredTabsCompleted() && isFormValid() ? (
+      <div className="flex items-center text-green-600">
+        <CheckCircle className="w-4 h-4 mr-2" />
+        <span className="text-sm font-medium">Ready to save - All required information is complete</span>
       </div>
+    ) : isBasicFormValid() ? (
+      <div className="flex items-center text-blue-600">
+        <Info className="w-4 h-4 mr-2" />
+        <span className="text-sm font-medium">
+          {formData.verifiedCertificate && !isBadgesTabValid() ? 
+            'Configure badge ranges to continue' : 
+            'Basic info complete - You can save now or add more details'
+          }
+        </span>
+      </div>
+    ) : (
+      <div className="flex items-center text-orange-600">
+        <AlertTriangle className="w-4 h-4 mr-2" />
+        <span className="text-sm font-medium">Complete required fields: course name, category, duration, and description</span>
+      </div>
+    )}
+  </div> */}
+
+  {/* Action Buttons */}
+  <div className="flex items-center justify-between">
+    {/* Left side - Optional settings link */}
+    <div>
+      {activeTab === 'basic' && isBasicFormValid() && !showOptionalSettings && !isEditing && (
+        <button
+          onClick={() => {
+            setShowOptionalSettings(true);
+            setActiveTab('settings');
+          }}
+          className="flex items-center text-sm text-[#0AAC9E] hover:text-[#0AAC9E]/80 font-medium"
+        >
+          <Settings className="w-4 h-4 mr-1" />
+          Add tags, certificates & advanced settings
+          <ArrowRight className="w-4 h-4 ml-1" />
+        </button>
+      )}
+      
+      {(activeTab === 'settings' || activeTab === 'badges') && (
+        <button
+          onClick={() => setActiveTab('basic')}
+          className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+        >
+          <ArrowRight className="w-4 h-4 mr-1 rotate-180" />
+          Back to basic info
+        </button>
+      )}
+    </div>
+
+    {/* Right side - Save buttons */}
+    <div className="flex items-center space-x-2">
+      {/* Skip & Save for optional tabs */}
+      {(activeTab === 'settings' || (activeTab === 'badges' && !formData.verifiedCertificate)) && (
+        <button
+          onClick={handleSaveOnly}
+          disabled={!isBasicFormValid() || isSaving}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Skip & Save
+        </button>
+      )}
+      
+      {/* Save Draft on basic tab */}
+      {activeTab === 'basic' && (
+        <button
+          onClick={handleSaveOnly}
+          disabled={!isBasicFormValid() || isSaving}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Save Draft
+        </button>
+      )}
+
+      {/* Main Save & Continue button */}
+      <button
+        onClick={handleSaveAndContinue}
+        disabled={!areAllRequiredTabsCompleted() || !isFormValid() || isSaving}
+        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isSaving ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            {isEditing ? 'Updating...' : 'Creating...'}
+          </>
+        ) : (
+          <>
+            <Save className="w-4 h-4 mr-1" />
+            Save & Continue
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </>
+        )}
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Create New Tag Modal */}
       {showCreateTag && (

@@ -2,58 +2,72 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { 
   Users, 
-  Target, 
   Search, 
   CheckCircle, 
   Circle,
-  ChevronDown,
-  ChevronRight,
-  Calendar,
   Clock,
   Settings,
-  Eye,
-  EyeOff,
   AlertCircle,
   UserPlus,
-  Globe,
   Loader2,
-  Filter,
   X,
-  Plus
+  Building2,
+  Send,
+  CheckCircle2,
+  Zap,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import {
   setFormData,
-  setModalOpen,
   nextStep,
-  prevStep
+  prevStep,
+  publishCourseAsync,
+  assignUsersAsync
 } from "@/redux/course/courseSlice";
+import {
+  assignCoursesToClusterAsync
+} from "@/redux/cluster/clusterSlice";
+import { 
+  adminApplicationUserAsync
+} from "@/redux/adminApplicationUser/adminApplicationUser";
 
-const TargetGroupsForm = ({ isEditing = false }) => {
+const CoursePublishForm = ({ isEditing = false }) => {
   const dispatch = useDispatch();
   
   const { 
     formData, 
     currentStep,
-    loading 
+    loading,
+    currentCourse
   } = useSelector((state) => state.course || {});
   
+  // Get users from adminApplicationUser slice
   const { 
-    data: targetGroupsData, 
-    loading: targetGroupsLoading 
-  } = useSelector((state) => state.getAllTargetGroups || {});
+    data: usersData
+  } = useSelector((state) => state.adminApplicationUser || {});
   
+  const {
+    clusters = [],
+    loading: clusterLoading
+  } = useSelector((state) => state.cluster || {});
+
+  // Extract users from the API response structure
+  const users = useMemo(() => {
+    if (usersData?.length > 0 && usersData[0]?.appUsers) {
+      return usersData[0].appUsers || [];
+    }
+    return [];
+  }, [usersData]);
+
+  const totalUserCount = useMemo(() => {
+    if (usersData?.length > 0) {
+      return usersData[0]?.totalAppUserCount || 0;
+    }
+    return 0;
+  }, [usersData]);
+
   // Local state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState(new Set());
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterOptions, setFilterOptions] = useState({
-    department: '',
-    role: '',
-    location: ''
-  });
-  const [selectedTargetGroups, setSelectedTargetGroups] = useState(
-    formData?.targetGroupIds || []
-  );
   const [publishSettings, setPublishSettings] = useState({
     publishCourse: formData?.publishCourse || false,
     autoReassign: formData?.autoReassign || false,
@@ -62,19 +76,36 @@ const TargetGroupsForm = ({ isEditing = false }) => {
     deadline: formData?.deadline || null
   });
 
-  // Extract target groups from the API response structure
-  const targetGroups = useMemo(() => {
-    return targetGroupsData?.[0]?.targetGroups || [];
-  }, [targetGroupsData]);
+  // Enhanced state for dropdowns and modals
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
+  
+  // Searchable dropdown states
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [clusterSearchTerm, setClusterSearchTerm] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showClusterDropdown, setShowClusterDropdown] = useState(false);
+  
+  // Loading states
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isAssigningUsers, setIsAssigningUsers] = useState(false);
+  const [isAssigningToCluster, setIsAssigningToCluster] = useState(false);
+  const [publishResult, setPublishResult] = useState(null);
 
-  // Fetch target groups on component mount
+  // Get course ID - prioritize real ID over temp ID
+  const getCourseId = () => {
+    const courseId = currentCourse?.id || formData?.courseId || formData?.id;
+    return courseId && !courseId.toString().startsWith('temp_') ? courseId : null;
+  };
+
+  // Fetch users on component mount
   useEffect(() => {
-    dispatch(getAllTargetGroupsAsync());
+    dispatch(adminApplicationUserAsync({ page: 1, take: 100 }));
   }, [dispatch]);
 
   // Update local state when formData changes
   useEffect(() => {
-    setSelectedTargetGroups(formData?.targetGroupIds || []);
     setPublishSettings({
       publishCourse: formData?.publishCourse || false,
       autoReassign: formData?.autoReassign || false,
@@ -84,97 +115,31 @@ const TargetGroupsForm = ({ isEditing = false }) => {
     });
   }, [formData]);
 
-  // Filter target groups based on search and filters
-  const filteredTargetGroups = useMemo(() => {
-    let filtered = targetGroups;
+  // Filter users for search
+  const filteredUsers = useMemo(() => {
+    if (!userSearchTerm) return users;
+    
+    return users.filter(user => {
+      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const searchLower = userSearchTerm.toLowerCase();
+      
+      return fullName.toLowerCase().includes(searchLower) ||
+             user.email?.toLowerCase().includes(searchLower) ||
+             user.userName?.toLowerCase().includes(searchLower) ||
+             user.department?.name?.toLowerCase().includes(searchLower) ||
+             user.position?.name?.toLowerCase().includes(searchLower);
+    });
+  }, [users, userSearchTerm]);
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(group =>
-        group.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        group.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Additional filters (if your API provides these fields)
-    if (filterOptions.department) {
-      filtered = filtered.filter(group => 
-        group.department?.toLowerCase().includes(filterOptions.department.toLowerCase())
-      );
-    }
-
-    if (filterOptions.role) {
-      filtered = filtered.filter(group => 
-        group.role?.toLowerCase().includes(filterOptions.role.toLowerCase())
-      );
-    }
-
-    if (filterOptions.location) {
-      filtered = filtered.filter(group => 
-        group.location?.toLowerCase().includes(filterOptions.location.toLowerCase())
-      );
-    }
-
-    return filtered;
-  }, [targetGroups, searchTerm, filterOptions]);
-
-  // Get statistics for target groups
-  const targetGroupStats = useMemo(() => {
-    const selectedGroups = targetGroups.filter(group => 
-      selectedTargetGroups.includes(group.id)
+  // Filter clusters for search
+  const filteredClusters = useMemo(() => {
+    if (!clusterSearchTerm) return clusters;
+    
+    return clusters.filter(cluster =>
+      cluster.subject?.toLowerCase().includes(clusterSearchTerm.toLowerCase()) ||
+      cluster.description?.toLowerCase().includes(clusterSearchTerm.toLowerCase())
     );
-    
-    const totalUsers = selectedGroups.reduce((sum, group) => 
-      sum + (group.users?.length || 0), 0
-    );
-    
-    return {
-      selectedCount: selectedGroups.length,
-      totalUsers: totalUsers,
-      selectedGroups: selectedGroups
-    };
-  }, [targetGroups, selectedTargetGroups]);
-
-  const handleTargetGroupToggle = (groupId) => {
-    const newSelected = selectedTargetGroups.includes(groupId)
-      ? selectedTargetGroups.filter(id => id !== groupId)
-      : [...selectedTargetGroups, groupId];
-    
-    setSelectedTargetGroups(newSelected);
-    
-    // Update formData
-    dispatch(setFormData({
-      ...formData,
-      targetGroupIds: newSelected
-    }));
-  };
-
-  const handleSelectAll = () => {
-    const allGroupIds = filteredTargetGroups.map(group => group.id);
-    setSelectedTargetGroups(allGroupIds);
-    dispatch(setFormData({
-      ...formData,
-      targetGroupIds: allGroupIds
-    }));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedTargetGroups([]);
-    dispatch(setFormData({
-      ...formData,
-      targetGroupIds: []
-    }));
-  };
-
-  const toggleGroupExpansion = (groupId) => {
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(groupId)) {
-      newExpanded.delete(groupId);
-    } else {
-      newExpanded.add(groupId);
-    }
-    setExpandedGroups(newExpanded);
-  };
+  }, [clusters, clusterSearchTerm]);
 
   const handlePublishSettingChange = (setting, value) => {
     const newSettings = {
@@ -190,515 +155,687 @@ const TargetGroupsForm = ({ isEditing = false }) => {
     }));
   };
 
-  const handleNext = () => {
-    // Validate that at least one target group is selected
-    if (selectedTargetGroups.length === 0) {
-      // You could show an error toast here
+  // Enhanced user selection handlers
+  const handleUserToggle = (userId) => {
+    const newSelected = selectedUsers.includes(userId)
+      ? selectedUsers.filter(id => id !== userId)
+      : [...selectedUsers, userId];
+    
+    setSelectedUsers(newSelected);
+  };
+
+  const handleSelectAllUsers = () => {
+    const allUserIds = filteredUsers.map(user => user.id);
+    setSelectedUsers(allUserIds);
+  };
+
+  const handleDeselectAllUsers = () => {
+    setSelectedUsers([]);
+  };
+
+  // API Integration Functions
+
+  // 1. Assign users to course API
+  const handleAssignUsers = async () => {
+    const courseId = getCourseId();
+    
+    if (!courseId) {
+      alert("Please save your course first before assigning users.");
       return;
     }
+
+    if (selectedUsers.length === 0) {
+      alert("Please select at least one user to assign.");
+      return;
+    }
+
+    setIsAssigningUsers(true);
     
-    // Open publish confirmation modal
-    dispatch(setModalOpen({ modal: 'publishConfirm', isOpen: true }));
+    try {
+      const assignmentData = {
+        appUserIds: selectedUsers,
+        courseIds: [parseInt(courseId)]
+      };
+
+      const result = await dispatch(assignUsersAsync(assignmentData)).unwrap();
+      
+      console.log('Users assigned successfully:', result);
+      
+      // Show success message
+      alert(`Successfully assigned ${selectedUsers.length} users to the course.`);
+      
+      // Reset selection
+      setSelectedUsers([]);
+      setShowUserDropdown(false);
+      
+    } catch (error) {
+      console.error('Failed to assign users:', error);
+      alert(`Failed to assign users: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsAssigningUsers(false);
+    }
   };
 
-  const handleAssignUsers = () => {
-    dispatch(setModalOpen({ modal: 'assignUsers', isOpen: true }));
+  // 2. Assign course to cluster API
+  const handleAssignToCluster = async () => {
+    const courseId = getCourseId();
+    
+    if (!courseId) {
+      alert("Please save your course first before assigning to cluster.");
+      return;
+    }
+
+    if (!selectedCluster) {
+      alert("Please select a cluster.");
+      return;
+    }
+
+    setIsAssigningToCluster(true);
+    
+    try {
+      const assignmentData = {
+        clusterId: selectedCluster.id,
+        userId: formData.userId,
+        courses: [{
+          courseId: parseInt(courseId),
+          isMandatory: selectedCluster.isMandatory || false,
+          orderNumber: selectedCluster.orderNumber || 1,
+          coefficient: selectedCluster.coefficient || 0
+        }]
+      };
+
+      const result = await dispatch(assignCoursesToClusterAsync(assignmentData)).unwrap();
+      
+      console.log('Course assigned to cluster successfully:', result);
+      
+      // Show success message
+      alert(`Successfully assigned course to cluster: ${selectedCluster.subject}`);
+      
+      // Reset selection
+      setSelectedCluster(null);
+      setShowClusterDropdown(false);
+      
+    } catch (error) {
+      console.error('Failed to assign course to cluster:', error);
+      alert(`Failed to assign to cluster: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsAssigningToCluster(false);
+    }
   };
 
-  if (targetGroupsLoading) {
+  // 3. Publish course API
+  const handlePublishCourse = async () => {
+    const courseId = getCourseId();
+    
+    if (!courseId) {
+      alert("Please save your course first before publishing.");
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishResult(null);
+    
+    try {
+      const result = await dispatch(publishCourseAsync(courseId)).unwrap();
+      
+      console.log('Course published successfully:', result);
+      
+      setPublishResult({
+        success: true,
+        message: result.message || 'Course published successfully!',
+        courseId: courseId
+      });
+      
+      // Update publish setting in formData
+      dispatch(setFormData({
+        ...formData,
+        publishCourse: true
+      }));
+      
+      // Auto-close modal after 3 seconds
+      setTimeout(() => {
+        setShowPublishConfirmModal(false);
+        dispatch(nextStep());
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Failed to publish course:', error);
+      setPublishResult({
+        success: false,
+        message: error.message || 'Failed to publish course',
+        courseId: courseId
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleNext = () => {
+    setShowPublishConfirmModal(true);
+  };
+
+  // Searchable User Dropdown Component
+  const SearchableUserDropdown = ({ isOpen, onToggle, selectedCount }) => (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded hover:border-[#0AAC9E] focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] transition-all duration-200 flex items-center justify-between text-sm"
+      >
+        <div className="flex items-center gap-2">
+          <UserPlus className="w-4 h-4 text-[#0AAC9E]" />
+          <span className="text-gray-700">
+            {selectedCount > 0 ? `${selectedCount} users selected` : 'Select users to assign'}
+          </span>
+        </div>
+        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-64 overflow-hidden">
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
+              <input
+                type="text"
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+                placeholder="Search users..."
+                className="w-full pl-6 pr-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-gray-600">{filteredUsers.length} users</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={handleSelectAllUsers}
+                  className="px-1.5 py-0.5 text-xs bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 transition-colors"
+                >
+                  All
+                </button>
+                <button
+                  onClick={handleDeselectAllUsers}
+                  className="px-1.5 py-0.5 text-xs border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                >
+                  None
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="max-h-40 overflow-y-auto">
+            {filteredUsers.map((user) => {
+              const userId = user.id;
+              const isSelected = selectedUsers.includes(userId);
+              const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+              
+              return (
+                <div key={userId} className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0">
+                  <button
+                    onClick={() => handleUserToggle(userId)}
+                    className="flex-shrink-0"
+                  >
+                    {isSelected ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-[#0AAC9E]" />
+                    ) : (
+                      <Circle className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                  
+                  <div className="w-6 h-6 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-[#0AAC9E]">
+                      {user.firstName?.charAt(0) || user.userName?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 truncate text-xs">
+                      {fullName || user.userName}
+                    </h4>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <span className="truncate">{user.email}</span>
+                      {user.department?.name && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <span className="truncate">{user.department.name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-3 text-gray-500">
+              <UserPlus className="w-5 h-5 mx-auto mb-1 text-gray-300" />
+              <p className="text-xs">No users found</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // Searchable Cluster Dropdown Component
+  const SearchableClusterDropdown = ({ isOpen, onToggle, selectedCluster }) => (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded hover:border-[#0AAC9E] focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] transition-all duration-200 flex items-center justify-between text-sm"
+      >
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-[#0AAC9E]" />
+          <span className="text-gray-700">
+            {selectedCluster ? selectedCluster.subject : 'Select a cluster'}
+          </span>
+        </div>
+        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-64 overflow-hidden">
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
+              <input
+                type="text"
+                value={clusterSearchTerm}
+                onChange={(e) => setClusterSearchTerm(e.target.value)}
+                placeholder="Search clusters..."
+                className="w-full pl-6 pr-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
+                autoFocus
+              />
+            </div>
+            <span className="text-xs text-gray-600 mt-1 block">{filteredClusters.length} clusters</span>
+          </div>
+          
+          <div className="max-h-40 overflow-y-auto">
+            {filteredClusters.map((cluster) => (
+              <div key={cluster.id} className="p-2 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0">
+                <button
+                  onClick={() => {
+                    setSelectedCluster(cluster);
+                    setShowClusterDropdown(false);
+                  }}
+                  className="w-full text-left"
+                >
+                  <h4 className="font-medium text-gray-900 text-xs">
+                    {cluster.subject}
+                  </h4>
+                  
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                    <span>{cluster.courses?.length || 0} courses</span>
+          
+             
+                  </div>
+                </button>
+              </div>
+            ))}
+          </div>
+          
+          {filteredClusters.length === 0 && (
+            <div className="text-center py-3 text-gray-500">
+              <Building2 className="w-5 h-5 mx-auto mb-1 text-gray-300" />
+              <p className="text-xs">No clusters found</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  if (!users && !totalUserCount) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0AAC9E]" />
-        <span className="ml-2 text-gray-600">Loading target groups...</span>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-[#0AAC9E]" />
+        <span className="ml-2 text-gray-600 text-sm">Loading users...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 p-3 max-w-6xl mx-auto text-sm">
       
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Assign Target Groups
+      <div className="text-center px-2">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          Publish & Assign Course
         </h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Select the target groups who should have access to this course. 
-          You can also configure publishing settings and assign individual users.
+        <p className="text-gray-600 max-w-xl mx-auto text-xs">
+          Configure publishing settings, assign users to your course, add to clusters, and publish to make it available to learners.
         </p>
       </div>
 
       {/* Course Summary */}
-      <div className="bg-gradient-to-r from-[#0AAC9E]/5 to-[#0AAC9E]/10 rounded-xl p-6 border border-[#0AAC9E]/20">
+      <div className="bg-gradient-to-r from-[#0AAC9E]/5 to-[#0AAC9E]/10 rounded p-3 border border-[#0AAC9E]/20">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">
               {formData?.name || "Course Name"}
             </h3>
-            <p className="text-gray-600 text-sm mb-3">
+            <p className="text-gray-600 text-xs mb-2">
               {formData?.description || "Course description"}
             </p>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-3 text-xs text-gray-600">
               <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                <span>{formData?.duration || 0} minutes</span>
+                <Clock className="w-3 h-3" />
+                <span>{formData?.duration || 0} min</span>
               </div>
               <div className="flex items-center gap-1">
-                <Target className="w-4 h-4" />
-                <span>{targetGroupStats.selectedCount} groups selected</span>
+                <Users className="w-3 h-3" />
+                <span>{totalUserCount} users</span>
               </div>
               <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>{targetGroupStats.totalUsers} total users</span>
+                <UserPlus className="w-3 h-3" />
+                <span>{selectedUsers.length} selected</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Target Groups Selection */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        
-        {/* Search and Filters Header */}
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#0AAC9E]" />
-              Select Target Groups
-            </h3>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSelectAll}
-                className="px-3 py-1 text-sm bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 transition-colors"
-              >
-                Select All
-              </button>
-              <button
-                onClick={handleDeselectAll}
-                className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
-              >
-                Deselect All
-              </button>
-            </div>
-          </div>
-          
-          {/* Search Bar */}
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search target groups..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E] text-sm"
-              />
-            </div>
-            
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
-                showFilters 
-                  ? 'border-[#0AAC9E] bg-[#0AAC9E]/5 text-[#0AAC9E]' 
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
-          </div>
-
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department
-                  </label>
-                  <select
-                    value={filterOptions.department}
-                    onChange={(e) => setFilterOptions(prev => ({
-                      ...prev,
-                      department: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
-                  >
-                    <option value="">All Departments</option>
-                    <option value="hr">Human Resources</option>
-                    <option value="it">Information Technology</option>
-                    <option value="sales">Sales</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="finance">Finance</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role Level
-                  </label>
-                  <select
-                    value={filterOptions.role}
-                    onChange={(e) => setFilterOptions(prev => ({
-                      ...prev,
-                      role: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
-                  >
-                    <option value="">All Roles</option>
-                    <option value="junior">Junior</option>
-                    <option value="senior">Senior</option>
-                    <option value="manager">Manager</option>
-                    <option value="director">Director</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <select
-                    value={filterOptions.location}
-                    onChange={(e) => setFilterOptions(prev => ({
-                      ...prev,
-                      location: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
-                  >
-                    <option value="">All Locations</option>
-                    <option value="remote">Remote</option>
-                    <option value="office">Office</option>
-                    <option value="hybrid">Hybrid</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => setFilterOptions({ department: '', role: '', location: '' })}
-                  className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                >
-                  <X className="w-3 h-3" />
-                  Clear Filters
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Target Groups List */}
-        <div className="max-h-96 overflow-y-auto">
-          {filteredTargetGroups.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="font-medium">No target groups found</p>
-              <p className="text-sm text-gray-400 mt-1">
-                {searchTerm || Object.values(filterOptions).some(v => v) 
-                  ? "Try adjusting your search or filters" 
-                  : "No target groups are available"
-                }
+      {/* Course ID Warning */}
+      {!getCourseId() && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+            <div>
+              <h4 className="font-semibold text-yellow-800 text-sm">
+                Course Not Saved
+              </h4>
+              <p className="text-xs text-yellow-700 mt-0.5">
+                Please save your course in Step 1 before assigning users or adding to clusters.
               </p>
             </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredTargetGroups.map((group) => {
-                const isSelected = selectedTargetGroups.includes(group.id);
-                const isExpanded = expandedGroups.has(group.id);
-                
-                return (
-                  <div key={group.id} className="hover:bg-gray-50 transition-colors">
-                    
-                    {/* Group Header */}
-                    <div className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        
-                        {/* Checkbox */}
-                        <button
-                          onClick={() => handleTargetGroupToggle(group.id)}
-                          className="flex-shrink-0"
-                        >
-                          {isSelected ? (
-                            <CheckCircle className="w-5 h-5 text-[#0AAC9E]" />
-                          ) : (
-                            <Circle className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-                          )}
-                        </button>
-                        
-                        {/* Group Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-gray-900 truncate">
-                              {group.name}
-                            </h4>
-                            {group.isActive === false && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                                Inactive
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {group.users?.length || 0} users
-                            </span>
-                            {group.department && (
-                              <span>{group.department}</span>
-                            )}
-                            {group.location && (
-                              <span>{group.location}</span>
-                            )}
-                          </div>
-                          
-                          {group.description && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              {group.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Expand/Collapse Button */}
-                      {group.users && group.users.length > 0 && (
-                        <button
-                          onClick={() => toggleGroupExpansion(group.id)}
-                          className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Section */}
+      <div className="bg-white rounded border border-gray-200 p-3">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Settings className="w-4 h-4 text-[#0AAC9E]" />
+          Course Assignment
+        </h3>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* User Assignment */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Assign Individual Users
+            </label>
+            <SearchableUserDropdown
+              isOpen={showUserDropdown}
+              onToggle={() => setShowUserDropdown(!showUserDropdown)}
+              selectedCount={selectedUsers.length}
+            />
+            {selectedUsers.length > 0 && (
+              <div className="mt-2">
+                <button
+                  onClick={handleAssignUsers}
+                  disabled={!getCourseId() || isAssigningUsers}
+                  className="w-full px-3 py-1.5 bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-xs"
+                >
+                  {isAssigningUsers ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <UserPlus className="w-3 h-3" />
+                  )}
+                  Assign {selectedUsers.length} User{selectedUsers.length !== 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Cluster Assignment */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Add to Learning Cluster
+            </label>
+            <SearchableClusterDropdown
+              isOpen={showClusterDropdown}
+              onToggle={() => setShowClusterDropdown(!showClusterDropdown)}
+              selectedCluster={selectedCluster}
+            />
+            {selectedCluster && (
+              <div className="mt-2 space-y-2">
+                {/* Cluster Configuration */}
+                <div className="bg-gray-50 rounded p-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Order
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={selectedCluster.orderNumber || 1}
+                        onChange={(e) => setSelectedCluster({
+                          ...selectedCluster,
+                          orderNumber: parseInt(e.target.value)
+                        })}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
+                      />
                     </div>
                     
-                    {/* Expanded User List */}
-                    {isExpanded && group.users && group.users.length > 0 && (
-                      <div className="px-4 pb-4 border-t border-gray-100 bg-gray-50">
-                        <div className="pt-3">
-                          <h5 className="text-sm font-medium text-gray-700 mb-2">
-                            Group Members ({group.users.length})
-                          </h5>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                            {group.users.map((user) => (
-                              <div key={user.userId} className="flex items-center gap-2 text-sm">
-                                <div className="w-6 h-6 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-medium text-[#0AAC9E]">
-                                    {user.fullName?.charAt(0) || 'U'}
-                                  </span>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-gray-900 truncate">
-                                    {user.fullName}
-                                  </p>
-                                  <p className="text-gray-500 text-xs truncate">
-                                    {user.email}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Coefficient (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={selectedCluster.coefficient || 0}
+                        onChange={(e) => setSelectedCluster({
+                          ...selectedCluster,
+                          coefficient: parseInt(e.target.value)
+                        })}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
+                      />
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Selected Groups Summary */}
-      {targetGroupStats.selectedCount > 0 && (
-        <div className="bg-[#0AAC9E]/5 border border-[#0AAC9E]/20 rounded-xl p-4">
-          <h4 className="font-semibold text-[#0AAC9E] mb-2 flex items-center gap-2">
-            <Target className="w-4 h-4" />
-            Course Access Summary
-          </h4>
-        
-          
-          <div className="mt-3 flex flex-wrap gap-2">
-            {targetGroupStats.selectedGroups.slice(0, 3).map((group) => (
-              <span key={group.id} className="px-2 py-1 bg-white text-[#0AAC9E] text-xs rounded border border-[#0AAC9E]/20">
-                {group.name}
-              </span>
-            ))}
-            {targetGroupStats.selectedGroups.length > 3 && (
-              <span className="px-2 py-1 bg-white text-[#0AAC9E] text-xs rounded border border-[#0AAC9E]/20">
-                +{targetGroupStats.selectedGroups.length - 3} more
-              </span>
+                  
+                  <div>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedCluster.isMandatory || false}
+                        onChange={(e) => setSelectedCluster({
+                          ...selectedCluster,
+                          isMandatory: e.target.checked
+                        })}
+                        className="text-[#0AAC9E] focus:ring-[#0AAC9E]"
+                      />
+                      <span className="text-xs text-gray-700">Make mandatory in cluster</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleAssignToCluster}
+                  disabled={!getCourseId() || isAssigningToCluster}
+                  className="w-full px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-xs"
+                >
+                  {isAssigningToCluster ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Building2 className="w-3 h-3" />
+                  )}
+                  Add to Cluster
+                </button>
+              </div>
             )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Publishing Settings */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Settings className="w-5 h-5 text-[#0AAC9E]" />
-          Publishing Settings
+      {/* Publish Section */}
+      <div className="bg-white rounded border border-gray-200 p-3">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Send className="w-4 h-4 text-[#0AAC9E]" />
+          Publish Course
         </h3>
         
-        <div className="space-y-4">
+        <div className="text-center">
+          <p className="text-gray-600 mb-3 text-xs">
+            Ready to make your course available to learners? Click below to publish and complete the course creation process.
+          </p>
           
-          {/* Publish Course Toggle */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Globe className="w-5 h-5 text-[#0AAC9E]" />
-              <div>
-                <div className="font-medium text-sm">Publish Course</div>
-                <div className="text-xs text-gray-500">
-                  Make course available to assigned learners
-                </div>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={publishSettings.publishCourse}
-                onChange={(e) => handlePublishSettingChange('publishCourse', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#0AAC9E]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0AAC9E]"></div>
-            </label>
-          </div>
-
-          {/* Auto Reassign */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Target className="w-5 h-5 text-[#0AAC9E]" />
-              <div>
-                <div className="font-medium text-sm">Auto Reassign</div>
-                <div className="text-xs text-gray-500">
-                  Automatically reassign when target groups change
-                </div>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={publishSettings.autoReassign}
-                onChange={(e) => handlePublishSettingChange('autoReassign', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#0AAC9E]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0AAC9E]"></div>
-            </label>
-          </div>
-
-          {/* Course Evaluation */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Eye className="w-5 h-5 text-[#0AAC9E]" />
-              <div>
-                <div className="font-medium text-sm">Enable Course Evaluation</div>
-                <div className="text-xs text-gray-500">
-                  Allow learners to rate and provide feedback
-                </div>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={publishSettings.hasEvaluation}
-                onChange={(e) => handlePublishSettingChange('hasEvaluation', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#0AAC9E]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0AAC9E]"></div>
-            </label>
-          </div>
-
-          {/* Start Date and Deadline */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date (Optional)
-              </label>
-              <input
-                type="date"
-                value={publishSettings.startDuration || ''}
-                onChange={(e) => handlePublishSettingChange('startDuration', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Deadline (Optional)
-              </label>
-              <input
-                type="date"
-                value={publishSettings.deadline || ''}
-                onChange={(e) => handlePublishSettingChange('deadline', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0AAC9E]/20 focus:border-[#0AAC9E]"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Individual User Assignment */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-semibold text-blue-900 mb-1">
-              Need to assign individual users?
-            </h4>
-            <p className="text-sm text-blue-800">
-              You can also assign specific users who may not be in your selected target groups.
-            </p>
-          </div>
           <button
-            onClick={handleAssignUsers}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 whitespace-nowrap"
+            onClick={handleNext}
+            disabled={!getCourseId()}
+            className="px-4 py-2 bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mx-auto text-sm"
           >
-            <UserPlus className="w-4 h-4" />
-            Assign Users
+            <Send className="w-4 h-4" />
+            Publish Course
           </button>
         </div>
       </div>
 
-      {/* Validation Warning */}
-      {selectedTargetGroups.length === 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-            <div>
-              <h4 className="font-semibold text-yellow-800">
-                No Target Groups Selected
-              </h4>
-              <p className="text-sm text-yellow-700 mt-1">
-                Please select at least one target group to make your course accessible to learners.
-              </p>
+      {/* Publish Confirmation Modal */}
+      {showPublishConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded shadow-xl w-full max-w-md">
+            <div className="p-4">
+              {publishResult ? (
+                // Success/Error Result
+                <div className="text-center">
+                  <div className={`w-12 h-12 ${publishResult.success ? 'bg-green-100' : 'bg-red-100'} rounded-full mx-auto mb-3 flex items-center justify-center`}>
+                    {publishResult.success ? (
+                      <CheckCircle2 className="w-6 h-6 text-green-600" />
+                    ) : (
+                      <AlertCircle className="w-6 h-6 text-red-600" />
+                    )}
+                  </div>
+                  
+                  <h3 className={`text-sm font-semibold mb-2 ${publishResult.success ? 'text-green-900' : 'text-red-900'}`}>
+                    {publishResult.success ? 'Course Published Successfully!' : 'Publishing Failed'}
+                  </h3>
+                  
+                  <p className={`text-xs mb-3 ${publishResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                    {publishResult.message}
+                  </p>
+                  
+                  {publishResult.success && (
+                    <div className="bg-green-50 border border-green-200 rounded p-2 mb-3">
+                      <div className="text-xs text-green-800">
+                        <p className="font-medium mb-1">Course is now live!</p>
+                        <p>Course ID: {publishResult.courseId}</p>
+                        <p>Selected Users: {selectedUsers.length}</p>
+                        <p>Available to: {totalUserCount} total users</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {publishResult.success ? (
+                    <div className="text-xs text-gray-500">
+                      Automatically continuing in 3 seconds...
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowPublishConfirmModal(false)}
+                      className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs"
+                    >
+                      Close
+                    </button>
+                  )}
+                </div>
+              ) : (
+                // Confirmation Dialog
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 bg-[#0AAC9E]/10 rounded-full flex items-center justify-center">
+                      <Send className="w-5 h-5 text-[#0AAC9E]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Publish Course
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Make your course available to learners
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded p-3 mb-3">
+                    <h4 className="font-medium text-gray-900 mb-2 text-xs">Publishing Summary</h4>
+                    <div className="space-y-1 text-xs text-gray-700">
+                      <div className="flex justify-between">
+                        <span>Course:</span>
+                        <span className="font-medium">{formData?.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Selected Users:</span>
+                        <span className="font-medium">{selectedUsers.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Available Users:</span>
+                        <span className="font-medium">{totalUserCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Course ID:</span>
+                        <span className="font-medium font-mono text-xs">{getCourseId()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-3">
+                    <div className="flex items-start gap-2">
+                      <Zap className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-blue-800">
+                        <p className="font-medium">What happens when you publish:</p>
+                        <ul className="mt-1 space-y-0.5 text-xs">
+                          <li>• Course becomes visible to assigned users</li>
+                          <li>• Learners receive notifications (if enabled)</li>
+                          <li>• Course appears in their learning dashboard</li>
+                          <li>• Progress tracking begins</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowPublishConfirmModal(false)}
+                      className="flex-1 px-3 py-1.5 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handlePublishCourse}
+                      disabled={isPublishing}
+                      className="flex-1 px-3 py-1.5 bg-[#0AAC9E] text-white rounded hover:bg-[#0AAC9E]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                    >
+                      {isPublishing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Send className="w-3 h-3" />
+                      )}
+                      Publish Course
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-        <button
-          onClick={() => dispatch(prevStep())}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-        >
-          Back to Content
-        </button>
-        
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleNext}
-            disabled={selectedTargetGroups.length === 0}
-            className="px-6 py-2 bg-[#0AAC9E] text-white rounded-lg hover:bg-[#0AAC9E]/90 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <span>Review & Publish</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      {/* Click outside handlers */}
+      {(showUserDropdown || showClusterDropdown) && (
+        <div 
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            setShowUserDropdown(false);
+            setShowClusterDropdown(false);
+          }}
+        />
+      )}
     </div>
   );
 };
 
-export default TargetGroupsForm;
+export default CoursePublishForm;

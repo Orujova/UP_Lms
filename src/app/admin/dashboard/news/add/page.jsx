@@ -135,7 +135,7 @@ export default function AddPage() {
         }
 
         const response = await fetch(
-          "https://bravoadmin.uplms.org/api/BrendingSetting?IsNews=true",
+          "https://demoadmin.databyte.app/api/BrendingSetting?IsNews=true",
           {
             method: "GET",
             headers: {
@@ -231,36 +231,37 @@ export default function AddPage() {
     return errors;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    const errors = validateForm();
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  const errors = validateForm();
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    toast.error("Please fill in all required fields");
+    return;
+  }
 
-    setIsSubmitting(true);
+  setIsSubmitting(true);
 
+  try {
     const serializedDescription = description;
-    const queryParamsObj = new URLSearchParams();
-
-    queryParamsObj.append("Title", formData.title);
-    queryParamsObj.append("SubTitle", formData.subtitle);
-    queryParamsObj.append("Description", serializedDescription);
-    queryParamsObj.append("Priority", formData.priority);
-    queryParamsObj.append("NewsCategoryId", formData.newsCategoryId);
-    queryParamsObj.append("HasNotification", formData.hasNotification);
-    queryParamsObj.append("HasComment", formData.hasComment);
-    queryParamsObj.append("HasLike", formData.hasLike);
-
-    formData.targetGroupIds.forEach((id) => {
-      queryParamsObj.append("TargetGroupIds", id);
-    });
-
-    const queryParams = queryParamsObj.toString();
     const formDataToSend = new FormData();
+
+    // Add all form fields directly to FormData (not as query params)
+    formDataToSend.append("Title", formData.title);
+    formDataToSend.append("SubTitle", formData.subtitle);
+    formDataToSend.append("Description", serializedDescription);
+    formDataToSend.append("Priority", formData.priority.toLowerCase());
+    formDataToSend.append("NewsCategoryId", formData.newsCategoryId);
+    formDataToSend.append("HasNotification", formData.hasNotification);
+    formDataToSend.append("HasComment", formData.hasComment);
+    formDataToSend.append("HasLike", formData.hasLike);
+    formDataToSend.append("Language", 'az');
+
+    // Add target group IDs
+    formData.targetGroupIds.forEach((id) => {
+      formDataToSend.append("TargetGroupIds", id);
+    });
 
     // Add images, or use default image if none uploaded
     if (formData.newsImages.length > 0) {
@@ -269,19 +270,33 @@ export default function AddPage() {
       });
     } else if (defaultNewsImage) {
       try {
-        const response = await fetch(defaultNewsImage);
+        const token = getToken();
+        
+        // Fetch the default image through your API with authorization header to avoid CORS
+        const response = await fetch(defaultNewsImage, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          mode: 'cors', // Explicitly set CORS mode
+        });
+        
         if (!response.ok) throw new Error("Failed to fetch default image");
+        
         const blob = await response.blob();
         const file = new File([blob], "default-news-image.jpg", {
-          type: blob.type,
+          type: blob.type || 'image/jpeg',
         });
         formDataToSend.append("NewsImages", file);
       } catch (error) {
         console.error("Error fetching default image:", error);
-        toast.error("Failed to include default image");
+        console.warn("Proceeding without default image due to CORS restriction");
+        // Don't return - continue without the default image
+        // Alternatively, you could skip adding any image
       }
     }
 
+    // Add attachments
     formData.attachments.forEach((attachment) => {
       formDataToSend.append("Attachments", attachment.file);
     });
@@ -294,33 +309,34 @@ export default function AddPage() {
       return;
     }
 
-    try {
-      const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News?${queryParams}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "application/json",
-          },
-          body: formDataToSend,
-        }
-      );
-
-      const result = await response.json();
-      if (response.ok && result.isSuccess) {
-        toast.success("News created successfully.");
-        router.push("/admin/dashboard/news");
-      } else {
-        toast.error(result.message || "Failed to create news.");
+    const response = await fetch(
+      `https://demoadmin.databyte.app/api/News`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "*/*",
+        },
+        body: formDataToSend,
       }
-    } catch (error) {
-      console.error("Error creating news:", error);
-      toast.error("An error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    );
+
+    const result = await response.json();
+    
+    if (response.ok && result.isSuccess) {
+      toast.success(result.message || "Xəbər uğurla yaradıldı");
+      router.push("/admin/dashboard/news");
+    } else {
+      toast.error(result.message || "Xəbər yaradılarkən xəta baş verdi");
+      console.error("API Error:", result);
     }
-  };
+  } catch (error) {
+    console.error("Error creating news:", error);
+    toast.error("Xəta baş verdi. Yenidən cəhd edin.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleCancel = () => {
     router.push("/admin/dashboard/news");

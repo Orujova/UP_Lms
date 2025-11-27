@@ -1,7 +1,7 @@
 import axios from "axios";
-import { getToken } from "@/authtoken/auth.js";
-
-const API_URL = "https://bravoadmin.uplms.org/api/";
+import { getToken,getUserId  } from "@/authtoken/auth.js";
+import { toast } from "sonner";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 const getHeaders = () => {
   const token = getToken();
@@ -13,7 +13,6 @@ const getHeaders = () => {
 
 // ======================== CONTENT MANAGEMENT ========================
 
-// Add content to section (FIXED ENUM VALUES)
 export const addContent = async (contentData) => {
   try {
     const formData = new FormData();
@@ -23,6 +22,7 @@ export const addContent = async (contentData) => {
     formData.append("Type", contentData.type.toString()); // Use CONTENT_TYPES enum
     formData.append("IsDiscussionEnabled", (contentData.isDiscussionEnabled || false).toString());
     formData.append("IsMeetingAllowed", (contentData.isMeetingAllowed || false).toString());
+    formData.append("IsSeekingEnabled", (contentData.isSeekingEnabled !== undefined ? contentData.isSeekingEnabled : true).toString());
 
     if (contentData.description) {
       formData.append("Description", contentData.description);
@@ -49,7 +49,6 @@ export const addContent = async (contentData) => {
   }
 };
 
-// Update content (FIXED ENUM VALUES)
 export const updateContent = async (contentData) => {
   try {
     const formData = new FormData();
@@ -59,6 +58,7 @@ export const updateContent = async (contentData) => {
     formData.append("HideContent", (contentData.hideContent || false).toString());
     formData.append("IsDiscussionEnabled", (contentData.isDiscussionEnabled || false).toString());
     formData.append("IsMeetingAllowed", (contentData.isMeetingAllowed || false).toString());
+    formData.append("IsSeekingEnabled", (contentData.isSeekingEnabled !== undefined ? contentData.isSeekingEnabled : true).toString());
     formData.append("Type", contentData.type.toString()); // Use CONTENT_TYPES enum
 
     if (contentData.description) {
@@ -187,8 +187,8 @@ export const getContentPaths = async (contentId) => {
       // Replace the internal IP with the public domain
       const originalPlaylistPath = response.data.playlistPath;
       const fixedPlaylistPath = originalPlaylistPath.replace(
-        'https://100.42.179.27:7198/', 
-        'https://bravoadmin.uplms.org/uploads/'
+        'https://100.42.179.27:7298/', 
+        'https://demoadmin.databyte.app/uploads/'
       );
       
       response.data.playlistPath = fixedPlaylistPath;
@@ -198,7 +198,7 @@ export const getContentPaths = async (contentId) => {
     // Also fix segment paths if present
     if (response.data?.segmentPaths && Array.isArray(response.data.segmentPaths)) {
       response.data.segmentPaths = response.data.segmentPaths.map(segmentPath => 
-        segmentPath.replace('https://100.42.179.27:7198/', 'https://bravoadmin.uplms.org/uploads/')
+        segmentPath.replace('https://100.42.179.27:7298/', 'https://demoadmin.databyte.app/uploads/')
       );
       console.log('🔧 Fixed segment paths:', response.data.segmentPaths);
     }
@@ -350,6 +350,7 @@ export const addVideoContent = async (videoData) => {
     formData.append("HideContent", (videoData.hideContent || false).toString());
     formData.append("IsDiscussionEnabled", (videoData.isDiscussionEnabled || false).toString());
     formData.append("IsMeetingAllowed", (videoData.isMeetingAllowed || false).toString());
+    formData.append("IsSeekingEnabled", (videoData.isSeekingEnabled !== undefined ? videoData.isSeekingEnabled : true).toString());
 
     if (videoData.description) {
       formData.append("Description", videoData.description);
@@ -372,7 +373,7 @@ export const addVideoContent = async (videoData) => {
   }
 };
 
-// Update video content (FIXED - Video type is 4 not 2)
+// Update video content (UPDATED WITH IsSeekingEnabled)
 export const updateVideoContent = async (videoData) => {
   try {
     const formData = new FormData();
@@ -382,6 +383,7 @@ export const updateVideoContent = async (videoData) => {
     formData.append("HideContent", (videoData.hideContent || false).toString());
     formData.append("IsDiscussionEnabled", (videoData.isDiscussionEnabled || false).toString());
     formData.append("IsMeetingAllowed", (videoData.isMeetingAllowed || false).toString());
+    formData.append("IsSeekingEnabled", (videoData.isSeekingEnabled !== undefined ? videoData.isSeekingEnabled : true).toString());
 
     if (videoData.description) {
       formData.append("Description", videoData.description);
@@ -404,6 +406,7 @@ export const updateVideoContent = async (videoData) => {
   }
 };
 
+
 // Get video by ID
 export const getVideoById = async (videoId) => {
   try {
@@ -419,20 +422,116 @@ export const getVideoById = async (videoId) => {
 
 // ======================== VIDEO INTERACTIONS ========================
 
-// Add video interaction
+export const addSubtitle = async (subtitleData) => {
+  try {
+    const userId = getUserId();
+    
+    const formData = new FormData();
+    formData.append("CourseContentId", subtitleData.courseContentId.toString());
+    formData.append("Language", subtitleData.language.toString());
+    formData.append("Name", subtitleData.name);
+    formData.append("UserId", userId.toString());
+
+    if (subtitleData.subtitleFile && subtitleData.subtitleFile instanceof File) {
+      formData.append("SubtitleFile", subtitleData.subtitleFile);
+    }
+
+    toast.loading("Uploading subtitle...", { id: "subtitle-upload" });
+
+    const response = await axios.post(`${API_URL}CourseContent/content/subtitle`, formData, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    toast.success("Subtitle uploaded successfully!", { id: "subtitle-upload" });
+    return response.data;
+  } catch (error) {
+    console.error("Error adding subtitle:", error);
+    toast.error("Failed to upload subtitle: " + (error.response?.data?.detail || error.message), { id: "subtitle-upload" });
+    throw new Error("Failed to add subtitle: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// FIXED: Update subtitle with toast notifications
+export const updateSubtitle = async (subtitleData) => {
+  try {
+    const userId = getUserId();
+    
+    const formData = new FormData();
+    formData.append("SubtitleId", subtitleData.subtitleId.toString());
+    formData.append("CourseContentId", subtitleData.courseContentId.toString());
+    formData.append("Language", subtitleData.language.toString());
+    formData.append("Name", subtitleData.name);
+    formData.append("UserId", userId.toString());
+
+    if (subtitleData.subtitleFile && subtitleData.subtitleFile instanceof File) {
+      formData.append("SubtitleFile", subtitleData.subtitleFile);
+    }
+
+    toast.loading("Updating subtitle...", { id: "subtitle-update" });
+
+    const response = await axios.put(`${API_URL}CourseContent/content/subtitle`, formData, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    toast.success("Subtitle updated successfully!", { id: "subtitle-update" });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating subtitle:", error);
+    toast.error("Failed to update subtitle: " + (error.response?.data?.detail || error.message), { id: "subtitle-update" });
+    throw new Error("Failed to update subtitle: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// FIXED: Delete subtitle with toast notifications
+export const deleteSubtitle = async (subtitleId) => {
+  try {
+    toast.loading("Deleting subtitle...", { id: "subtitle-delete" });
+
+    const response = await axios.delete(`${API_URL}CourseContent/content/subtitle`, {
+      params: { subtitleId },
+      headers: getHeaders(),
+    });
+
+    toast.success("Subtitle deleted successfully!", { id: "subtitle-delete" });
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting subtitle:", error);
+    toast.error("Failed to delete subtitle: " + (error.response?.data?.detail || error.message), { id: "subtitle-delete" });
+    throw new Error("Failed to delete subtitle: " + (error.response?.data?.detail || error.message));
+  }
+};
+
+// FIXED: Time format helper for video interactions
+const formatTimeSpanForAPI = (seconds) => {
+  if (!seconds || isNaN(seconds)) return "00:00:00";
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// FIXED: Add video interaction with proper time format and toast
 export const addVideoInteraction = async (interactionData) => {
   try {
     const payload = {
       courseContentId: interactionData.courseContentId,
-      interactionType: interactionData.interactionType || 1, // 1=Question, 2=Evaluation, 3=Information
-      startTimeInVideo: {
-        ticks: parseDurationToTicks(interactionData.startTimeInVideo || 0)
-      },
+      interactionType: interactionData.interactionType || 1,
+      startTimeInVideo: formatTimeSpanForAPI(interactionData.startTimeInVideo || 0),
       title: interactionData.title || "",
       questionDetails: interactionData.questionDetails || null,
       evaluationDetails: interactionData.evaluationDetails || null,
       informationDetails: interactionData.informationDetails || null,
     };
+
+    toast.loading("Adding video interaction...", { id: "interaction-add" });
 
     const response = await axios.post(
       `${API_URL}CourseContent/AddVideoInteraction`,
@@ -444,23 +543,23 @@ export const addVideoInteraction = async (interactionData) => {
         }
       }
     );
+
+    toast.success("Video interaction added successfully!", { id: "interaction-add" });
     return response.data;
   } catch (error) {
     console.error("Error adding video interaction:", error);
+    toast.error("Failed to add video interaction: " + (error.response?.data?.detail || error.message), { id: "interaction-add" });
     throw new Error("Failed to add video interaction: " + (error.response?.data?.detail || error.message));
   }
 };
-
-// Update video interaction
+// FIXED: Update video interaction with proper time format
 export const updateVideoInteraction = async (interactionData) => {
   try {
     const payload = {
       videoInteractionId: interactionData.videoInteractionId,
       courseContentId: interactionData.courseContentId,
       interactionType: interactionData.interactionType,
-      startTimeInVideo: {
-        ticks: parseDurationToTicks(interactionData.startTimeInVideo || 0)
-      },
+      startTimeInVideo: formatTimeSpanForAPI(interactionData.startTimeInVideo || 0), // Fixed format
       title: interactionData.title,
       questionDetails: interactionData.questionDetails || null,
       evaluationDetails: interactionData.evaluationDetails || null,
@@ -556,72 +655,10 @@ export const getUserVideoInteractionViewed = async (appUserId, videoInteractionI
 
 // ======================== SUBTITLES ========================
 
-// Add subtitle to content (FIXED LANGUAGE ENUM)
-export const addSubtitle = async (subtitleData) => {
-  try {
-    const formData = new FormData();
-    formData.append("CourseContentId", subtitleData.courseContentId.toString());
-    formData.append("Language", subtitleData.language.toString()); // Use SUBTITLE_LANGUAGES enum
-    formData.append("Name", subtitleData.name);
-    formData.append("UserId", subtitleData.userId.toString());
 
-    if (subtitleData.subtitleFile && subtitleData.subtitleFile instanceof File) {
-      formData.append("SubtitleFile", subtitleData.subtitleFile);
-    }
 
-    const response = await axios.post(`${API_URL}CourseContent/content/subtitle`, formData, {
-      headers: {
-        ...getHeaders(),
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error adding subtitle:", error);
-    throw new Error("Failed to add subtitle: " + (error.response?.data?.detail || error.message));
-  }
-};
 
-// Update subtitle (FIXED LANGUAGE ENUM)
-export const updateSubtitle = async (subtitleData) => {
-  try {
-    const formData = new FormData();
-    formData.append("SubtitleId", subtitleData.subtitleId.toString());
-    formData.append("CourseContentId", subtitleData.courseContentId.toString());
-    formData.append("Language", subtitleData.language.toString()); // Use SUBTITLE_LANGUAGES enum
-    formData.append("Name", subtitleData.name);
-    formData.append("UserId", subtitleData.userId.toString());
 
-    if (subtitleData.subtitleFile && subtitleData.subtitleFile instanceof File) {
-      formData.append("SubtitleFile", subtitleData.subtitleFile);
-    }
-
-    const response = await axios.put(`${API_URL}CourseContent/content/subtitle`, formData, {
-      headers: {
-        ...getHeaders(),
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating subtitle:", error);
-    throw new Error("Failed to update subtitle: " + (error.response?.data?.detail || error.message));
-  }
-};
-
-// Delete subtitle
-export const deleteSubtitle = async (subtitleId) => {
-  try {
-    const response = await axios.delete(`${API_URL}CourseContent/content/subtitle`, {
-      params: { subtitleId },
-      headers: getHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting subtitle:", error);
-    throw new Error("Failed to delete subtitle: " + (error.response?.data?.detail || error.message));
-  }
-};
 
 // Get subtitles by video ID
 export const getSubtitlesByVideoId = async (courseContentId) => {
@@ -1012,29 +1049,7 @@ export const streamVideo = async (contentId, file) => {
 // ======================== HELPER FUNCTIONS ========================
 
 // Parse duration string to ticks for video interactions
-const parseDurationToTicks = (durationInput) => {
-  const TICKS_PER_SECOND = 10000000;
-  
-  if (typeof durationInput === "number") {
-    return durationInput * TICKS_PER_SECOND;
-  }
-  
-  if (typeof durationInput === "string") {
-    const parts = durationInput.split(":");
-    if (parts.length === 3) {
-      const hours = parseInt(parts[0]) || 0;
-      const minutes = parseInt(parts[1]) || 0;
-      const seconds = parseInt(parts[2]) || 0;
-      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-      return totalSeconds * TICKS_PER_SECOND;
-    }
-    
-    const seconds = parseInt(durationInput) || 0;
-    return seconds * TICKS_PER_SECOND;
-  }
 
-  return 0;
-};
 
 // Convert ticks to seconds
 export const ticksToSeconds = (ticks) => {
@@ -1360,11 +1375,12 @@ export const formatContentForDisplay = (content) => {
     canHaveInteractions: content.type === CONTENT_TYPES.VIDEO, // Only videos can have interactions
     canHaveDiscussion: content.isDiscussionEnabled || false,
     canHaveMeeting: content.isMeetingAllowed || false,
+    isSeekingEnabled: content.isSeekingEnabled !== undefined ? content.isSeekingEnabled : true, // Default to true
     preview: generateContentPreview(content),
   };
 };
 
-// Format video for display
+// Format video for display (UPDATED WITH IsSeekingEnabled)
 export const formatVideoForDisplay = (video) => {
   if (!video) return null;
 
@@ -1374,6 +1390,7 @@ export const formatVideoForDisplay = (video) => {
     quality: VIDEO_QUALITIES[video.videoQuality] || VIDEO_QUALITIES.HD,
     hasSubtitles: video.enableSubtitles || false,
     hasInteractions: video.enableInteractions || false,
+    isSeekingEnabled: video.isSeekingEnabled !== undefined ? video.isSeekingEnabled : true, // Default to true
   };
 };
 

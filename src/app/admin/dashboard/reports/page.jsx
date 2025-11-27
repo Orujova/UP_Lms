@@ -307,7 +307,7 @@ const AnalyticsDashboard = () => {
 
       // Fetch all data without pagination for charts
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/getallannouncementinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/Announcement/getallannouncementinterestanalysis/reporting?${queryParams}`,
         {
           method: "GET",
           headers: {
@@ -380,7 +380,7 @@ const AnalyticsDashboard = () => {
         );
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/getallannouncementinterestanalysis/reporting?${queryParams}`,
+        `https://demoadmin.databyte.app/api/Announcement/getallannouncementinterestanalysis/reporting?${queryParams}`,
         {
           method: "GET",
           headers: {
@@ -483,7 +483,7 @@ const AnalyticsDashboard = () => {
         );
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/exportannouncementinterestanalysis/reporting?${queryParams.toString()}`,
+        `https://demoadmin.databyte.app/api/Announcement/exportannouncementinterestanalysis/reporting?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {

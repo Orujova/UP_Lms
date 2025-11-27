@@ -15,7 +15,6 @@ import {
   Target,
   CheckCircle,
   ExternalLink,
-  Share2,
 } from "lucide-react";
 import { getToken, getUserId } from "@/authtoken/auth.js";
 import LoadingSpinner from "@/components/loadingSpinner";
@@ -36,15 +35,28 @@ const EventDetails = ({ params }) => {
   const fetchEventDetails = async () => {
     try {
       setLoading(true);
+      
+      // Updated API endpoint: GET /api/Event/GetById with query parameters
+      const queryParams = new URLSearchParams({
+        Id: id,
+        UserId: userId,
+        Device: '1', // 1 for web, 2 for mobile
+        Language: 'az',
+      });
+
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Event/${id}?userid=${userId}`,
+        `https://demoadmin.databyte.app/api/Event/GetById?${queryParams.toString()}`,
         {
           headers: {
-            accept: "accept: */*",
+            accept: "*/*",
             Authorization: `Bearer ${token}`,
           },
         }
       );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch event: ${response.status}`);
+      }
 
       const data = await response.json();
       console.log("Event data:", data);
@@ -112,7 +124,6 @@ const EventDetails = ({ params }) => {
     );
   }
 
-  // Fix image URL if it contains the legacy server path
   const getImageUrl = (url) => {
     if (!url) return null;
 

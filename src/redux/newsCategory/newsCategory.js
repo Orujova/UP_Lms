@@ -4,7 +4,7 @@ import { fetchNewsCategory } from "@/api/newsCategory";
 import axios from "axios";
 import { getToken } from "@/authtoken/auth.js";
 
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 // Existing thunk
 export const newsCategoryAsync = createAsyncThunk(
@@ -80,20 +80,24 @@ export const updateNewsCategoryAsync = createAsyncThunk(
 
 export const deleteNewsCategoryAsync = createAsyncThunk(
   "data/deleteNewsCategory",
-  async (id, { dispatch }) => {
+  async ({ id, language = "" }, { dispatch }) => {
     try {
       const token = getToken();
       if (!token) {
         throw new Error("Token bulunamadı. Lütfen giriş yapınız.");
       }
 
-      await axios.delete(`${API_URL}NewsCategory`, {
+      // Query parametreleri ile URL oluştur
+      const params = new URLSearchParams({ Id: id });
+      if (language) {
+        params.append("Language", language);
+      }
+
+      await axios.delete(`${API_URL}NewsCategory?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
           accept: "application/json",
         },
-        data: { id },
       });
 
       // Refresh the categories list after deleting

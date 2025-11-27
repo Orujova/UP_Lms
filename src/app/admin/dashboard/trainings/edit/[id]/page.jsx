@@ -68,7 +68,7 @@ const TrainingEditPage = () => {
       setLoading(true);
       const token = getToken();
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Training/GetById?Id=${id}`,
+        `https://demoadmin.databyte.app/api/Training/GetById?Id=${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -119,7 +119,7 @@ const TrainingEditPage = () => {
     try {
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups",
+        "https://demoadmin.databyte.app/api/TargetGroup/GetAllTargetGroups",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -290,7 +290,7 @@ const TrainingEditPage = () => {
       setLoadingModal(true);
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Training",
+        "https://demoadmin.databyte.app/api/Training",
         {
           method: "PUT",
           headers: {

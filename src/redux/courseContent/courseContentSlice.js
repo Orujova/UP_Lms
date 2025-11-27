@@ -490,6 +490,7 @@ const courseContentInitialState = {
     isMandatory: false,
     canSkip: false,
     orderNumber: 1,
+     isSeekingEnabled: true,
   },
   
   // FIXED: Enhanced video form for editing with streaming support
@@ -506,6 +507,7 @@ const courseContentInitialState = {
     useHLS: true,
     enableAdaptiveBitrate: true,
     preloadLevel: 'metadata', // 'none', 'metadata', 'auto'
+     isSeekingEnabled: true,
   },
   
   // Comment form
@@ -545,6 +547,9 @@ const courseContentInitialState = {
     levels: [], // Available quality levels
     networkError: false,
     streamUrl: null,
+
+    isSeekingEnabled: true, // Controls whether seeking/scrubbing is allowed
+    seekingBlocked: false, // For te
   },
   
   // Video interactions (overlay elements)
@@ -657,6 +662,12 @@ const courseContentSlice = createSlice({
           state.contentForm.contentTypeId = CONTENT_TYPES.TEXT_BOX;
         }
       }
+
+       if (action.payload.isSeekingEnabled !== undefined) {
+        if (typeof action.payload.isSeekingEnabled !== 'boolean') {
+          state.contentForm.isSeekingEnabled = true; // Default to true
+        }
+      }
     },
     
     resetContentForm: (state) => {
@@ -668,6 +679,14 @@ const courseContentSlice = createSlice({
     // FIXED: Enhanced video form management with streaming support
     setVideoForm: (state, action) => {
       state.videoForm = { ...state.videoForm, ...action.payload };
+
+ // Validate IsSeekingEnabled
+      if (action.payload.isSeekingEnabled !== undefined) {
+        if (typeof action.payload.isSeekingEnabled !== 'boolean') {
+          state.videoForm.isSeekingEnabled = true; // Default to true
+        }
+      }
+
     },
     
     resetVideoForm: (state) => {
@@ -733,7 +752,41 @@ const courseContentSlice = createSlice({
           state.videoPlayer.selectedSubtitleLanguage = SUBTITLE_LANGUAGES.ENGLISH;
         }
       }
+
+       // UPDATED: Validate IsSeekingEnabled
+      if (action.payload.isSeekingEnabled !== undefined) {
+        if (typeof action.payload.isSeekingEnabled !== 'boolean') {
+          state.videoPlayer.isSeekingEnabled = true; // Default to true
+        }
+      }
     },
+
+     toggleVideoSeeking: (state) => {
+      state.videoPlayer.isSeekingEnabled = !state.videoPlayer.isSeekingEnabled;
+    },
+    
+    // UPDATED: New action to set seeking state
+    setVideoSeeking: (state, action) => {
+      if (typeof action.payload === 'boolean') {
+        state.videoPlayer.isSeekingEnabled = action.payload;
+      }
+    },
+    
+    // UPDATED: New action for temporary seeking blocks
+    setSeekingBlocked: (state, action) => {
+      if (typeof action.payload === 'boolean') {
+        state.videoPlayer.seekingBlocked = action.payload;
+      }
+    },
+    
+    // UPDATED: Enhanced setVideoTime with seeking validation
+    setVideoTime: (state, action) => {
+      // Only allow time changes if seeking is enabled and not blocked
+      if (state.videoPlayer.isSeekingEnabled && !state.videoPlayer.seekingBlocked) {
+        state.videoPlayer.currentTime = action.payload;
+      }
+    },
+    
     
     playVideo: (state) => {
       state.videoPlayer.isPlaying = true;
@@ -833,8 +886,12 @@ const courseContentSlice = createSlice({
         orderNumber: state.contentsBySection[sectionId].length + 1,
         // FIXED: Ensure content type is valid
         type: content.type || CONTENT_TYPES.TEXT_BOX,
+
+          isSeekingEnabled: content.type === CONTENT_TYPES.VIDEO 
+          ? (content.isSeekingEnabled !== undefined ? content.isSeekingEnabled : true)
+          : content.isSeekingEnabled,
       };
-      
+ 
       state.contentsBySection[sectionId].push(newContent);
       courseContentSlice.caseReducers.updateStatistics(state);
     },
@@ -1606,9 +1663,17 @@ const courseContentSlice = createSlice({
         });
 
         // Add to appropriate section
-        if (sectionId) {
+          if (sectionId) {
+          const enhancedContent = {
+            ...content,
+            // Ensure IsSeekingEnabled is set for video content
+            isSeekingEnabled: content.type === CONTENT_TYPES.VIDEO 
+              ? (content.isSeekingEnabled !== undefined ? content.isSeekingEnabled : true)
+              : content.isSeekingEnabled,
+          };
+          
           courseContentSlice.caseReducers.addContentToSection(state, {
-            payload: { sectionId, content },
+            payload: { sectionId, content: enhancedContent },
           });
         }
         
@@ -2060,6 +2125,9 @@ export const {
   toggleSubtitles,
   setSubtitleLanguage,
   setStreamingState,
+    toggleVideoSeeking,
+  setVideoSeeking,
+  setSeekingBlocked,
   setStreamingReady,
   setStreamingError,
   clearStreamingError,
@@ -2318,6 +2386,46 @@ export const selectStreamingMetricsById = (videoId) => (state) => {
     errors: 0,
     totalPlayTime: 0,
     averageQuality: 0
+  };
+};
+
+export const selectVideoPlayerWithSeeking = (state) => {
+  const player = state.courseContent.videoPlayer;
+  return {
+    ...player,
+    canSeek: player.isSeekingEnabled && !player.seekingBlocked,
+    seekingDisabled: !player.isSeekingEnabled || player.seekingBlocked,
+  };
+};
+
+// UPDATED: New selector for seeking status
+export const selectVideoSeekingStatus = (state) => {
+  const player = state.courseContent.videoPlayer;
+  return {
+    isSeekingEnabled: player.isSeekingEnabled,
+    seekingBlocked: player.seekingBlocked,
+    canSeek: player.isSeekingEnabled && !player.seekingBlocked,
+  };
+};
+
+// UPDATED: Enhanced content selector with seeking info for videos
+export const selectContentWithSeekingInfo = (contentId) => (state) => {
+  // Find content in all sections
+  let content = null;
+  Object.values(state.courseContent.contentsBySection).forEach(section => {
+    const found = section.find(c => (c.id || c.contentId) === contentId);
+    if (found) content = found;
+  });
+  
+  if (!content) return null;
+  
+  return {
+    ...content,
+    // Add seeking info for video content
+    seekingInfo: content.type === CONTENT_TYPES.VIDEO ? {
+      isSeekingEnabled: content.isSeekingEnabled !== undefined ? content.isSeekingEnabled : true,
+      seekingAllowed: content.isSeekingEnabled !== false, // Default to true if undefined
+    } : null,
   };
 };
 

@@ -1,7 +1,7 @@
 // api/api.js
 import { getToken } from "@/authtoken/auth.js"; // Make sure the path is correct
 
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 const userSetting = {
   fetchPositionGroups: async () => {

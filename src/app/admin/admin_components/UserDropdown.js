@@ -9,20 +9,22 @@ export default function UserDropdown({ userData, onLogout, onClose }) {
     <div className="absolute right-0 mt-2 w-[18rem] bg-white rounded-lg shadow-lg border overflow-hidden">
       <div className="p-2 border-b bg-gray-50">
         <div className="flex items-center gap-3">
-          <Image
-            src={
-              userData?.imageUrl
-                ? `https://bravoadmin.uplms.org/uploads/${userData.imageUrl.replace(
-                    "https://100.42.179.27:7198/",
-                    ""
-                  )}`
-                : noPP
-            }
-            width={35}
-            height={35}
-            className="rounded-lg"
-            alt="User Profile"
-          />
+         <Image
+  src={
+    userData?.imageUrl
+      ? `https://demoadmin.databyte.app/uploads/${userData.imageUrl.replace(
+          "https://100.42.179.27:7298/",
+          ""
+        )}`
+      : noPP
+  }
+  width={35}
+  height={35}
+  className="rounded-lg"
+  alt="User Profile"
+  unoptimized
+/>
+
           <div>
             <h4 className="text-xs font-medium">
               {userData?.firstName || "User"}

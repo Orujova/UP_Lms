@@ -107,40 +107,63 @@ export default function AnnouncementDetail({ params }) {
   }, []);
 
   // Fetch announcement data
-  const fetchAnnouncementDetail = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/${id}?userid=${userId}`
-      );
-      const data = await response.json();
-      setAnnouncement(data);
-    } catch (error) {
-      console.error("Error fetching announcement details:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const fetchAnnouncementDetail = async (device = null, language = null) => {
+  try {
+    setLoading(true);
+    
+    // Query parametrlərini qurmaq
+    const params = new URLSearchParams({
+      Id: id,
+      UserId: userId
+    });
+    
+    if (device !== null) params.append('Device', device);
+    if (language) params.append('Language', language);
+    
+    const response = await fetch(
+      `https://demoadmin.databyte.app/api/Announcement/GetById?${params.toString()}`
+    );
+    const data = await response.json();
+    setAnnouncement(data);
+  } catch (error) {
+    console.error("Error fetching announcement details:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Delete announcement handler
-  const deleteAnnouncement = async () => {
+// Delete announcement handler
+const deleteAnnouncement = async () => {
     try {
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/${id}`,
-        { method: "DELETE" }
+        `https://demoadmin.databyte.app/api/Announcement/DeleteAnnouncement`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            announcementId: parseInt(id),
+            language: "string" // və ya actual language
+          })
+        }
       );
 
-      if (response.ok) {
-        toast.success("Announcement deleted successfully");
-        router.push("/admin/dashboard/announcements/");
-      } else {
-        throw new Error("Failed to delete announcement");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to delete announcement");
       }
+
+      toast.success("Announcement deleted successfully");
+      router.push("/admin/dashboard/announcements/");
+      
     } catch (error) {
       console.error("Error deleting announcement:", error);
-      toast.error("Failed to delete announcement");
+      toast.error(error.message || "Failed to delete announcement");
+    } finally {
+      setIsDeleteModalOpen(false);
     }
-    setIsDeleteModalOpen(false);
   };
 
   // Helper function to format dates
@@ -235,7 +258,7 @@ export default function AnnouncementDetail({ params }) {
                 <div className="relative h-48 bg-gray-100">
                   <img
                     src={`https://bravoadmin.uplms.org/uploads/${announcement.imageUrl.replace(
-                      "https://100.42.179.27:7198/",
+                      "https://100.42.179.27:7298/",
                       ""
                     )}`}
                     alt={announcement.title}

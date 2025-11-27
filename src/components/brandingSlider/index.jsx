@@ -40,7 +40,7 @@ export default function BrandingSlider({ children, showLogo = false }) {
     try {
       setIsLoading(true);
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/BrendingSetting?IsOTPAndLogin=true"
+        "https://demoadmin.databyte.app/api/BrendingSetting?IsOTPAndLogin=true"
       );
       const data = await response.json();
 
@@ -53,8 +53,8 @@ export default function BrandingSlider({ children, showLogo = false }) {
         // Process all images
         const fixedUrls = data[0].otpAndLoginImages.map(
           (imageUrl) =>
-            `https://bravoadmin.uplms.org/uploads/${imageUrl.replace(
-              "https://100.42.179.27:7198/",
+            `https://demoadmin.databyte.app/uploads/${imageUrl.replace(
+              "https://100.42.179.27:7298/",
               ""
             )}`
         );

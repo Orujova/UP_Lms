@@ -86,24 +86,24 @@ const NewAnnouncementPage = () => {
   const normalizeImageUrl = (urlStr) => {
     if (!urlStr) return null;
 
-    if (urlStr.includes("100.42.179.27:7198")) {
+    if (urlStr.includes("100.42.179.27:7298")) {
       const baseDir = urlStr.includes("brending/") ? "" : "brending/";
       const fileName = urlStr.split("/").pop();
-      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${fileName}`;
+      return `https://demoadmin.databyte.app/uploads/brending/${baseDir}${fileName}`;
     }
 
-    if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/brending/")) {
+    if (urlStr.startsWith("https://demoadmin.databyte.app/uploads/brending/")) {
       return urlStr;
     }
 
     if (urlStr.startsWith("brending/")) {
-      return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
+      return `https://demoadmin.databyte.app/uploads/${urlStr}`;
     }
 
     if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
       const baseDir = urlStr.includes("brending/") ? "" : "brending/";
       const cleanPath = urlStr.replace(/^\/+/, "");
-      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${cleanPath}`;
+      return `https://demoadmin.databyte.app/uploads/brending/${baseDir}${cleanPath}`;
     }
 
     return urlStr;
@@ -138,7 +138,7 @@ const NewAnnouncementPage = () => {
   const fetchBrandingSettings = async () => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/BrendingSetting?IsAnnouncement=true",
+        "https://demoadmin.databyte.app/api/BrendingSetting?IsAnnouncement=true",
         {
           headers: {
             accept: "*/*",
@@ -156,12 +156,12 @@ const NewAnnouncementPage = () => {
         console.log("Normalized default image URL:", normalizedUrl);
       } else {
         console.warn("No default announcement image found in branding settings");
-        setDefaultImageUrl("/placeholder-image.jpg"); // Fallback placeholder
+        setDefaultImageUrl(); // Fallback placeholder
       }
     } catch (error) {
       console.error("Error fetching branding settings:", error);
       toast.error("Failed to load branding settings");
-      setDefaultImageUrl("/placeholder-image.jpg"); // Fallback placeholder
+      setDefaultImageUrl(); // Fallback placeholder
     }
   };
 
@@ -185,7 +185,7 @@ const NewAnnouncementPage = () => {
   const fetchPollUnits = async () => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit?Page=1&ShowMore.Take=100",
+        "https://demoadmin.databyte.app/api/PollUnit?Page=1&ShowMore.Take=100",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -204,7 +204,7 @@ const NewAnnouncementPage = () => {
   const fetchTargetGroups = async () => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100",
+        "https://demoadmin.databyte.app/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -388,7 +388,7 @@ const NewAnnouncementPage = () => {
         try {
           const token = localStorage.getItem("token");
           const response = await fetch(
-            "https://bravoadmin.uplms.org/api/Announcement",
+            "https://demoadmin.databyte.app/api/Announcement",
             {
               method: "POST",
               headers: {

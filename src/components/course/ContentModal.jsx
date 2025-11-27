@@ -25,10 +25,24 @@ import {
   setModalOpen,
   closeAllModals
 } from "@/redux/course/courseSlice";
-
+import dynamic from "next/dynamic";
 // Import the video upload progress component
 import VideoUploadProgress from './VideoUploadProgress';
-import SimpleRichTextEditor from '@/components/SimpleRichText';
+// UPDATED: Import PageTextComponent instead of SimpleRichTextEditor
+const PageTextComponent = dynamic(
+  () => import("@/components/pageTextComponent"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border rounded p-4 min-h-[300px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-t-emerald-500 border-b-emerald-700 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-2 text-gray-600 text-sm">Loading editor...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 const ContentModal = () => {
   const dispatch = useDispatch();
@@ -131,6 +145,7 @@ const ContentModal = () => {
     description: "",
     hideContent: false,
     type: 0, 
+      isSeekingEnabled: true,
     isDiscussionEnabled: false,
     isMeetingAllowed: false,
     contentString: "",
@@ -245,85 +260,87 @@ const ContentModal = () => {
 
   // Initialize form data
   useEffect(() => {
-    const hasModalStateChanged = prevIsOpen.current !== isOpen || prevIsEditing.current !== isEditing;
-    const hasEditingContentChanged = prevEditingContentId.current !== editingContent?.id;
-    
-    if (!hasModalStateChanged && !hasEditingContentChanged) {
-      return;
-    }
-    
-    prevIsOpen.current = isOpen;
-    prevIsEditing.current = isEditing;
-    prevEditingContentId.current = editingContent?.id;
-    
-    if (!isOpen) {
-      isInitialized.current = false;
-      setShowUploadProgress(false);
-      setUploadedContentId(null);
-      return;
-    }
+  const hasModalStateChanged = prevIsOpen.current !== isOpen || prevIsEditing.current !== isEditing;
+  const hasEditingContentChanged = prevEditingContentId.current !== editingContent?.id;
+  
+  if (!hasModalStateChanged && !hasEditingContentChanged) {
+    return;
+  }
+  
+  prevIsOpen.current = isOpen;
+  prevIsEditing.current = isEditing;
+  prevEditingContentId.current = editingContent?.id;
+  
+  if (!isOpen) {
+    isInitialized.current = false;
+    setShowUploadProgress(false);
+    setUploadedContentId(null);
+    return;
+  }
 
-    if (isInitialized.current && !hasEditingContentChanged) {
-      return;
-    }
+  if (isInitialized.current && !hasEditingContentChanged) {
+    return;
+  }
 
-    console.log('Initializing ContentModal form data');
+  console.log('Initializing ContentModal form data');
+  
+  if (isEditing && editingContent) {
+    console.log('Editing content:', editingContent);
     
-    if (isEditing && editingContent) {
-      console.log('Editing content:', editingContent);
-      
-      let detectedType = currentConfig.apiType;
-      if (editingContent.type !== undefined && editingContent.type !== null) {
-        detectedType = parseInt(editingContent.type);
-      }
-      
-      let contentString = "";
-      if (editingContent.contentString) {
-        contentString = editingContent.contentString;
-      } else if (editingContent.data) {
-        contentString = editingContent.data;
-      } else if (editingContent.description && detectedType === CONTENT_TYPES.QUIZ) {
-        contentString = editingContent.description;
-      }
-      
-      setFormState({
-        sectionId: editingContent.courseSectionId || editingContent.sectionId || sectionId,
-        description: editingContent.description || "",
-        hideContent: Boolean(editingContent.hideContent),
-        type: detectedType,
-        isDiscussionEnabled: Boolean(editingContent.isDiscussionEnabled),
-        isMeetingAllowed: Boolean(editingContent.isMeetingAllowed),
-        contentString: contentString,
-        contentFile: null,
-        order: editingContent.order || editingContent.orderNumber || 1,
-        // Quiz specific
-        duration: editingContent.duration || 20,
-        canSkip: editingContent.canSkip !== undefined ? Boolean(editingContent.canSkip) : true
-      });
-    } else {
-      console.log('Creating new content for section:', sectionId);
-      setFormState({
-        sectionId: sectionId,
-        description: "",
-        hideContent: false,
-        type: currentConfig.apiType,
-        isDiscussionEnabled: false,
-        isMeetingAllowed: false,
-        contentString: "",
-        contentFile: null,
-        order: 1,
-        // Quiz specific
-        duration: 20,
-        canSkip: true
-      });
+    let detectedType = currentConfig.apiType;
+    if (editingContent.type !== undefined && editingContent.type !== null) {
+      detectedType = parseInt(editingContent.type);
     }
     
-    setErrors({});
-    setFilePreview(null);
-    setDragActive(false);
-    isInitialized.current = true;
+    let contentString = "";
+    if (editingContent.contentString) {
+      contentString = editingContent.contentString;
+    } else if (editingContent.data) {
+      contentString = editingContent.data;
+    } else if (editingContent.description && detectedType === CONTENT_TYPES.QUIZ) {
+      contentString = editingContent.description;
+    }
     
-  }, [isOpen, isEditing, editingContent?.id, sectionId, currentConfig.apiType, CONTENT_TYPES.QUIZ]);
+    setFormState({
+      sectionId: editingContent.courseSectionId || editingContent.sectionId || sectionId,
+      description: editingContent.description || "",
+      hideContent: Boolean(editingContent.hideContent),
+      type: detectedType,
+      isDiscussionEnabled: Boolean(editingContent.isDiscussionEnabled),
+      isMeetingAllowed: Boolean(editingContent.isMeetingAllowed),
+      isSeekingEnabled: editingContent.isSeekingEnabled !== undefined ? Boolean(editingContent.isSeekingEnabled) : true, // ADDED
+      contentString: contentString,
+      contentFile: null,
+      order: editingContent.order || editingContent.orderNumber || 1,
+      // Quiz specific
+      duration: editingContent.duration || 20,
+      canSkip: editingContent.canSkip !== undefined ? Boolean(editingContent.canSkip) : true
+    });
+  } else {
+    console.log('Creating new content for section:', sectionId);
+    setFormState({
+      sectionId: sectionId,
+      description: "",
+      hideContent: false,
+      type: currentConfig.apiType,
+      isDiscussionEnabled: false,
+      isMeetingAllowed: false,
+      isSeekingEnabled: true, // ADDED: Default to true
+      contentString: "",
+      contentFile: null,
+      order: 1,
+      // Quiz specific
+      duration: 20,
+      canSkip: true
+    });
+  }
+  
+  setErrors({});
+  setFilePreview(null);
+  setDragActive(false);
+  isInitialized.current = true;
+  
+}, [isOpen, isEditing, editingContent?.id, sectionId, currentConfig.apiType, CONTENT_TYPES.QUIZ]);
 
   // Update sectionId when it changes
   useEffect(() => {
@@ -509,47 +526,48 @@ const ContentModal = () => {
 
   // Submit handler
   const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+  e.preventDefault();
+  
+  if (!validateForm()) return;
 
-    if (!sectionId) {
-      setErrors({ submit: "Section ID is missing. Please create a section first." });
-      return;
-    }
+  if (!sectionId) {
+    setErrors({ submit: "Section ID is missing. Please create a section first." });
+    return;
+  }
 
-    if (!courseId) {
-      setErrors({ submit: "Course ID is missing. Please create the course first." });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      const contentData = {
-        sectionId: sectionId,
-        courseSectionId: sectionId,
-        description: formState.description?.trim() || "",
-        hideContent: Boolean(formState.hideContent),
-        type: parseInt(formState.type),
-        isDiscussionEnabled: Boolean(formState.isDiscussionEnabled),
-        isMeetingAllowed: Boolean(formState.isMeetingAllowed),
-        order: parseInt(formState.order) || 1,
-        contentString: formState.contentString?.trim() || (
-          formState.type === CONTENT_TYPES.QUIZ && !formState.contentString?.trim() 
-            ? formState.description?.trim() || ""
-            : ""
-        ),
-        contentFile: formState.contentFile || null,
-        // Quiz specific data
-        duration: formState.type === CONTENT_TYPES.QUIZ ? parseInt(formState.duration) || 20 : undefined,
-        canSkip: formState.type === CONTENT_TYPES.QUIZ ? Boolean(formState.canSkip) : undefined
-      };
+  if (!courseId) {
+    setErrors({ submit: "Course ID is missing. Please create the course first." });
+    return;
+  }
+  
+  setIsSubmitting(true);
+  
+  try {
+    const contentData = {
+      sectionId: sectionId,
+      courseSectionId: sectionId,
+      description: formState.description?.trim() || "",
+      hideContent: Boolean(formState.hideContent),
+      type: parseInt(formState.type),
+      isDiscussionEnabled: Boolean(formState.isDiscussionEnabled),
+      isMeetingAllowed: Boolean(formState.isMeetingAllowed),
+      isSeekingEnabled: Boolean(formState.isSeekingEnabled), // ADDED
+      order: parseInt(formState.order) || 1,
+      contentString: formState.contentString?.trim() || (
+        formState.type === CONTENT_TYPES.QUIZ && !formState.contentString?.trim() 
+          ? formState.description?.trim() || ""
+          : ""
+      ),
+      contentFile: formState.contentFile || null,
+      // Quiz specific data
+      duration: formState.type === CONTENT_TYPES.QUIZ ? parseInt(formState.duration) || 20 : undefined,
+      canSkip: formState.type === CONTENT_TYPES.QUIZ ? Boolean(formState.canSkip) : undefined
+    };
 
-      console.log('Submitting content data:', {
-        ...contentData,
-        contentFile: contentData.contentFile ? `File: ${contentData.contentFile.name}` : null
-      });
+    console.log('Submitting content data:', {
+      ...contentData,
+      contentFile: contentData.contentFile ? `File: ${contentData.contentFile.name}` : null
+    });
 
       // Check if this is a video upload that needs progress tracking
       if (currentConfig.apiType === CONTENT_TYPES.VIDEO && formState.contentFile) {
@@ -836,14 +854,14 @@ const ContentModal = () => {
     );
   };
 
-  // Text input renderer - Updated to use SimpleRichTextEditor for page content
+  // UPDATED: Text input renderer - Using PageTextComponent for page content
   const renderTextInput = () => {
     if (!currentConfig.requiresText || currentConfig.apiType === CONTENT_TYPES.QUIZ) return null;
 
     const labelText = contentModalType === 'page' ? 'Page Content' : "Content";
     const placeholderText = contentModalType === 'page' ? 'Enter your page content here...' : 'Enter your text content here...';
 
-    // Use rich text editor for page content, regular textarea for others
+    // Use PageTextComponent for page content, regular textarea for others
     if (contentModalType === 'page') {
       return (
         <div>
@@ -851,11 +869,9 @@ const ContentModal = () => {
             {labelText} <span className="text-red-500">*</span>
           </label>
           <div className={`${errors.contentString ? 'ring-2 ring-red-300 rounded-lg' : ''}`}>
-            <SimpleRichTextEditor
-              value={formState.contentString}
+            <PageTextComponent
+              desc={formState.contentString || null}
               onChange={(content) => handleInputChange('contentString', content)}
-              placeholder={placeholderText}
-              minHeight={200}
               readOnly={false}
             />
           </div>
@@ -866,7 +882,7 @@ const ContentModal = () => {
             </p>
           )}
           <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <span>Use the toolbar above to format your content with headings, lists, links, and more.</span>
+            <span>Use the toolbar above to format your content with headings, lists, links, images, and more.</span>
             <span>{stripHtmlTags(formState.contentString).length} characters</span>
           </div>
         </div>
@@ -1137,6 +1153,27 @@ const ContentModal = () => {
                   {/* Only show discussion and meeting options for VIDEO content */}
                   {currentConfig.apiType === CONTENT_TYPES.VIDEO && (
                     <>
+
+<div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
+          <div>
+            <label htmlFor="isSeekingEnabled" className="text-xs font-medium text-gray-900">
+              Enable Video Seeking
+            </label>
+           
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              id="isSeekingEnabled"
+              checked={formState.isSeekingEnabled}
+              onChange={(e) => handleInputChange('isSeekingEnabled', e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#0AAC9E]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0AAC9E]"></div>
+          </label>
+        </div>
+
+
                       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
                         <div>
                           <label htmlFor="isDiscussionEnabled" className="text-xs font-medium text-gray-900">
@@ -1261,25 +1298,6 @@ const ContentModal = () => {
                         <Eye className="w-3 h-3 mr-1" />
                         Open in new tab
                       </a>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Content Preview for Rich Text (Page Content) */}
-              {formState.contentString && contentModalType === 'page' && (
-                <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-                  <div className="flex items-start space-x-3">
-                    <Monitor className="w-5 h-5 text-gray-600 mt-1 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Page Content Preview</h4>
-                      <div 
-                        className="text-xs text-gray-700 bg-white p-3 rounded border max-h-40 overflow-y-auto prose prose-sm"
-                        dangerouslySetInnerHTML={{ __html: formState.contentString }}
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Character count: {stripHtmlTags(formState.contentString).length} characters
-                      </p>
                     </div>
                   </div>
                 </div>

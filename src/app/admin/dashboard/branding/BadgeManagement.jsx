@@ -31,8 +31,8 @@ import {
 // Image URL utility function
 const getImageUrl = (url) => {
   if (!url) return null;
-  if (url.includes("https://bravoadmin.uplms.org/")) {
-    return `https://bravoadmin.uplms.org/uploads/${url.replace(
+  if (url.includes("https://demoadmin.databyte.app/")) {
+    return `https://demoadmin.databyte.app/uploads/${url.replace(
       "https://bravoadmin.uplms.org",
       ""
     )}`;

@@ -81,7 +81,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/AdminApplicationUser/OtpConfirmationForLogin",
+        "https://demoadmin.databyte.app/api/AdminApplicationUser/OtpConfirmationForLogin",
         {
           method: "POST",
           headers: {
@@ -126,7 +126,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/AdminApplicationUser/ResendOTP",
+        "https://demoadmin.databyte.app/api/AdminApplicationUser/ResendOTP",
         {
           method: "POST",
           headers: {

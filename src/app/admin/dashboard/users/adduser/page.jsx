@@ -286,7 +286,7 @@ const UserCreationPage = () => {
 
       manualUserData.roleIds.forEach((id) => queryParams.append("RoleIds", id));
 
-      const url = `https://bravoadmin.uplms.org/api/AdminApplicationUser/CreateUser?${queryParams.toString()}`;
+      const url = `https://demoadmin.databyte.app/api/AdminApplicationUser/CreateUser?${queryParams.toString()}`;
 
       console.log("Sending request:", {
         method: "POST",
@@ -376,7 +376,7 @@ const UserCreationPage = () => {
 
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/AdminApplicationUser/import-excel",
+        "https://demoadmin.databyte.app/api/AdminApplicationUser/import-excel",
         {
           method: "POST",
           headers: {

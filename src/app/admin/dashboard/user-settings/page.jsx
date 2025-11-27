@@ -68,7 +68,7 @@ const UserSettings = () => {
 
   // API config
   const token = getToken();
-  const API_URL = "https://bravoadmin.uplms.org/api/";
+  const API_URL = "https://demoadmin.databyte.app/api/";
 
   // ===== SEARCH FUNCTIONS =====
   // Handle search term and group search term changes
@@ -320,32 +320,33 @@ const UserSettings = () => {
   };
 
   // Delete position
-  const deletePosition = async (id) => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${API_URL}Position`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id }),
-      });
+  // Delete position - Updated to use query parameter
+const deletePosition = async (id) => {
+  try {
+    setIsLoading(true);
+    const response = await fetch(`${API_URL}Position?Id=${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete position");
-      }
-
-      setMessage({ text: "Position deleted successfully!", type: "success" });
-      toast.success("Position deleted successfully!");
-      fetchPositions();
-      fetchAllPositionsForSearch();
-    } catch (error) {
-      setMessage({ text: error.message, type: "error" });
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      throw new Error("Failed to delete position");
     }
-  };
+
+    setMessage({ text: "Position deleted successfully!", type: "success" });
+    toast.success("Position deleted successfully!");
+    fetchPositions();
+    fetchAllPositionsForSearch();
+  } catch (error) {
+    setMessage({ text: error.message, type: "error" });
+    toast.error("Failed to delete position");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Handle position form submission
   const handlePositionSubmit = async (formData) => {
@@ -546,34 +547,34 @@ const UserSettings = () => {
 
   // Delete position group
   const deletePositionGroup = async (id) => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${API_URL}PositionGroup`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id }),
-      });
+  try {
+    setIsLoading(true);
+    const response = await fetch(`${API_URL}PositionGroup?Id=${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete position group");
-      }
-
-      setMessage({
-        text: "Position group deleted successfully!",
-        type: "success",
-      });
-      toast.success("Position group deleted successfully!");
-      fetchAllPositionGroups();
-      fetchAllPositionGroupsForSearch();
-    } catch (error) {
-      setMessage({ text: error.message, type: "error" });
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      throw new Error("Failed to delete position group");
     }
-  };
+
+    setMessage({
+      text: "Position group deleted successfully!",
+      type: "success",
+    });
+    toast.success("Position group deleted successfully!");
+    fetchAllPositionGroups();
+    fetchAllPositionGroupsForSearch();
+  } catch (error) {
+    setMessage({ text: error.message, type: "error" });
+    toast.error("Failed to delete position group");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Handle position group form submission
   const handlePositionGroupSubmit = async (formData) => {

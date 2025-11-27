@@ -7,7 +7,7 @@ import noPP from "@/images/noPP.png";
 export default function UserProfile({ userData, onLogout }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
+console.log(userData);
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -26,19 +26,21 @@ export default function UserProfile({ userData, onLogout }) {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Image
-          src={
-            userData?.imageUrl
-              ? `https://bravoadmin.uplms.org/uploads/${userData.imageUrl.replace(
-                  "https://100.42.179.27:7198/",
-                  ""
-                )}`
-              : noPP
-          }
-          width={35}
-          height={35}
-          className="rounded-lg"
-          alt="User Profile"
-        />
+  src={
+    userData?.imageUrl
+      ? `https://demoadmin.databyte.app/uploads/${userData.imageUrl.replace(
+          "https://100.42.179.27:7298/",
+          ""
+        )}`
+      : noPP
+  }
+  width={35}
+  height={35}
+  className="rounded-lg"
+  alt="User Profile"
+  unoptimized
+/>
+
         <div className="flex flex-col">
           <span className="text-xs font-medium">
             {userData?.firstName || "User"}

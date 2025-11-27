@@ -79,7 +79,7 @@ export default function AnnouncementsList() {
         }
 
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/Announcement?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${debouncedSearch}&OrderBy=${sortBy}`
+          `https://demoadmin.databyte.app/api/Announcement?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${debouncedSearch}&OrderBy=${sortBy}`
         );
 
         if (!response.ok) {
@@ -112,32 +112,46 @@ export default function AnnouncementsList() {
   }, [currentPage, debouncedSearch, sortBy]);
 
   const deleteAnnouncement = async (id) => {
-    try {
-      const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/${id}`,
-        { method: "DELETE" }
-      );
-
-      if (response.ok) {
-        setAnnouncements((prev) =>
-          prev.filter((announcement) => announcement.id !== id)
-        );
-        setTotalCount((prevCount) => prevCount - 1);
-        toast.success("Announcement deleted successfully");
-        if (announcements.length === 1 && currentPage > 1) {
-          setCurrentPage((prev) => prev - 1);
-        }
-      } else {
-        throw new Error("Failed to delete announcement.");
+  try {
+    const response = await fetch(
+      `https://demoadmin.databyte.app/api/Announcement/DeleteAnnouncement`, // Domain düzəldildi
+      {
+        method: "DELETE", // DELETE metoduna dəyişdirin
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`, // Token əlavə edin
+        },
+        body: JSON.stringify({
+          announcementId: id,
+          language: "string" // və ya actual language: "az", "en"
+        })
       }
-    } catch (error) {
-      console.error("Error deleting announcement:", error);
-      toast.error("Failed to delete announcement");
-    } finally {
-      setIsDeleteModalOpen(false);
-      setDeleteAnnouncementId(null);
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || "Failed to delete announcement");
     }
-  };
+
+    // Success
+    setAnnouncements((prev) =>
+      prev.filter((announcement) => announcement.id !== id)
+    );
+    setTotalCount((prevCount) => prevCount - 1);
+    toast.success("Announcement deleted successfully");
+    
+    // If last item on page, go to previous page
+    if (announcements.length === 1 && currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  } catch (error) {
+    console.error("Error deleting announcement:", error);
+    toast.error(error.message || "Failed to delete announcement");
+  } finally {
+    setIsDeleteModalOpen(false);
+    setDeleteAnnouncementId(null);
+  }
+};
 
   const handleDeleteClick = (id) => {
     setDeleteAnnouncementId(id);
@@ -185,8 +199,8 @@ export default function AnnouncementsList() {
           <div className="relative h-40 bg-gray-100">
             {announcement.imageUrl ? (
               <img
-                src={`https://bravoadmin.uplms.org/uploads/${announcement.imageUrl.replace(
-                  "https://100.42.179.27:7198/",
+                src={`https://demoadmin.databyte.app/uploads/${announcement.imageUrl.replace(
+                  "https://100.42.179.27:7298/",
                   ""
                 )}`}
                 alt={announcement.title}

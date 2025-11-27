@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import UserComponent from "../userComponent";
 
-const BASE_IMAGE_URL = "https://bravoadmin.uplms.org/uploads/";
+const BASE_IMAGE_URL = "https://demoadmin.databyte.app/uploads/";
 
 const formatImageUrl = (imageUrl) => {
   if (!imageUrl) return "";
 
-  const cleanPath = imageUrl.replace("https://100.42.179.27:7198/", "");
+  const cleanPath = imageUrl.replace("https://100.42.179.27:7298/", "");
 
   return `${BASE_IMAGE_URL}${cleanPath}`;
 };

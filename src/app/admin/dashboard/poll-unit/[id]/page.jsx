@@ -38,7 +38,7 @@ const PollUnitDetail = ({ params }) => {
   const fetchPollUnitDetails = async () => {
     try {
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/PollUnit/${id}`
+        `https://demoadmin.databyte.app/api/PollUnit/${id}`
       );
       const data = await response.json();
       setPollUnit(data);
@@ -55,7 +55,7 @@ const PollUnitDetail = ({ params }) => {
       setDeleting(true);
 
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit",
+        "https://demoadmin.databyte.app/api/PollUnit",
         {
           method: "DELETE",
           headers: {
@@ -89,7 +89,7 @@ const PollUnitDetail = ({ params }) => {
       const token = getToken();
 
       // Prepare the API endpoint with query parameters
-      const endpoint = `https://bravoadmin.uplms.org/api/PollUnit/export-poll-units?PollUnitId=${id}`;
+      const endpoint = `https://demoadmin.databyte.app/api/PollUnit/export-poll-units?PollUnitId=${id}`;
 
       const response = await fetch(endpoint, {
         method: "GET",

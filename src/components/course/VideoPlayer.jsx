@@ -1,10 +1,9 @@
-// Enhanced VideoPlayer.jsx - Complete Implementation with Advanced Progress Bar & Subtitle Management
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { 
   Play, Pause, Volume2, VolumeX, Maximize, Minimize, Settings, 
   SkipBack, SkipForward, Download, Loader2, AlertCircle, 
   Upload, Subtitles, Languages, Plus, X, Clock, Target, Trash2,
-  Video as VideoIcon, PlayCircle, Edit2, Eye, Check
+  Video as VideoIcon, PlayCircle, Edit2, Eye, Check, FileText
 } from "lucide-react";
 
 import { 
@@ -16,8 +15,48 @@ import {
   addVideoInteraction,
   getVideoStreamingUrl,
   SUBTITLE_LANGUAGES,
-  INTERACTION_TYPES
+  INTERACTION_TYPES,
+  getLanguageName
 } from "@/api/courseContent";
+
+// Evaluation emoji sets based on backend enum
+const EVALUATION_EMOJI_SETS = {
+  HEART_EMOJI: 1,
+  SMILE_EMOJI: 2,
+  MEDAL_EMOJI: 3,
+  PLANT_EMOJI: 4
+};
+
+const EMOJI_MAPPINGS = {
+  [EVALUATION_EMOJI_SETS.HEART_EMOJI]: [
+    { value: 1, emoji: '🖤', label: 'Needs improvement' },
+    { value: 2, emoji: '💙', label: 'Developing' },
+    { value: 3, emoji: '💚', label: 'Satisfactory' },
+    { value: 4, emoji: '💛', label: 'Good' },
+    { value: 5, emoji: '❤️', label: 'Excellent' }
+  ],
+  [EVALUATION_EMOJI_SETS.SMILE_EMOJI]: [
+    { value: 1, emoji: '😞', label: 'Needs Improvement' },
+    { value: 2, emoji: '😐', label: 'Fair' },
+    { value: 3, emoji: '🙂', label: 'Satisfactory' },
+    { value: 4, emoji: '😃', label: 'Good' },
+    { value: 5, emoji: '🤩', label: 'Outstanding' }
+  ],
+  [EVALUATION_EMOJI_SETS.MEDAL_EMOJI]: [
+    { value: 1, emoji: '🏅', label: 'Participation' },
+    { value: 2, emoji: '🥉', label: 'Fair' },
+    { value: 3, emoji: '🥈', label: 'Good' },
+    { value: 4, emoji: '🥇', label: 'Very Good' },
+    { value: 5, emoji: '🏆', label: 'Excellent' }
+  ],
+  [EVALUATION_EMOJI_SETS.PLANT_EMOJI]: [
+    { value: 1, emoji: '🌱', label: 'Learning' },
+    { value: 2, emoji: '🌿', label: 'Progressing' },
+    { value: 3, emoji: '🌾', label: 'Performing' },
+    { value: 4, emoji: '🌻', label: 'Strong' },
+    { value: 5, emoji: '🌳', label: 'Excellent' }
+  ]
+};
 
 const EnhancedVideoPlayer = ({ 
   content, 
@@ -55,15 +94,15 @@ const EnhancedVideoPlayer = ({
   const [streamingReady, setStreamingReady] = useState(false);
   const [hlsSupported, setHlsSupported] = useState(false);
 
-  // Enhanced Subtitle state
+  // Subtitle state
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState(null);
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
   const [showSubtitleUpload, setShowSubtitleUpload] = useState(false);
   const [showSubtitleEditor, setShowSubtitleEditor] = useState(false);
-  const [subtitlePreview, setSubtitlePreview] = useState(null);
+  const [subtitleLoading, setSubtitleLoading] = useState(false);
 
-  // Enhanced Progress Bar state
+  // Progress Bar state
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState(0);
   const [hoverTime, setHoverTime] = useState(null);
@@ -100,17 +139,6 @@ const EnhancedVideoPlayer = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   }, []);
 
-  // Get language name
-  const getLanguageName = useCallback((languageCode) => {
-    const languageMap = {
-      [SUBTITLE_LANGUAGES.ENGLISH]: "English",
-      [SUBTITLE_LANGUAGES.AZERBAIJANI]: "Azerbaijani", 
-      [SUBTITLE_LANGUAGES.TURKISH]: "Turkish",
-      [SUBTITLE_LANGUAGES.RUSSIAN]: "Russian"
-    };
-    return languageMap[languageCode] || "Unknown";
-  }, []);
-
   // Progress calculation
   const progressPercentage = useMemo(() => {
     if (!duration || duration <= 0 || isNaN(currentTime) || isNaN(duration)) return 0;
@@ -131,7 +159,7 @@ const EnhancedVideoPlayer = ({
     }
   }, [currentTime, duration]);
 
-  // Time update function
+  // Update current time
   const updateCurrentTime = useCallback(() => {
     const video = videoRef.current;
     if (!video || isSeeking || isDragging) return;
@@ -152,7 +180,7 @@ const EnhancedVideoPlayer = ({
     }
   }, [isSeeking, isDragging]);
 
-  // Manual time update interval
+  // Time update interval
   useEffect(() => {
     if (isPlaying && !isSeeking && !isDragging) {
       timeUpdateIntervalRef.current = setInterval(() => {
@@ -173,7 +201,7 @@ const EnhancedVideoPlayer = ({
     };
   }, [isPlaying, isSeeking, isDragging, updateCurrentTime]);
 
-  // Video loading logic
+  // Video loading logic using real API
   useEffect(() => {
     const loadVideoStream = async () => {
       if (!contentId || !isVideoType) {
@@ -188,6 +216,7 @@ const EnhancedVideoPlayer = ({
       try {
         console.log('🎬 Loading video stream for content:', contentId);
         
+        // Check upload status first
         if (content?.uploadStatus !== undefined && content.uploadStatus !== 3) {
           const statusMessages = {
             0: 'Video upload is pending',
@@ -203,6 +232,7 @@ const EnhancedVideoPlayer = ({
           return;
         }
 
+        // Try to get streaming URL
         try {
           const streamingResult = await getVideoStreamingUrl(contentId);
           console.log('🔗 Streaming result:', streamingResult);
@@ -218,6 +248,7 @@ const EnhancedVideoPlayer = ({
           console.warn('⚠️ Streaming URL failed, trying direct URL:', streamingError.message);
         }
 
+        // Fallback to direct content URL
         if (content?.data || content?.contentString) {
           const directUrl = content.data || content.contentString;
           console.log('🔗 Using direct content URL:', directUrl);
@@ -250,6 +281,33 @@ const EnhancedVideoPlayer = ({
 
     loadVideoStream();
   }, [contentId, isVideoType, content?.data, content?.contentString, content?.uploadStatus]);
+
+  // Load subtitles using real API
+  useEffect(() => {
+    const loadSubtitles = async () => {
+      if (!contentId || !showSubtitles) return;
+
+      try {
+        setSubtitleLoading(true);
+        console.log('📝 Loading subtitles for content:', contentId);
+        
+        const subtitlesResponse = await getSubtitlesByVideoId(contentId);
+        const subtitleList = Array.isArray(subtitlesResponse) 
+          ? subtitlesResponse 
+          : subtitlesResponse?.subtitles || [];
+          
+        console.log('📝 Loaded subtitles:', subtitleList);
+        setSubtitles(subtitleList);
+      } catch (error) {
+        console.warn('Could not load subtitles:', error.message);
+        setSubtitles([]);
+      } finally {
+        setSubtitleLoading(false);
+      }
+    };
+
+    loadSubtitles();
+  }, [contentId, showSubtitles]);
 
   // Video element setup
   useEffect(() => {
@@ -397,35 +455,22 @@ const EnhancedVideoPlayer = ({
         hlsRef.current = null;
       }
       
-      if (videoUrl.startsWith('blob:')) {
+      if (videoUrl && videoUrl.startsWith('blob:')) {
         URL.revokeObjectURL(videoUrl);
       }
     };
   }, [videoUrl, streamingReady, autoplay, hlsSupported, updateCurrentTime, isSeeking, isDragging]);
 
-  // Load subtitles
-  useEffect(() => {
-    const loadSubtitles = async () => {
-      if (!contentId || !showSubtitles) return;
-
-      try {
-        const subtitlesResponse = await getSubtitlesByVideoId(contentId);
-        const subtitleList = Array.isArray(subtitlesResponse) 
-          ? subtitlesResponse 
-          : subtitlesResponse?.subtitles || [];
-        setSubtitles(subtitleList);
-      } catch (error) {
-        console.warn('Could not load subtitles:', error.message);
-      }
-    };
-
-    loadSubtitles();
-  }, [contentId, showSubtitles]);
-
   // Enhanced seek function
   const handleSeek = useCallback((time) => {
     const video = videoRef.current;
     if (!video || !duration || isNaN(time)) return;
+    
+    // Check if seeking is enabled for this content
+    if (content?.isSeekingEnabled === false) {
+      console.log('🚫 Seeking is disabled for this content');
+      return;
+    }
     
     try {
       const newTime = Math.max(0, Math.min(duration, time));
@@ -443,11 +488,16 @@ const EnhancedVideoPlayer = ({
       console.error('Seek error:', error);
       setIsSeeking(false);
     }
-  }, [duration, updateCurrentTime]);
+  }, [duration, updateCurrentTime, content?.isSeekingEnabled]);
 
-  // Enhanced Progress bar handlers
+  // Progress bar handlers
   const handleProgressMouseDown = useCallback((event) => {
     if (!progressBarRef.current || !duration || duration <= 0) return;
+    
+    // Check if seeking is enabled
+    if (content?.isSeekingEnabled === false) {
+      return;
+    }
     
     event.preventDefault();
     event.stopPropagation();
@@ -463,7 +513,7 @@ const EnhancedVideoPlayer = ({
       setIsDragging(true);
       setDragPosition(newPosition);
     }
-  }, [duration]);
+  }, [duration, content?.isSeekingEnabled]);
 
   const handleProgressMouseMove = useCallback((event) => {
     if (!progressBarRef.current || !duration) return;
@@ -480,19 +530,19 @@ const EnhancedVideoPlayer = ({
       setHoverPosition(hoverPos * 100);
       setShowTimeTooltip(true);
       
-      if (isDragging) {
+      if (isDragging && content?.isSeekingEnabled !== false) {
         setDragPosition(hoverPos * 100);
       }
     }
-  }, [duration, isDragging]);
+  }, [duration, isDragging, content?.isSeekingEnabled]);
 
   const handleProgressMouseUp = useCallback(() => {
-    if (isDragging && duration) {
+    if (isDragging && duration && content?.isSeekingEnabled !== false) {
       const newTime = (dragPosition / 100) * duration;
       handleSeek(newTime);
     }
     setIsDragging(false);
-  }, [isDragging, dragPosition, duration, handleSeek]);
+  }, [isDragging, dragPosition, duration, handleSeek, content?.isSeekingEnabled]);
 
   const handleProgressMouseLeave = useCallback(() => {
     setShowTimeTooltip(false);
@@ -501,7 +551,7 @@ const EnhancedVideoPlayer = ({
     }
   }, [isDragging, handleProgressMouseUp]);
 
-  // Add global mouse event listeners for dragging
+  // Global mouse event listeners for dragging
   useEffect(() => {
     if (isDragging) {
       const handleGlobalMouseMove = (e) => handleProgressMouseMove(e);
@@ -516,6 +566,53 @@ const EnhancedVideoPlayer = ({
       };
     }
   }, [isDragging, handleProgressMouseMove, handleProgressMouseUp]);
+
+  // Enhanced subtitle change handler using real API
+  const handleSubtitleChange = useCallback(async (subtitle) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const existingTracks = Array.from(video.querySelectorAll('track'));
+    existingTracks.forEach(track => track.remove());
+
+    if (!subtitle) {
+      setCurrentSubtitle(null);
+      return;
+    }
+
+    try {
+      if (subtitle.fileUrl || subtitle.fileName) {
+        const fileName = subtitle.fileName || subtitle.fileUrl.split('/').pop();
+        console.log('📝 Loading subtitle file:', fileName);
+        
+        const subtitleBlob = await getContentStream(contentId, fileName);
+        const subtitleText = await subtitleBlob.text();
+        
+        console.log('📝 Subtitle content loaded');
+        
+        const subtitleBlobUrl = URL.createObjectURL(
+          new Blob([subtitleText], { type: 'text/vtt' })
+        );
+        
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.src = subtitleBlobUrl;
+        track.label = subtitle.name;
+        track.default = true;
+        
+        video.appendChild(track);
+        setCurrentSubtitle(subtitle);
+        
+        track.addEventListener('load', () => {
+          if (video.textTracks[0]) {
+            video.textTracks[0].mode = 'showing';
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load subtitle:', error);
+    }
+  }, [contentId]);
 
   // Control functions
   const togglePlay = useCallback(() => {
@@ -610,56 +707,6 @@ const EnhancedVideoPlayer = ({
     }
   }, []);
 
-  // Enhanced subtitle change handler
-  const handleSubtitleChange = useCallback(async (subtitle) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const existingTracks = Array.from(video.querySelectorAll('track'));
-    existingTracks.forEach(track => track.remove());
-
-    if (!subtitle) {
-      setCurrentSubtitle(null);
-      setSubtitlePreview(null);
-      return;
-    }
-
-    try {
-      if (subtitle.fileUrl || subtitle.fileName) {
-        const fileName = subtitle.fileName || subtitle.fileUrl.split('/').pop();
-        const subtitleBlob = await getContentStream(contentId, fileName);
-        const subtitleText = await subtitleBlob.text();
-        
-        setSubtitlePreview({
-          name: subtitle.name,
-          language: getLanguageName(subtitle.language),
-          content: subtitleText.split('\n').slice(0, 5).join('\n') + '...'
-        });
-        
-        const subtitleBlobUrl = URL.createObjectURL(
-          new Blob([subtitleText], { type: 'text/vtt' })
-        );
-        
-        const track = document.createElement('track');
-        track.kind = 'subtitles';
-        track.src = subtitleBlobUrl;
-        track.label = subtitle.name;
-        track.default = true;
-        
-        video.appendChild(track);
-        setCurrentSubtitle(subtitle);
-        
-        track.addEventListener('load', () => {
-          if (video.textTracks[0]) {
-            video.textTracks[0].mode = 'showing';
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load subtitle:', error);
-    }
-  }, [contentId, getLanguageName]);
-
   // Auto-hide controls
   useEffect(() => {
     let timeout;
@@ -686,7 +733,7 @@ const EnhancedVideoPlayer = ({
     }
   }, [isPlaying]);
 
-  // Render loading state
+  // Loading state
   if (isLoading) {
     return (
       <div className="relative w-full h-full bg-black flex items-center justify-center">
@@ -697,17 +744,17 @@ const EnhancedVideoPlayer = ({
           <X className="w-6 h-6" />
         </button>
         <div className="text-center text-white">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#0AAC9E' }} />
           <p className="text-lg">Loading video...</p>
           <p className="text-sm text-gray-300 mt-2">
-            Duration: {formatTime(duration)} | Current: {formatTime(currentTime)}
+            Content ID: {contentId}
           </p>
         </div>
       </div>
     );
   }
 
-  // Render error state
+  // Error state
   if (videoError) {
     return (
       <div className="relative w-full h-full bg-black flex items-center justify-center">
@@ -732,7 +779,6 @@ const EnhancedVideoPlayer = ({
     );
   }
 
-  // Main player render
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
       {/* Close Button */}
@@ -754,24 +800,11 @@ const EnhancedVideoPlayer = ({
           onClick={togglePlay}
         />
 
-        {/* Debug Info (development only) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-16 left-4 bg-black/60 text-white text-xs p-2 rounded">
-            <div>Time: {formatTime(currentTime)} / {formatTime(duration)}</div>
-            <div>Progress: {progressPercentage.toFixed(1)}%</div>
-            <div>Buffered: {bufferedPercentage.toFixed(1)}%</div>
-            <div>Playing: {isPlaying ? 'Yes' : 'No'}</div>
-            <div>Seeking: {isSeeking ? 'Yes' : 'No'}</div>
-            <div>Dragging: {isDragging ? 'Yes' : 'No'}</div>
-            <div>Buffering: {isBuffering ? 'Yes' : 'No'}</div>
-          </div>
-        )}
-
         {/* Buffering Indicator */}
         {isBuffering && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/60 rounded-xl p-4 text-white">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" style={{ color: '#0AAC9E' }} />
               <p className="text-sm">Buffering...</p>
             </div>
           </div>
@@ -781,10 +814,20 @@ const EnhancedVideoPlayer = ({
         {(isSeeking || isDragging) && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/60 rounded-xl p-4 text-white">
-              <Clock className="w-6 h-6 mx-auto mb-2" />
+              <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: '#0AAC9E' }} />
               <p className="text-sm">
                 {formatTime(isDragging ? (dragPosition * duration / 100) : currentTime)}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Seeking Disabled Indicator */}
+        {content?.isSeekingEnabled === false && (showTimeTooltip || isDragging) && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="bg-red-600/80 rounded-xl p-4 text-white">
+              <AlertCircle className="w-6 h-6 mx-auto mb-2" />
+              <p className="text-sm">Seeking is disabled for this video</p>
             </div>
           </div>
         )}
@@ -796,7 +839,7 @@ const EnhancedVideoPlayer = ({
             <div className="absolute top-0 left-0 right-0 p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-black/50 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#0AAC9E' }}>
                     <VideoIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -814,9 +857,15 @@ const EnhancedVideoPlayer = ({
                       {currentSubtitle && (
                         <>
                           <span>•</span>
-                          <span className="text-green-400">
+                          <span style={{ color: '#0AAC9E' }}>
                             {getLanguageName(currentSubtitle.language)} Subtitles
                           </span>
+                        </>
+                      )}
+                      {content?.isSeekingEnabled === false && (
+                        <>
+                          <span>•</span>
+                          <span className="text-yellow-400">Seeking Disabled</span>
                         </>
                       )}
                     </div>
@@ -853,7 +902,8 @@ const EnhancedVideoPlayer = ({
               <div className="absolute inset-0 flex items-center justify-center">
                 <button
                   onClick={togglePlay}
-                  className="w-20 h-20 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                  className="w-20 h-20 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                  style={{ backgroundColor: 'rgba(10, 172, 158, 0.8)' }}
                 >
                   <Play className="w-10 h-10 text-white ml-1" />
                 </button>
@@ -862,11 +912,13 @@ const EnhancedVideoPlayer = ({
 
             {/* Bottom Controls */}
             <div className="absolute bottom-0 left-0 right-0 p-6">
-              {/* Enhanced Progress Bar */}
+              {/* Progress Bar */}
               <div className="mb-4 relative">
                 <div 
                   ref={progressBarRef}
-                  className="relative h-2 bg-white/30 rounded-full cursor-pointer group hover:h-3 transition-all"
+                  className={`relative h-2 bg-white/30 rounded-full group hover:h-3 transition-all ${
+                    content?.isSeekingEnabled === false ? 'cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                   onMouseDown={handleProgressMouseDown}
                   onMouseMove={handleProgressMouseMove}
                   onMouseLeave={handleProgressMouseLeave}
@@ -879,20 +931,28 @@ const EnhancedVideoPlayer = ({
                   
                   {/* Watched Progress */}
                   <div 
-                    className="absolute h-full bg-white rounded-full transition-all"
-                    style={{ width: `${Math.min(100, Math.max(0, progressPercentage))}%` }}
+                    className="absolute h-full rounded-full transition-all"
+                    style={{ 
+                      width: `${Math.min(100, Math.max(0, progressPercentage))}%`,
+                      backgroundColor: '#0AAC9E'
+                    }}
                   />
                   
                   {/* Progress Handle */}
-                  <div 
-                    className={`absolute w-4 h-4 bg-white rounded-full -mt-1 -ml-2 shadow-lg transition-opacity ${
-                      isDragging || showTimeTooltip ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}
-                    style={{ left: `${Math.min(100, Math.max(0, progressPercentage))}%` }}
-                  />
+                  {content?.isSeekingEnabled !== false && (
+                    <div 
+                      className={`absolute w-4 h-4 rounded-full -mt-1 -ml-2 shadow-lg transition-opacity ${
+                        isDragging || showTimeTooltip ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      style={{ 
+                        left: `${Math.min(100, Math.max(0, progressPercentage))}%`,
+                        backgroundColor: '#0AAC9E'
+                      }}
+                    />
+                  )}
                   
                   {/* Hover Preview Handle */}
-                  {showTimeTooltip && !isDragging && (
+                  {showTimeTooltip && !isDragging && content?.isSeekingEnabled !== false && (
                     <div 
                       className="absolute w-3 h-3 bg-yellow-400 rounded-full -mt-0.5 -ml-1.5 opacity-60"
                       style={{ left: `${hoverPosition}%` }}
@@ -906,7 +966,7 @@ const EnhancedVideoPlayer = ({
                     className="absolute -top-10 transform -translate-x-1/2 bg-black/80 text-white text-xs rounded px-2 py-1 pointer-events-none"
                     style={{ left: `${hoverPosition}%` }}
                   >
-                    {formatTime(hoverTime)}
+                    {content?.isSeekingEnabled === false ? 'Seeking disabled' : formatTime(hoverTime)}
                   </div>
                 )}
                 
@@ -923,8 +983,13 @@ const EnhancedVideoPlayer = ({
                   {/* Skip Back */}
                   <button 
                     onClick={() => skipTime(-10)} 
-                    className="text-white hover:text-gray-300 p-2 rounded-lg hover:bg-white/10 transition-colors"
-                    title="Skip back 10s"
+                    disabled={content?.isSeekingEnabled === false}
+                    className={`text-white p-2 rounded-lg transition-colors ${
+                      content?.isSeekingEnabled === false 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'hover:text-gray-300'
+                    }`}
+                    title={content?.isSeekingEnabled === false ? 'Seeking disabled' : 'Skip back 10s'}
                   >
                     <SkipBack className="w-5 h-5" />
                   </button>
@@ -932,7 +997,8 @@ const EnhancedVideoPlayer = ({
                   {/* Play/Pause */}
                   <button 
                     onClick={togglePlay} 
-                    className="text-white hover:text-gray-300 p-3 rounded-lg hover:bg-white/10 transition-colors"
+                    className="text-white p-3 rounded-lg transition-colors"
+                    style={{ backgroundColor: 'rgba(10, 172, 158, 0.2)' }}
                   >
                     {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
                   </button>
@@ -940,8 +1006,13 @@ const EnhancedVideoPlayer = ({
                   {/* Skip Forward */}
                   <button 
                     onClick={() => skipTime(10)} 
-                    className="text-white hover:text-gray-300 p-2 rounded-lg hover:bg-white/10 transition-colors"
-                    title="Skip forward 10s"
+                    disabled={content?.isSeekingEnabled === false}
+                    className={`text-white p-2 rounded-lg transition-colors ${
+                      content?.isSeekingEnabled === false 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'hover:text-gray-300'
+                    }`}
+                    title={content?.isSeekingEnabled === false ? 'Seeking disabled' : 'Skip forward 10s'}
                   >
                     <SkipForward className="w-5 h-5" />
                   </button>
@@ -950,7 +1021,7 @@ const EnhancedVideoPlayer = ({
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={toggleMute}
-                      className="text-white hover:text-gray-300 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      className="text-white hover:text-gray-300 p-2 rounded-lg transition-colors"
                     >
                       {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                     </button>
@@ -964,7 +1035,7 @@ const EnhancedVideoPlayer = ({
                         onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
                         className="w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer slider"
                         style={{
-                          background: `linear-gradient(to right, white 0%, white ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) 100%)`
+                          background: `linear-gradient(to right, #0AAC9E 0%, #0AAC9E ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) 100%)`
                         }}
                       />
                       <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -975,15 +1046,21 @@ const EnhancedVideoPlayer = ({
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  {/* Enhanced Subtitles Menu */}
+                  {/* Subtitles Menu */}
                   {showSubtitles && (
                     <div className="relative">
                       <button
                         onClick={() => setShowSubtitleMenu(!showSubtitleMenu)}
-                        className={`text-white hover:text-gray-300 p-2 rounded-lg hover:bg-white/10 transition-colors ${currentSubtitle ? 'bg-white/20' : ''}`}
+                        className={`text-white hover:text-gray-300 p-2 rounded-lg transition-colors ${
+                          currentSubtitle ? 'bg-white/20' : 'hover:bg-white/10'
+                        }`}
+                        style={currentSubtitle ? { backgroundColor: 'rgba(10, 172, 158, 0.3)' } : {}}
                         title="Subtitles"
                       >
                         <Languages className="w-5 h-5" />
+                        {subtitleLoading && (
+                          <Loader2 className="w-3 h-3 animate-spin absolute -top-1 -right-1" style={{ color: '#0AAC9E' }} />
+                        )}
                       </button>
                       
                       {showSubtitleMenu && (
@@ -997,6 +1074,7 @@ const EnhancedVideoPlayer = ({
                                   setShowSubtitleMenu(false);
                                 }}
                                 className="text-white hover:text-gray-300 p-1 rounded transition-colors"
+                                style={{ color: '#0AAC9E' }}
                                 title="Manage subtitles"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -1007,6 +1085,7 @@ const EnhancedVideoPlayer = ({
                                   setShowSubtitleMenu(false);
                                 }}
                                 className="text-white hover:text-gray-300 p-1 rounded transition-colors"
+                                style={{ color: '#0AAC9E' }}
                                 title="Upload subtitle"
                               >
                                 <Plus className="w-4 h-4" />
@@ -1020,7 +1099,9 @@ const EnhancedVideoPlayer = ({
                                 handleSubtitleChange(null);
                                 setShowSubtitleMenu(false);
                               }}
-                              className={`w-full text-left text-white hover:bg-white/20 px-3 py-2 rounded text-sm transition-colors ${!currentSubtitle ? 'bg-white/20' : ''}`}
+                              className={`w-full text-left text-white hover:bg-white/20 px-3 py-2 rounded text-sm transition-colors ${
+                                !currentSubtitle ? 'bg-white/20' : ''
+                              }`}
                             >
                               Off
                             </button>
@@ -1031,7 +1112,9 @@ const EnhancedVideoPlayer = ({
                                   handleSubtitleChange(subtitle);
                                   setShowSubtitleMenu(false);
                                 }}
-                                className={`w-full text-left text-white hover:bg-white/20 px-3 py-2 rounded text-sm transition-colors ${currentSubtitle?.id === subtitle.id ? 'bg-white/20' : ''}`}
+                                className={`w-full text-left text-white hover:bg-white/20 px-3 py-2 rounded text-sm transition-colors ${
+                                  currentSubtitle?.id === subtitle.id ? 'bg-white/20' : ''
+                                }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <div>
@@ -1039,24 +1122,12 @@ const EnhancedVideoPlayer = ({
                                     <div className="text-xs text-gray-400">{subtitle.name}</div>
                                   </div>
                                   {currentSubtitle?.id === subtitle.id && (
-                                    <Eye className="w-4 h-4 text-green-400" />
+                                    <Eye className="w-4 h-4" style={{ color: '#0AAC9E' }} />
                                   )}
                                 </div>
                               </button>
                             ))}
                           </div>
-                          
-                          {/* Subtitle Preview */}
-                          {subtitlePreview && (
-                            <div className="mt-3 p-2 bg-white/10 rounded text-xs">
-                              <div className="text-white font-medium mb-1">
-                                {subtitlePreview.name} ({subtitlePreview.language})
-                              </div>
-                              <div className="text-gray-300 whitespace-pre-line">
-                                {subtitlePreview.content}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -1069,7 +1140,7 @@ const EnhancedVideoPlayer = ({
                       className="text-white hover:text-gray-300 p-2 rounded-lg hover:bg-white/10 transition-colors"
                       title="Add interaction at current time"
                     >
-                      <Target className="w-5 h-5" />
+                      <Target className="w-5 h-5" style={{ color: '#0AAC9E' }} />
                     </button>
                   )}
 
@@ -1101,6 +1172,9 @@ const EnhancedVideoPlayer = ({
                           <div className="text-gray-300">
                             Subtitles: {currentSubtitle ? getLanguageName(currentSubtitle.language) : 'Off'}
                           </div>
+                          <div className="text-gray-300">
+                            Seeking: {content?.isSeekingEnabled === false ? 'Disabled' : 'Enabled'}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1121,19 +1195,16 @@ const EnhancedVideoPlayer = ({
         )}
       </div>
 
-      {/* Enhanced Subtitle Upload Modal */}
+      {/* Subtitle Upload Modal */}
       {showSubtitleUpload && (
         <SubtitleUploadModal
           contentId={contentId}
           currentTime={currentTime}
-          onSubtitleAdded={() => {
-            getSubtitlesByVideoId(contentId).then(updatedSubtitles => {
-              setSubtitles(Array.isArray(updatedSubtitles) ? updatedSubtitles : updatedSubtitles?.subtitles || []);
-            });
+          onSubtitleAdded={(newSubtitle) => {
+            setSubtitles(prev => [...prev, newSubtitle]);
             setShowSubtitleUpload(false);
           }}
           onClose={() => setShowSubtitleUpload(false)}
-          getLanguageName={getLanguageName}
         />
       )}
 
@@ -1147,7 +1218,6 @@ const EnhancedVideoPlayer = ({
             setShowSubtitleEditor(false);
           }}
           onClose={() => setShowSubtitleEditor(false)}
-          getLanguageName={getLanguageName}
         />
       )}
 
@@ -1178,7 +1248,7 @@ const EnhancedVideoPlayer = ({
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: white;
+          background: #0AAC9E;
           cursor: pointer;
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
@@ -1187,7 +1257,7 @@ const EnhancedVideoPlayer = ({
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: white;
+          background: #0AAC9E;
           cursor: pointer;
           border: none;
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -1197,8 +1267,8 @@ const EnhancedVideoPlayer = ({
   );
 };
 
-// Enhanced Subtitle Upload Component
-const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded, getLanguageName }) => {
+// Real API Subtitle Upload Component
+const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded }) => {
   const [subtitleFile, setSubtitleFile] = useState(null);
   const [subtitleName, setSubtitleName] = useState('');
   const [subtitleLanguage, setSubtitleLanguage] = useState(SUBTITLE_LANGUAGES.ENGLISH);
@@ -1209,6 +1279,11 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.includes('text') && !file.name.match(/\.(vtt|srt)$/i)) {
+        setError('Please select a valid VTT or SRT subtitle file');
+        return;
+      }
+
       setSubtitleFile(file);
       if (!subtitleName) {
         setSubtitleName(file.name.replace(/\.(vtt|srt)$/i, ''));
@@ -1221,41 +1296,44 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
         setPreview(content.split('\n').slice(0, 10).join('\n'));
       };
       reader.readAsText(file);
+      setError(null);
     }
   };
 
-  const handleUpload = async () => {
-    if (!subtitleFile || !subtitleName.trim()) {
-      setError('Please select a VTT/SRT file and enter a name');
-      return;
-    }
+  // FIXED: SubtitleUploadModal with proper user ID
+const handleUpload = async () => {
+  if (!subtitleFile || !subtitleName.trim()) {
+    setError('Please select a VTT/SRT file and enter a name');
+    return;
+  }
 
-    setIsUploading(true);
-    setError(null);
+  setIsUploading(true);
+  setError(null);
 
-    try {
-      const subtitleData = {
-        courseContentId: contentId,
-        language: subtitleLanguage,
-        name: subtitleName.trim(),
-        userId: 1,
-        subtitleFile: subtitleFile
-      };
+  try {
+    const subtitleData = {
+      courseContentId: contentId,
+      language: subtitleLanguage,
+      name: subtitleName.trim(),
+      subtitleFile: subtitleFile
+      // UserId will be added automatically in the API function
+    };
 
-      await addSubtitle(subtitleData);
-      onSubtitleAdded();
-    } catch (error) {
-      setError(error.message || 'Failed to upload subtitle');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    const response = await addSubtitle(subtitleData);
+    onSubtitleAdded(response);
+  } catch (error) {
+    console.error('Subtitle upload error:', error);
+    setError(error.message || 'Failed to upload subtitle');
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg p-6 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">Upload Subtitle</h3>
+          <h3 className="text-lg font-bold" style={{ color: '#0AAC9E' }}>Upload Subtitle</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -1272,9 +1350,10 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
             <label className="block text-sm font-medium mb-2">Subtitle File (VTT/SRT)</label>
             <input
               type="file"
-              accept=".vtt,.srt"
+              accept=".vtt,.srt,text/vtt,application/x-subrip"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': '#0AAC9E' }}
             />
             <p className="text-xs text-gray-500 mt-1">
               Supported formats: WebVTT (.vtt), SubRip (.srt)
@@ -1288,7 +1367,8 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
               value={subtitleName}
               onChange={(e) => setSubtitleName(e.target.value)}
               placeholder="Subtitle name"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': '#0AAC9E' }}
             />
           </div>
 
@@ -1297,7 +1377,8 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
             <select
               value={subtitleLanguage}
               onChange={(e) => setSubtitleLanguage(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': '#0AAC9E' }}
             >
               {Object.entries(SUBTITLE_LANGUAGES).map(([key, value]) => (
                 <option key={key} value={value}>
@@ -1308,8 +1389,8 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
           </div>
 
           {/* Current Time Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
+          <div className="rounded-lg p-3" style={{ backgroundColor: 'rgba(10, 172, 158, 0.1)', borderColor: '#0AAC9E', borderWidth: '1px' }}>
+            <p className="text-sm" style={{ color: '#0AAC9E' }}>
               <Clock className="w-4 h-4 inline mr-1" />
               Current video time: {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
             </p>
@@ -1336,7 +1417,8 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
           <button
             onClick={handleUpload}
             disabled={isUploading || !subtitleFile || !subtitleName.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50"
+            style={{ backgroundColor: '#0AAC9E' }}
           >
             {isUploading ? (
               <>
@@ -1353,9 +1435,8 @@ const SubtitleUploadModal = ({ contentId, currentTime, onClose, onSubtitleAdded,
   );
 };
 
-// Subtitle Editor Component
-const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose, getLanguageName }) => {
-  const [selectedSubtitle, setSelectedSubtitle] = useState(null);
+// Real API Subtitle Editor Component
+const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleDeleteSubtitle = async (subtitleId) => {
@@ -1363,11 +1444,16 @@ const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose,
 
     try {
       setIsLoading(true);
+      console.log('🗑️ Deleting subtitle:', subtitleId);
+      
       await deleteSubtitle(subtitleId);
+      console.log('✅ Subtitle deleted');
+      
       const updatedSubtitles = subtitles.filter(s => s.id !== subtitleId);
       onSubtitleUpdated(updatedSubtitles);
     } catch (error) {
-      console.error('Failed to delete subtitle:', error);
+      console.error('❌ Failed to delete subtitle:', error);
+      alert('Failed to delete subtitle: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -1377,7 +1463,7 @@ const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose,
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg p-6 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">Manage Subtitles</h3>
+          <h3 className="text-lg font-bold" style={{ color: '#0AAC9E' }}>Manage Subtitles</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -1386,7 +1472,7 @@ const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose,
         <div className="space-y-3">
           {subtitles.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <Languages className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <Languages className="w-12 h-12 mx-auto mb-4 opacity-50" style={{ color: '#0AAC9E' }} />
               <p>No subtitles available</p>
               <p className="text-sm">Upload a subtitle file to get started</p>
             </div>
@@ -1402,8 +1488,8 @@ const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose,
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setSelectedSubtitle(subtitle)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    className="p-2 rounded transition-colors"
+                    style={{ color: '#0AAC9E' }}
                     title="Preview"
                   >
                     <Eye className="w-4 h-4" />
@@ -1414,7 +1500,11 @@ const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose,
                     className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                     title="Delete"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -1435,7 +1525,7 @@ const SubtitleEditorModal = ({ contentId, subtitles, onSubtitleUpdated, onClose,
   );
 };
 
-// Video Interaction Component
+// Real API Video Interaction Component with Evaluation Support
 const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionAdded, formatTime }) => {
   const [interactionType, setInteractionType] = useState(INTERACTION_TYPES.QUESTION);
   const [title, setTitle] = useState('');
@@ -1445,6 +1535,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
     { optionText: '', isCorrect: false, displayOrder: 1 }
   ]);
   const [informationContent, setInformationContent] = useState('');
+  const [evaluationEmojiSet, setEvaluationEmojiSet] = useState(EVALUATION_EMOJI_SETS.SMILE_EMOJI);
+  const [evaluationPrompt, setEvaluationPrompt] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -1458,7 +1550,10 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
 
   const removeOption = (index) => {
     if (options.length > 2) {
-      setOptions(prev => prev.filter((_, i) => i !== index));
+      setOptions(prev => prev.filter((_, i) => i !== index).map((opt, i) => ({
+        ...opt,
+        displayOrder: i
+      })));
     }
   };
 
@@ -1479,10 +1574,35 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
       return;
     }
 
+    if (interactionType === INTERACTION_TYPES.QUESTION) {
+      const hasCorrectAnswer = options.some(opt => opt.isCorrect && opt.optionText.trim());
+      if (!hasCorrectAnswer) {
+        setError('Please mark at least one option as correct');
+        return;
+      }
+    }
+
+    if (interactionType === INTERACTION_TYPES.INFORMATION && !informationContent.trim()) {
+      setError('Please enter information content');
+      return;
+    }
+
+    if (interactionType === INTERACTION_TYPES.EVALUATION && !evaluationPrompt.trim()) {
+      setError('Please enter evaluation prompt text');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      console.log('🎯 Creating video interaction:', {
+        contentId,
+        type: interactionType,
+        time: currentTime,
+        title: title.trim()
+      });
+
       const interactionData = {
         courseContentId: contentId,
         interactionType,
@@ -1493,8 +1613,11 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
       if (interactionType === INTERACTION_TYPES.QUESTION) {
         interactionData.questionDetails = {
           questionText: questionText.trim(),
-          questionType: 1,
-          options: options.filter(opt => opt.optionText.trim())
+          questionType: 1, // Multiple choice
+          options: options.filter(opt => opt.optionText.trim()).map((opt, index) => ({
+            ...opt,
+            displayOrder: index
+          }))
         };
       } else if (interactionType === INTERACTION_TYPES.INFORMATION) {
         interactionData.informationDetails = {
@@ -1502,14 +1625,17 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
         };
       } else if (interactionType === INTERACTION_TYPES.EVALUATION) {
         interactionData.evaluationDetails = {
-          emojiSet: 1,
-          promptText: title.trim()
+          emojiSet: evaluationEmojiSet,
+          promptText: evaluationPrompt.trim()
         };
       }
 
       const response = await addVideoInteraction(interactionData);
+      console.log('✅ Video interaction created:', response);
+      
       onInteractionAdded(response);
     } catch (error) {
+      console.error('❌ Failed to create interaction:', error);
       setError(error.message || 'Failed to add interaction');
     } finally {
       setIsSubmitting(false);
@@ -1521,7 +1647,7 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
       <div className="bg-white rounded-lg p-6 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-bold">Add Video Interaction</h3>
+            <h3 className="text-lg font-bold" style={{ color: '#0AAC9E' }}>Add Video Interaction</h3>
             <p className="text-sm text-gray-600">At time: {formatTime(currentTime)}</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
@@ -1541,7 +1667,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
             <select
               value={interactionType}
               onChange={(e) => setInteractionType(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': '#0AAC9E' }}
             >
               <option value={INTERACTION_TYPES.QUESTION}>Question</option>
               <option value={INTERACTION_TYPES.EVALUATION}>Evaluation</option>
@@ -1556,7 +1683,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter interaction title"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': '#0AAC9E' }}
             />
           </div>
 
@@ -1569,7 +1697,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
                   onChange={(e) => setQuestionText(e.target.value)}
                   placeholder="Enter your question"
                   rows={3}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ '--tw-ring-color': '#0AAC9E' }}
                 />
               </div>
 
@@ -1578,7 +1707,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
                   <label className="block text-sm font-medium">Answer Options</label>
                   <button
                     onClick={addOption}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                    className="text-sm font-medium transition-colors"
+                    style={{ color: '#0AAC9E' }}
                   >
                     + Add Option
                   </button>
@@ -1591,7 +1721,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
                       value={option.optionText}
                       onChange={(e) => updateOption(index, 'optionText', e.target.value)}
                       placeholder={`Option ${index + 1}`}
-                      className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                      style={{ '--tw-ring-color': '#0AAC9E' }}
                     />
                     <label className="flex items-center">
                       <input
@@ -1607,6 +1738,7 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
                           }
                         }}
                         className="mr-1"
+                        style={{ accentColor: '#0AAC9E' }}
                       />
                       <span className="text-sm">Correct</span>
                     </label>
@@ -1630,19 +1762,56 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
               <textarea
                 value={informationContent}
                 onChange={(e) => setInformationContent(e.target.value)}
-                placeholder="Enter information content"
+                placeholder="Enter information content (HTML supported)"
                 rows={4}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': '#0AAC9E' }}
               />
             </div>
           )}
 
           {interactionType === INTERACTION_TYPES.EVALUATION && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-700">
-                Evaluation interactions will prompt users to rate their experience using emojis.
-              </p>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Evaluation Prompt</label>
+                <input
+                  type="text"
+                  value={evaluationPrompt}
+                  onChange={(e) => setEvaluationPrompt(e.target.value)}
+                  placeholder="How would you rate this content?"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ '--tw-ring-color': '#0AAC9E' }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Emoji Set</label>
+                <select
+                  value={evaluationEmojiSet}
+                  onChange={(e) => setEvaluationEmojiSet(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ '--tw-ring-color': '#0AAC9E' }}
+                >
+                  <option value={EVALUATION_EMOJI_SETS.SMILE_EMOJI}>Smile Emojis (😞 to 🤩)</option>
+                  <option value={EVALUATION_EMOJI_SETS.HEART_EMOJI}>Heart Emojis (🖤 to ❤️)</option>
+                  <option value={EVALUATION_EMOJI_SETS.MEDAL_EMOJI}>Medal Emojis (🏅 to 🏆)</option>
+                  <option value={EVALUATION_EMOJI_SETS.PLANT_EMOJI}>Plant Emojis (🌱 to 🌳)</option>
+                </select>
+              </div>
+
+              {/* Emoji Preview */}
+              <div className="rounded-lg p-3" style={{ backgroundColor: 'rgba(10, 172, 158, 0.1)', borderColor: '#0AAC9E', borderWidth: '1px' }}>
+                <p className="text-sm font-medium mb-2" style={{ color: '#0AAC9E' }}>Preview:</p>
+                <div className="flex items-center justify-between text-sm">
+                  {EMOJI_MAPPINGS[evaluationEmojiSet]?.map((emoji, index) => (
+                    <div key={index} className="text-center">
+                      <div className="text-lg mb-1">{emoji.emoji}</div>
+                      <div className="text-xs text-gray-600">{emoji.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -1656,7 +1825,8 @@ const VideoInteractionModal = ({ currentTime, contentId, onClose, onInteractionA
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || !title.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50"
+            style={{ backgroundColor: '#0AAC9E' }}
           >
             {isSubmitting ? (
               <>

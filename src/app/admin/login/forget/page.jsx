@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 // Constants
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 export default function ImprovedForgotPassword() {
   const router = useRouter();

@@ -62,13 +62,12 @@ const ErrorDisplay = ({ error }) => (
   </div>
 );
 
-// Priority Badge component
 const PriorityBadge = ({ priority }) => {
   const priorityColors = {
     HIGH: "bg-red-100 text-red-600",
     MEDIUM: "bg-yellow-100 text-yellow-600",
     LOW: "bg-blue-100 text-blue-600",
-    medium: "bg-yellow-100 text-yellow-600", // Handle lowercase priority values
+    medium: "bg-yellow-100 text-yellow-600",
     high: "bg-red-100 text-red-600",
     low: "bg-blue-100 text-blue-600",
   };
@@ -84,7 +83,6 @@ const PriorityBadge = ({ priority }) => {
   );
 };
 
-// Image Slider Component
 const ImageSlider = ({ images }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
@@ -96,7 +94,6 @@ const ImageSlider = ({ images }) => {
     const isFirstSlide = currentIndex === 0;
     const newIndex = isFirstSlide ? images.length - 1 : currentIndex - 1;
 
-    // First change the state, then update the display after animation
     setTimeout(() => {
       setDisplayedImage(images[newIndex]);
       setCurrentIndex(newIndex);
@@ -110,7 +107,6 @@ const ImageSlider = ({ images }) => {
     const isLastSlide = currentIndex === images.length - 1;
     const newIndex = isLastSlide ? 0 : currentIndex + 1;
 
-    // First change the state, then update the display after animation
     setTimeout(() => {
       setDisplayedImage(images[newIndex]);
       setCurrentIndex(newIndex);
@@ -122,7 +118,6 @@ const ImageSlider = ({ images }) => {
     if (transitioning || slideIndex === currentIndex) return;
     setTransitioning(true);
 
-    // First change the state, then update the display after animation
     setTimeout(() => {
       setDisplayedImage(images[slideIndex]);
       setCurrentIndex(slideIndex);
@@ -130,10 +125,8 @@ const ImageSlider = ({ images }) => {
     }, 200);
   };
 
-  // If no images, return nothing
   if (!images || images.length === 0) return null;
 
-  // If only one image, just show it without controls
   if (images.length === 1) {
     return (
       <div className="relative w-full h-[65vh]">
@@ -160,7 +153,6 @@ const ImageSlider = ({ images }) => {
         />
       </div>
 
-      {/* Left Arrow */}
       <div className="absolute top-1/2 left-6 -translate-y-1/2 z-10">
         <button
           onClick={goToPrevious}
@@ -172,7 +164,6 @@ const ImageSlider = ({ images }) => {
         </button>
       </div>
 
-      {/* Right Arrow */}
       <div className="absolute top-1/2 right-6 -translate-y-1/2 z-10">
         <button
           onClick={goToNext}
@@ -184,7 +175,6 @@ const ImageSlider = ({ images }) => {
         </button>
       </div>
 
-      {/* Thumbnails at bottom */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex space-x-3 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full">
         {images.map((img, slideIndex) => (
           <button
@@ -204,7 +194,6 @@ const ImageSlider = ({ images }) => {
   );
 };
 
-// Attachment Card Component
 const AttachmentCard = ({ fileName, fileSize, fileUrl }) => {
   const getFileIcon = (fileName) => {
     const extension = fileName.split(".").pop().toLowerCase();
@@ -236,14 +225,6 @@ const AttachmentCard = ({ fileName, fileSize, fileUrl }) => {
             <p className="text-xs text-gray-500">{fileSize}</p>
           </div>
         </div>
-        <a
-          href={fileUrl}
-          download
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Download file"
-        >
-          <Download size={16} className="text-gray-600" />
-        </a>
       </div>
     </div>
   );
@@ -281,8 +262,16 @@ export default function NewsPage() {
           );
         }
 
+        // Updated API call using GET /api/News/id endpoint
+        const queryParams = new URLSearchParams({
+          Id: newsId,
+          UserId: userId,
+          Device: '1', // 1 for web, 2 for mobile
+          Language: 'az',
+        });
+
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/News/${newsId}?userid=${userId}`,
+          `https://demoadmin.databyte.app/api/News/id?${queryParams.toString()}`,
           {
             headers: {
               accept: "application/json",
@@ -319,7 +308,6 @@ export default function NewsPage() {
     jsonObject = null;
   }
 
-  // Process image URLs to make them valid
   const processedImages =
     newsData.newsImages?.map(
       (img) =>
@@ -329,7 +317,6 @@ export default function NewsPage() {
         )}`
     ) || [];
 
-  // Process attachment URLs and info
   const attachments =
     newsData.newsAttachments?.map((attachment, index) => ({
       url: `https://bravoadmin.uplms.org/uploads/${attachment.replace(
@@ -342,7 +329,6 @@ export default function NewsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Hero Image Section with Slider */}
       <div className="relative">
         {processedImages.length > 0 ? (
           <ImageSlider images={processedImages} />
@@ -353,7 +339,6 @@ export default function NewsPage() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
-        {/* Floating Category Badge */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
           <span className="px-6 py-2 bg-white/90 backdrop-blur-sm text-[#0AAC9E] rounded-full text-sm font-medium shadow-lg">
             {newsData.subTitle}
@@ -361,7 +346,6 @@ export default function NewsPage() {
         </div>
       </div>
 
-      {/* Content Section */}
       <main className="-mt-32 relative z-10 pb-12">
         <div className="max-w-5xl mx-auto px-4">
           <article className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -389,7 +373,6 @@ export default function NewsPage() {
               </div>
             </div>
             <div className="p-7">
-              {/* Title and Actions */}
               <div className="mb-7">
                 <div className="flex items-center justify-between mb-4">
                   <h1 className="text-2xl font-bold text-gray-900 leading-tight">
@@ -398,7 +381,6 @@ export default function NewsPage() {
                   <PriorityBadge priority={newsData.priority} />
                 </div>
 
-                {/* Category and Main Metadata */}
                 <div className="mb-5">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="inline-flex items-center gap-2 text-sm text-gray-700 bg-gray-100 px-4 py-1 rounded-lg">
@@ -435,7 +417,6 @@ export default function NewsPage() {
                 </div>
               </div>
 
-              {/* Target Groups Section */}
               {newsData.targetGroups && newsData.targetGroups.length > 0 && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg flex gap-3 items-center">
                   <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -446,7 +427,7 @@ export default function NewsPage() {
                     {newsData.targetGroups.map((group, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-normal bg-[#E6F7F5] text-[#0AAC9E]"
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-normal bg-[#E6F7F5] text-[##0AAC9E]"
                       >
                         {group}
                       </span>
@@ -455,7 +436,6 @@ export default function NewsPage() {
                 </div>
               )}
 
-              {/* Engagement Section */}
               <div className="border-t border-b border-gray-100 py-3 mb-8">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2 text-gray-500">
@@ -473,7 +453,6 @@ export default function NewsPage() {
                 </div>
               </div>
 
-              {/* Attachments Section - Collapsible with smooth animation */}
               {attachments.length > 0 && (
                 <div className="mb-8">
                   <button
@@ -516,7 +495,6 @@ export default function NewsPage() {
                 </div>
               )}
 
-              {/* Content */}
               <div className="prose prose-lg max-w-none">
                 <div className="text-gray-700">
                   <PageTextComponent desc={jsonObject} readOnly={true} />

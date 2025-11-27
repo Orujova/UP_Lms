@@ -16,10 +16,7 @@ import {
   Heart,
   HeartOff,
   ArrowLeft,
-  Save,
-  Calendar,
   Send,
-  X,
 } from "lucide-react";
 
 // Import components
@@ -91,7 +88,7 @@ export default function EditPage() {
     title: "",
     subtitle: "",
     newsCategoryId: "",
-    targetGroupIds: [], // Array for multiple target groups
+    targetGroupIds: [],
     newsImages: [],
     attachments: [],
     hasNotification: false,
@@ -106,7 +103,7 @@ export default function EditPage() {
   const [normalizedEditorData, setNormalizedEditorData] = useState(null);
   const [responseMessage, setResponseMessage] = useState("");
   const [currentCategoryName, setCurrentCategoryName] = useState("");
-  const [currentTargetGroupNames, setCurrentTargetGroupNames] = useState([]); // Changed to array
+  const [currentTargetGroupNames, setCurrentTargetGroupNames] = useState([]);
   const [originalData, setOriginalData] = useState(null);
 
   const newsId = pathname?.split("/").pop();
@@ -121,10 +118,7 @@ export default function EditPage() {
     dispatch(newsCategoryAsync());
   }, [dispatch]);
 
-  // Only update formData when selectedTargetGroups changes AND
-  // it's not the initial load/API data setting the selection
   useEffect(() => {
-    // Skip this effect if we're still loading initial data
     if (skipTargetGroupsUpdate.current) {
       return;
     }
@@ -133,7 +127,6 @@ export default function EditPage() {
       group.id.toString()
     );
 
-    // Only update if the values are actually different to avoid loops
     if (
       JSON.stringify(newTargetGroupIds) !==
       JSON.stringify(formData.targetGroupIds)
@@ -143,7 +136,6 @@ export default function EditPage() {
         targetGroupIds: newTargetGroupIds,
       }));
 
-      // Clear error when field is updated
       if (formErrors.targetGroupIds) {
         setFormErrors((prev) => ({ ...prev, targetGroupIds: null }));
       }
@@ -197,7 +189,6 @@ export default function EditPage() {
   useEffect(() => {
     if (description) {
       try {
-        // Normalize the description data for the editor
         const normalized = normalizeEditorData(description);
         setNormalizedEditorData(normalized);
       } catch (error) {
@@ -220,8 +211,16 @@ export default function EditPage() {
         const token = getToken();
         const parsedToken = getParsedToken();
 
+        // Updated API endpoint: GET /api/News/id with query parameters
+        const queryParams = new URLSearchParams({
+          Id: newsId,
+          UserId: parsedToken.UserID,
+          Device: '1', // 1 for web, 2 for mobile
+          Language: 'az',
+        });
+
         const response = await fetch(
-          `https://bravoadmin.uplms.org/api/News/${newsId}?userid=${parsedToken.UserID}`,
+          `https://demoadmin.databyte.app/api/News/id?${queryParams.toString()}`,
           {
             headers: {
               accept: "*/*",
@@ -249,7 +248,6 @@ export default function EditPage() {
           }
         }
 
-        // Convert targetGroupIds to array of strings
         const targetGroupIds =
           data.targetGroupIds && data.targetGroupIds.length > 0
             ? data.targetGroupIds.map((id) => id.toString())
@@ -296,15 +294,13 @@ export default function EditPage() {
             }))
           : [];
 
-        // Set flag to avoid the circular dependency during init
         skipTargetGroupsUpdate.current = true;
 
-        // Update form state
         setFormData({
           title: data.title || "",
           subtitle: data.subTitle || "",
           newsCategoryId: categoryId,
-          targetGroupIds: targetGroupIds, // Now using array of IDs
+          targetGroupIds: targetGroupIds,
           newsImages: existingImages,
           attachments: existingAttachments,
           hasNotification: data.hasNotification || false,
@@ -318,9 +314,8 @@ export default function EditPage() {
           setCurrentTargetGroupNames(data.targetGroups);
         }
 
-        // Set selectedTargetGroups direct from the API data
+        // Set selectedTargetGroups from API data
         if (targetGroupIds.length > 0 && targetGroups.length > 0) {
-          // Try to find actual matching groups
           const matchingGroups = targetGroups.filter((group) =>
             targetGroupIds.includes(group.id.toString())
           );
@@ -328,7 +323,6 @@ export default function EditPage() {
           if (matchingGroups.length > 0) {
             setSelectedTargetGroups(matchingGroups);
           } else if (data.targetGroups && data.targetGroups.length > 0) {
-            // Create temporary target group objects if no matches found
             const tempGroups = targetGroupIds.map((id, index) => ({
               id: id,
               name: data.targetGroups[index] || `Group ${id}`,
@@ -343,7 +337,6 @@ export default function EditPage() {
           data.targetGroupIds &&
           data.targetGroupIds.length > 0
         ) {
-          // Create temporary target group objects
           const tempGroups = data.targetGroupIds.map((id, index) => ({
             id: id.toString(),
             name: data.targetGroups[index] || `Group ${id}`,
@@ -353,7 +346,6 @@ export default function EditPage() {
           setSelectedTargetGroups(tempGroups);
         }
 
-        // Process description data - store raw data first, normalization happens in useEffect
         if (data.description) {
           setDescription(data.description);
         }
@@ -362,7 +354,6 @@ export default function EditPage() {
         toast.error("Failed to fetch news data");
       } finally {
         setLoading(false);
-        // Reset the flag after a short delay to allow other effects to complete
         setTimeout(() => {
           skipTargetGroupsUpdate.current = false;
           isInitialLoad.current = false;
@@ -387,14 +378,12 @@ export default function EditPage() {
       }
     }
 
-    // Clear error when field is updated
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: null }));
     }
   };
 
   const handleEditorChange = (value) => {
-    // Use utility function to handle editor data
     handleDescriptionChange(value, setDescription);
     if (formErrors.description) {
       setFormErrors((prev) => ({ ...prev, description: null }));
@@ -417,7 +406,6 @@ export default function EditPage() {
     }
   };
 
-  // Form validation
   const validateForm = () => {
     const errors = {};
     if (!formData.title.trim()) errors.title = "Title is required";
@@ -435,7 +423,6 @@ export default function EditPage() {
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Validate form
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -453,7 +440,6 @@ export default function EditPage() {
     }
 
     try {
-      // Generate form data
       const formDataToSend = new FormData();
 
       // Add basic form fields
@@ -502,41 +488,9 @@ export default function EditPage() {
         }
       });
 
-      // Create query parameters
-      const queryParams = new URLSearchParams();
-      queryParams.append("Id", newsId);
-      queryParams.append("Title", formData.title.trim());
-      queryParams.append("SubTitle", formData.subtitle.trim());
-      queryParams.append("Description", description);
-      queryParams.append("Priority", formData.priority.toLowerCase());
-      queryParams.append(
-        "HasNotification",
-        formData.hasNotification.toString()
-      );
-      queryParams.append("HasComment", formData.hasComment.toString());
-      queryParams.append("HasLike", formData.hasLike.toString());
-      queryParams.append("NewsCategoryId", formData.newsCategoryId);
-
-      // Add all target groups to query params
-      formData.targetGroupIds.forEach((groupId) => {
-        queryParams.append("TargetGroupIds", groupId);
-      });
-
-      imagesToDelete.forEach((imageId) => {
-        if (!isNaN(parseInt(imageId))) {
-          queryParams.append("ImageIdsToDelete", imageId);
-        }
-      });
-
-      attachmentsToDelete.forEach((attachmentId) => {
-        if (!isNaN(parseInt(attachmentId))) {
-          queryParams.append("AttachmentIdsToDelete", attachmentId);
-        }
-      });
-
-      // Make API request
+      // Updated API call: PUT /api/News with Language parameter
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/News?${queryParams.toString()}`,
+        `https://demoadmin.databyte.app/api/News?Language=az`,
         {
           method: "PUT",
           headers: {
@@ -589,7 +543,6 @@ export default function EditPage() {
     router.push("/admin/dashboard/news");
   };
 
-  // Priority options
   const priorityOptions = [
     { id: "HIGH", name: "High" },
     { id: "MEDIUM", name: "Medium" },
@@ -603,7 +556,6 @@ export default function EditPage() {
   return (
     <main className="pt-16 bg-gray-50/50 min-h-screen">
       <div className="max-w-6xl mx-auto px-5 mb-16">
-        {/* Header with back button */}
         <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
           <h1 className="text-2xl font-semibold text-gray-800">Edit News</h1>
           <button
@@ -627,11 +579,8 @@ export default function EditPage() {
         )}
 
         <form className="grid grid-cols-1 gap-8" onSubmit={handleSubmit}>
-          {/* Main content area with 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left column - 2/3 width */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Title and subtitle section */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center mb-2 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">
@@ -664,7 +613,6 @@ export default function EditPage() {
                 </div>
               </div>
 
-              {/* Media section */}
               <div className="bg-white rounded-lg shadow-sm px-6 py-5">
                 <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">Media</h2>
@@ -711,9 +659,7 @@ export default function EditPage() {
               </div>
             </div>
 
-            {/* Right sidebar - 1/3 width */}
             <div className="lg:col-span-1 space-y-8">
-              {/* Publication settings */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">
@@ -741,7 +687,6 @@ export default function EditPage() {
                     options={priorityOptions}
                   />
 
-                  {/* Target groups */}
                   <div>
                     <TargetGroupSelector
                       targetGroups={targetGroups}
@@ -762,7 +707,6 @@ export default function EditPage() {
                 </div>
               </div>
 
-              {/* Interaction settings */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center mb-4 border-b border-gray-100 pb-3">
                   <h2 className="text-lg font-medium text-gray-800">
@@ -811,7 +755,6 @@ export default function EditPage() {
             </div>
           </div>
 
-          {/* Editor section - Full Width */}
           <div className="bg-white rounded-lg shadow-sm p-6 w-full">
             <div className="flex items-center mb-5 border-b border-gray-100 pb-3">
               <h2 className="text-lg font-medium text-gray-800">Content</h2>
@@ -846,13 +789,10 @@ export default function EditPage() {
             </div>
           </div>
 
-          {/* Action buttons - At bottom, full width */}
           <div>
             <div className="grid grid-cols-4 gap-4">
-              {/* First two columns are empty */}
               <div className="col-span-2"></div>
 
-              {/* Cancel button in third column */}
               <div className="col-span-1">
                 <button
                   type="button"
@@ -863,7 +803,6 @@ export default function EditPage() {
                 </button>
               </div>
 
-              {/* Update button in fourth column */}
               <div className="col-span-1">
                 <button
                   type="submit"

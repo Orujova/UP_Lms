@@ -15,6 +15,7 @@ import {
   ChevronDown,
   SquareArrowOutUpRight,
 } from "lucide-react";
+import { getToken } from "@/authtoken/auth.js";
 import LoadingSpinner from "@/components/loadingSpinner";
 import DeleteConfirmationModal from "@/components/deleteModal";
 
@@ -48,7 +49,7 @@ export default function EventList() {
     try {
       setLoading(true);
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Event?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${search}&OrderBy=${sortOrder}`
+        `https://demoadmin.databyte.app/api/Event?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${search}&OrderBy=${sortOrder}`
       );
       const data = await response.json();
       setEvents(data[0].events);
@@ -76,16 +77,31 @@ export default function EventList() {
     if (!eventToDelete) return;
 
     try {
-      const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Event/${eventToDelete}`,
-        { method: "DELETE" }
-      );
+      const token = getToken();
+      
+      // UPDATED DELETE API
+const queryParams = new URLSearchParams({
+  EventId: eventToDelete.toString(),
+  Language: 'az',
+});
+
+const response = await fetch(
+  `https://demoadmin.databyte.app/api/Event?${queryParams.toString()}`,
+  { 
+    method: "DELETE",
+    headers: {
+      accept: "*/*",
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
       if (response.ok) {
         setEvents((prev) => prev.filter((event) => event.id !== eventToDelete));
         fetchEvents();
       } else {
-        throw new Error("Failed to delete event.");
+        const errorText = await response.text().catch(() => '');
+        throw new Error(errorText || "Failed to delete event.");
       }
     } catch (error) {
       console.error("Error deleting event:", error);

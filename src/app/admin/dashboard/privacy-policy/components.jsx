@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
 // Constants
-export const API_URL = "https://bravoadmin.uplms.org/api/";
+export const API_URL = "https://demoadmin.databyte.app/api/";
 
 // Modern UI Components with improved styling
 export const PageHeader = ({ title, subtitle, icon, actions }) => (

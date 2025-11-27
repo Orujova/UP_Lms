@@ -1,6 +1,6 @@
-// src/api/news.js - Expanded with additional API functions
+// src/api/news.js - Updated with new API endpoints
 
-import { getToken } from "@/authtoken/auth.js";
+import { getToken, getUserId } from "@/authtoken/auth.js";
 
 export const fetchNews = async (params = {}) => {
   const token = getToken();
@@ -49,7 +49,7 @@ export const fetchNews = async (params = {}) => {
       queryParams.append("ViewRange.End", params.ViewRange.End);
   }
 
-  const url = `https://bravoadmin.uplms.org/api/News?${queryParams.toString()}`;
+  const url = `https://demoadmin.databyte.app/api/News?${queryParams.toString()}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -70,7 +70,7 @@ export const fetchNews = async (params = {}) => {
 export const addNews = async (newsData) => {
   const token = getToken();
 
-  const response = await fetch("https://bravoadmin.uplms.org/api/News", {
+  const response = await fetch("https://demoadmin.databyte.app/api/News", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -86,17 +86,28 @@ export const addNews = async (newsData) => {
   return response.json();
 };
 
-// Get a single news item by ID
-export const getNewsById = async (id) => {
+// Get a single news item by ID - UPDATED ENDPOINT
+export const getNewsById = async (id, userId = null, device = 1, language = 'az') => {
   const token = getToken();
+  const userIdToUse = userId || getUserId();
 
-  const response = await fetch(`https://bravoadmin.uplms.org/api/News/${id}`, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+  const queryParams = new URLSearchParams({
+    Id: id.toString(),
+    UserId: userIdToUse.toString(),
+    Device: device.toString(), // 1 for web, 2 for mobile
+    Language: language,
   });
+
+  const response = await fetch(
+    `https://demoadmin.databyte.app/api/News/id?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch news item");
@@ -105,17 +116,21 @@ export const getNewsById = async (id) => {
   return response.json();
 };
 
-// Update an existing news item
-export const updateNews = async (newsData) => {
+// Update an existing news item - UPDATED ENDPOINT
+export const updateNews = async (newsData, language = 'az') => {
   const token = getToken();
 
-  const response = await fetch("https://bravoadmin.uplms.org/api/News", {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: newsData, // FormData object with news details including ID
-  });
+  const response = await fetch(
+    `https://demoadmin.databyte.app/api/News?Language=${language}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accept: "*/*",
+      },
+      body: newsData, // FormData object with news details including ID
+    }
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
@@ -125,24 +140,29 @@ export const updateNews = async (newsData) => {
   return response.json();
 };
 
-// Delete a news item
-export const deleteNews = async (id) => {
+// Delete a news item - UPDATED ENDPOINT
+export const deleteNews = async (id, language = 'az') => {
   const token = getToken();
 
-  const formData = new FormData();
-  formData.append("Id", id);
-
-  const response = await fetch("https://bravoadmin.uplms.org/api/News", {
-    method: "DELETE",
-    headers: {
-      accept: "*/*",
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
+  const queryParams = new URLSearchParams({
+    Id: id.toString(),
+    Language: language,
   });
 
+  const response = await fetch(
+    `https://demoadmin.databyte.app/api/News?${queryParams.toString()}`,
+    {
+      method: "DELETE",
+      headers: {
+        accept: "*/*",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
   if (!response.ok) {
-    throw new Error("Failed to delete news item");
+    const errorText = await response.text().catch(() => '');
+    throw new Error(errorText || "Failed to delete news item");
   }
 
   return id; // Return the ID for Redux state updates
@@ -166,7 +186,7 @@ export const exportNews = async (params = {}) => {
   if (params.OrderBy)
     queryParams.append("OrderBy", params.OrderBy.toLowerCase());
 
-  const url = `https://bravoadmin.uplms.org/api/News/export?${queryParams.toString()}`;
+  const url = `https://demoadmin.databyte.app/api/News/export?${queryParams.toString()}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -187,7 +207,7 @@ export const fetchNewsCategories = async () => {
   const token = getToken();
 
   const response = await fetch(
-    "https://bravoadmin.uplms.org/api/NewsCategory",
+    "https://demoadmin.databyte.app/api/NewsCategory",
     {
       headers: {
         Authorization: `Bearer ${token}`,

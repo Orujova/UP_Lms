@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'master(deploy)'
+      - 'demo'
 
 jobs:
   build-and-deploy:
@@ -32,13 +33,18 @@ jobs:
     
     - name: Test SSH Connection
       run: ssh -v uplms@100.42.179.27 'pwd'
-    
-    - name: Handle PM2 Process (Stop instead of Delete)
+
+    # ======================
+    # MASTER (Production)
+    # ======================
+    - name: Handle PM2 Process (Prod)
+      if: github.ref == 'refs/heads/master(deploy)'
       continue-on-error: true
       run: |
         ssh uplms@100.42.179.27 'ADMIN_PID=$(pm2 pid "uplms_front_admin" 2>/dev/null); if [ -n "$ADMIN_PID" ]; then pm2 stop "uplms_front_admin" || true; else echo "No process to stop"; fi'
-    
-    - name: Sync Files
+
+    - name: Sync Files (Prod)
+      if: github.ref == 'refs/heads/master(deploy)'
       run: |
         rsync -av --delete -e "ssh -i $HOME/.ssh/id_rsa" \
           --exclude="node_modules" \
@@ -46,8 +52,33 @@ jobs:
           --exclude=".github" \
           --exclude=".next/cache" \
           ./ uplms@100.42.179.27:/home/uplms/front_admin/
-    
-    - name: Install Dependencies and Start/Restart PM2 Process
+
+    - name: Install Dependencies and Start/Restart PM2 Process (Prod)
+      if: github.ref == 'refs/heads/master(deploy)'
       run: |
         ssh uplms@100.42.179.27 'cd /home/uplms/front_admin && npm install --production && ADMIN_PID=$(pm2 pid "uplms_front_admin" 2>/dev/null); if [ -n "$ADMIN_PID" ]; then pm2 restart "uplms_front_admin" && pm2 save; else pm2 start "npm run start" --name "uplms_front_admin" && pm2 save; fi'
-      #Test code
+
+    # ======================
+    # DEMO
+    # ======================
+    - name: Handle PM2 Process (Demo)
+      if: github.ref == 'refs/heads/demo'
+      continue-on-error: true
+      run: |
+        ssh uplms@100.42.179.27 'DEMO_PID=$(pm2 pid "uplms_front_demo" 2>/dev/null); if [ -n "$DEMO_PID" ]; then pm2 stop "uplms_front_demo" || true; else echo "No process to stop"; fi'
+
+    - name: Sync Files (Demo)
+      if: github.ref == 'refs/heads/demo'
+      run: |
+        ssh uplms@100.42.179.27 "mkdir -p /home/uplms/front_demo"
+        rsync -av --delete -e "ssh -i $HOME/.ssh/id_rsa" \
+          --exclude="node_modules" \
+          --exclude=".git" \
+          --exclude=".github" \
+          --exclude=".next/cache" \
+          ./ uplms@100.42.179.27:/home/uplms/front_demo/
+
+    - name: Install Dependencies and Start/Restart PM2 Process (Demo)
+      if: github.ref == 'refs/heads/demo'
+      run: |
+        ssh uplms@100.42.179.27 'cd /home/uplms/front_demo && npm install --production && DEMO_PID=$(pm2 pid "uplms_front_demo" 2>/dev/null); if [ -n "$DEMO_PID" ]; then pm2 restart "uplms_front_demo" && pm2 save; else pm2 start "npm run start" --name "uplms_front_demo" && pm2 save; fi'

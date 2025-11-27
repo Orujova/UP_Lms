@@ -2,7 +2,7 @@
 import axios from "axios";
 import { getToken } from "@/authtoken/auth.js";
 
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 export const fetchNewsCategory = async () => {
   try {
@@ -74,21 +74,27 @@ export const updateNewsCategory = async (id, categoryName) => {
   }
 };
 
-export const deleteNewsCategory = async (id) => {
+export const deleteNewsCategory = async (id, language = "") => {
   try {
     const token = getToken();
     if (!token) {
       throw new Error("Token bulunamadı. Lütfen giriş yapınız.");
     }
 
-    const response = await axios.delete(`${API_URL}NewsCategory`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        accept: "application/json",
-      },
-      data: { id },
-    });
+    const params = new URLSearchParams({ Id: id });
+    if (language) {
+      params.append("Language", language);
+    }
+
+    const response = await axios.delete(
+      `${API_URL}NewsCategory?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "application/json",
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     console.error("Error deleting news category:", error);

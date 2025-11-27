@@ -1263,28 +1263,12 @@ const handleContentDrop = useCallback(async (dropIndex, draggedIndexFromEvent, s
             })}
           </div>
         ) : (
-          <div className="text-center py-16 border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
+          <div className="text-center py-4 border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
             <div className="flex flex-col items-center">
-              <div className="relative mb-4">
-                <GripVertical className="w-8 h-8 text-gray-300 absolute -top-2 -left-2" />
-                <BookOpen className="w-12 h-12 text-gray-400" />
-              </div>
+              
               <h3 className="text-lg font-medium text-gray-900 mb-2">No sections yet</h3>
-              <p className="text-gray-500 mb-6 max-w-md text-center">
-                Start building your course by adding your first section. You can drag and drop sections to reorder them later.
-              </p>
-              <button
-                onClick={handleAddSection}
-                disabled={loading}
-                className="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-[#0AAC9E] rounded-lg hover:bg-[#0AAC9E]/90 transition-colors disabled:opacity-50"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4 mr-2" />
-                )}
-                Add First Section
-              </button>
+            
+             
             </div>
           </div>
         )}

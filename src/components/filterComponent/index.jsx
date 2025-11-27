@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Filter, X, Search, ChevronDown } from "lucide-react";
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 const FilterComponent = ({ onApplyFilters, buttonClassName }) => {
   const [open, setOpen] = useState(false);

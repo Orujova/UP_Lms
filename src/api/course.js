@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getToken, getUserId } from "@/authtoken/auth.js";
 
-const API_URL = "https://bravoadmin.uplms.org/api/";
+const API_URL = "https://demoadmin.databyte.app/api/";
 
 const getHeaders = () => {
   const token = getToken();
@@ -15,9 +15,9 @@ const getHeaders = () => {
 
 export const getImageUrl = (url) => {
   if (!url) return null;
-  if (url.includes("https://100.42.179.27:7198/")) {
-    return `https://bravoadmin.uplms.org/uploads/${url.replace(
-      "https://100.42.179.27:7198/",
+  if (url.includes("https://100.42.179.27:7298/")) {
+    return `https://demoadmin.databyte.app/uploads/${url.replace(
+      "https://100.42.179.27:7298/",
       ""
     )}`;
   }
@@ -25,40 +25,94 @@ export const getImageUrl = (url) => {
 };
 
 // ======================== COURSE ENDPOINTS ========================
+export const getDistinctCourseNames = async (language = null) => {
+  try {
+    const params = language ? `?Language=${language}` : '';
+    const response = await axios.get(
+      `${API_URL}PositionCourseRequirement/GetDistinctCourseNames${params}`,
+      { headers: getHeaders() }
+    );
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching course names:", error);
+    throw new Error("Failed to fetch course names: " + (error.response?.data?.message || error.message));
+  }
+};
+
+// Get positions info for selected course name
+export const getCoursePositionsInfo = async (courseName, language = null) => {
+  try {
+    const params = new URLSearchParams();
+    params.append('CourseName', courseName);
+    if (language) params.append('Language', language);
+    
+    const response = await axios.get(
+      `${API_URL}PositionCourseRequirement/GetDistinctCoursePositionsInfo?${params.toString()}`,
+      { headers: getHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching course positions info:", error);
+    throw new Error("Failed to fetch positions info: " + (error.response?.data?.message || error.message));
+  }
+};
+// ======================== COURSE ENDPOINTS ========================
 
 // Fetch all courses (FIXED ORDER BY)
 export const fetchCourses = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
+    
+    // Pagination
     if (params.page) queryParams.append("Page", params.page);
     if (params.take) queryParams.append("ShowMore.Take", params.take);
+    
+    // Search and filtering
     if (params.search) queryParams.append("Search", params.search);
     if (params.tagId) queryParams.append("TagId", params.tagId);
-    if (params.hasCertificate !== undefined)
+    if (params.courseCategoryName) queryParams.append("CourseCategoryName", params.courseCategoryName);
+    
+    // Boolean filters
+    if (params.hasCertificate !== undefined) {
       queryParams.append("HasCertificate", params.hasCertificate);
-    if (params.minDuration)
-      queryParams.append("MinDuration", params.minDuration);
-    if (params.maxDuration)
-      queryParams.append("MaxDuration", params.maxDuration);
-    if (params.courseCategoryName)
-      queryParams.append("CourseCategoryName", params.courseCategoryName);
+    }
+    if (params.isPromoted !== undefined) {
+      queryParams.append("IsPromoted", params.isPromoted);
+    }
+    
+    // Duration filters
+    if (params.minDuration) queryParams.append("MinDuration", params.minDuration);
+    if (params.maxDuration) queryParams.append("MaxDuration", params.maxDuration);
 
-    // FIXED: Add proper orderBy parameter based on API documentation
+    // FIXED: OrderBy parameter - match exactly with backend enum
     if (params.orderBy) {
-      const orderByMap = {
+      // Convert our frontend values to backend expected values
+      const orderByMapping = {
         'nameasc': 'nameasc',
-        'namedesc': 'namedesc',
+        'namedesc': 'namedesc', 
         'dateasc': 'dateasc',
         'datedesc': 'datedesc',
         'durationasc': 'durationasc',
-        'durationdesc': 'durationdesc'
+        'durationdesc': 'durationdesc',
+        // Fallback mappings
+        'newest': 'datedesc',
+        'oldest': 'dateasc',
+        'nameAsc': 'nameasc',
+        'nameDesc': 'namedesc',
+        'durationAsc': 'durationasc',
+        'durationDesc': 'durationdesc'
       };
-      queryParams.append("OrderBy", orderByMap[params.orderBy.toLowerCase()] || 'nameasc');
+      
+      const mappedOrderBy = orderByMapping[params.orderBy.toLowerCase()] || 'nameasc';
+      queryParams.append("OrderBy", mappedOrderBy);
+      console.log('Sending OrderBy parameter:', mappedOrderBy);
     }
 
     const url = `${API_URL}Course${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
+
+    console.log('Fetching courses with URL:', url);
 
     const response = await axios.get(url, {
       headers: getHeaders(),
@@ -78,14 +132,18 @@ export const fetchCourses = async (params = {}) => {
       }
     }
 
-    // Process image URLs
+    // Process image URLs and add computed fields
     const processedCourses = courses.map(course => ({
       ...course,
       imageUrl: getImageUrl(course.imageUrl),
       topAssignedUsers: course.topAssignedUsers?.map(user => ({
         ...user,
         profilePictureUrl: getImageUrl(user.profilePictureUrl)
-      })) || []
+      })) || [],
+      // Add computed fields for better filtering
+      isPublished: course.publishCourse || false,
+      hasVerifiedCertificate: course.verifiedCertificate || false,
+      isPromotedCourse: course.isPromoted || false,
     }));
 
     return {
@@ -97,7 +155,6 @@ export const fetchCourses = async (params = {}) => {
     throw new Error("Failed to fetch courses: " + (error.response?.data?.message || error.message));
   }
 };
-
 // Fetch single course by ID
 export const fetchCourseById = async (courseId, userId = null) => {
   try {
@@ -132,7 +189,7 @@ export const fetchCourseById = async (courseId, userId = null) => {
 };
 
 
-// Fixed createCourse function with ID fetching
+// Updated createCourse function with new fields
 export const createCourse = async (courseData) => {
   try {
     const token = getToken();
@@ -153,13 +210,17 @@ export const createCourse = async (courseData) => {
     formData.append("CategoryId", (courseData.categoryId || "").toString());
     formData.append("UserId", (userId || "").toString());
 
+    // NEW FIELD: AboutCourse (rich text content)
+    formData.append("AboutCourse", courseData.aboutCourse || "");
+
     // Boolean fields - always include with explicit true/false
     formData.append("VerifiedCertificate", (courseData.verifiedCertificate || false).toString());
     formData.append("AutoReassign", (courseData.autoReassign || false).toString());
-    formData.append("ClusterIsMandatory", (courseData.clusterIsMandatory || false).toString());
-    
-    // NEW: Added HasNotification field
     formData.append("HasNotification", (courseData.hasNotification || false).toString());
+    
+    // NEW FIELDS: IsPromoted and PublishCourse
+    formData.append("IsPromoted", (courseData.isPromoted || false).toString());
+    formData.append("PublishCourse", (courseData.publishCourse || false).toString());
 
     // Optional integer fields - only add if they have valid values
     if (courseData.certificateId && courseData.certificateId !== null && courseData.certificateId !== "") {
@@ -174,12 +235,12 @@ export const createCourse = async (courseData) => {
       formData.append("DeadLine", courseData.deadline.toString());
     }
 
-    // NEW: Added ExpirationDate field
+    // UPDATED: ExpirationDate - now in months instead of days
     if (courseData.expirationDate && courseData.expirationDate !== null && courseData.expirationDate !== "") {
       formData.append("ExpirationDate", courseData.expirationDate.toString());
     }
 
-    // Cluster settings
+    // Cluster settings (ClusterIsMandatory field removed as per API)
     if (courseData.clusterId && courseData.clusterId !== null && courseData.clusterId !== "") {
       formData.append("ClusterId", courseData.clusterId.toString());
       
@@ -199,14 +260,7 @@ export const createCourse = async (courseData) => {
       formData.append("ImageFile", courseData.imageFile);
     }
 
-    // Arrays - Target Groups
-    if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds) && courseData.targetGroupIds.length > 0) {
-      courseData.targetGroupIds.forEach((id) => {
-        if (id !== null && id !== undefined && id !== "") {
-          formData.append("TargetGroupIds", id.toString());
-        }
-      });
-    }
+   
 
     // Arrays - Tags
     if (courseData.tagIds && Array.isArray(courseData.tagIds) && courseData.tagIds.length > 0) {
@@ -217,7 +271,7 @@ export const createCourse = async (courseData) => {
       });
     }
 
-    // FIXED: Succession rates now uses SuccessionRatesJson as string
+    // Succession rates - using SuccessionRatesJson as string
     if (courseData.successionRates && Array.isArray(courseData.successionRates) && courseData.successionRates.length > 0) {
       const validRates = courseData.successionRates.filter(rate => 
         rate.minRange !== null && rate.minRange !== undefined && 
@@ -245,14 +299,14 @@ export const createCourse = async (courseData) => {
 
     console.log("Course created successfully:", response.data);
 
-    // Handle API response - check if it's actually successful
+    // Handle API response
     if (response.data && response.data.success === false) {
       throw new Error(response.data.message || "Course creation failed due to business rules");
     }
 
-    // FIXED: Since API only returns success message, fetch the created course
+    // Return response with proper handling
     if (response.data?.success) {
-      // Wait a moment for the course to be fully created
+      // Wait for course to be fully created
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       try {
@@ -264,7 +318,6 @@ export const createCourse = async (courseData) => {
         });
         
         if (latestCoursesResponse.courses && latestCoursesResponse.courses.length > 0) {
-          // Find the course with matching name and description
           const createdCourse = latestCoursesResponse.courses.find(course => 
             course.name === courseData.name && 
             course.description === courseData.description
@@ -273,7 +326,6 @@ export const createCourse = async (courseData) => {
           if (createdCourse) {
             console.log('Found created course with ID:', createdCourse.id);
             
-            // Return the full course object with real ID
             return {
               ...response.data,
               id: createdCourse.id,
@@ -288,14 +340,13 @@ export const createCourse = async (courseData) => {
         console.warn('Could not fetch created course details:', fetchError);
       }
       
-      // If we can't fetch the course, return success with a note
       return {
         ...response.data,
         id: null,
         courseId: null,
         success: true,
         message: response.data.message,
-        needsRefresh: true // Flag to indicate we need to refresh course list
+        needsRefresh: true
       };
     }
 
@@ -320,6 +371,126 @@ export const createCourse = async (courseData) => {
     }
     
     throw new Error(errorMessage);
+  }
+};
+
+// Updated updateCourse function with new fields
+export const updateCourse = async (courseData) => {
+  try {
+    const formData = new FormData();
+
+    // Required for update
+    if (courseData.id) {
+      formData.append("Id", courseData.id.toString());
+    }
+
+    if (courseData.name) formData.append("Name", courseData.name);
+    if (courseData.description) formData.append("Description", courseData.description);
+    
+    // NEW FIELD: AboutCourse
+    if (courseData.aboutCourse !== undefined) {
+      formData.append("AboutCourse", courseData.aboutCourse || "");
+    }
+    
+    if (courseData.duration) formData.append("Duration", courseData.duration.toString());
+    if (courseData.categoryId) formData.append("CategoryId", courseData.categoryId.toString());
+    
+    if (courseData.verifiedCertificate !== undefined) {
+      formData.append("VerifiedCertificate", courseData.verifiedCertificate.toString());
+    }
+     const userId = getUserId();
+    if (userId) {
+      formData.append("UserId", userId.toString());
+    }
+
+    if (courseData.imageFile && courseData.imageFile instanceof File) {
+      formData.append("ImageFile", courseData.imageFile);
+    }
+
+    if (courseData.certificateId) {
+      formData.append("CertificateId", courseData.certificateId.toString());
+    }
+
+    if (courseData.tagIds && Array.isArray(courseData.tagIds)) {
+      courseData.tagIds.forEach((id) => {
+        formData.append("TagIds", id.toString());
+      });
+    }
+
+
+
+    if (courseData.startDuration) {
+      formData.append("StartDuration", courseData.startDuration.toString());
+    }
+
+    if (courseData.deadline) {
+      formData.append("DeadLine", courseData.deadline.toString());
+    }
+
+    // UPDATED: ExpirationDate in months
+    if (courseData.expirationDate) {
+      formData.append("ExpirationDate", courseData.expirationDate.toString());
+    }
+
+    if (courseData.autoReassign !== undefined) {
+      formData.append("AutoReassign", courseData.autoReassign.toString());
+    }
+
+    if (courseData.hasNotification !== undefined) {
+      formData.append("HasNotification", courseData.hasNotification.toString());
+    }
+
+    // NEW FIELDS: IsPromoted and PublishCourse
+    if (courseData.isPromoted !== undefined) {
+      formData.append("IsPromoted", courseData.isPromoted.toString());
+    }
+
+    if (courseData.publishCourse !== undefined) {
+      formData.append("PublishCourse", courseData.publishCourse.toString());
+    }
+
+   
+
+    // Cluster settings (removed ClusterIsMandatory)
+    if (courseData.clusterId) {
+      formData.append("ClusterId", courseData.clusterId.toString());
+      
+      if (courseData.clusterCoefficient !== null && courseData.clusterCoefficient !== undefined) {
+        formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
+      }
+    }
+
+    if (courseData.clusterOrderNumber) {
+      formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
+    }
+
+    // Succession rates
+    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
+      const validRates = courseData.successionRates.filter(rate => 
+        rate.minRange !== null && rate.minRange !== undefined && 
+        rate.maxRange !== null && rate.maxRange !== undefined
+      ).map(rate => ({
+        minRange: parseInt(rate.minRange),
+        maxRange: parseInt(rate.maxRange),
+        badgeId: rate.badgeId && !isNaN(parseInt(rate.badgeId)) ? parseInt(rate.badgeId) : null
+      }));
+
+      if (validRates.length > 0) {
+        formData.append("SuccessionRatesJson", JSON.stringify(validRates));
+      }
+    }
+
+    const response = await axios.put(`${API_URL}Course/UpdateCourse`, formData, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error updating course:", error);
+    throw new Error("Failed to update course: " + (error.response?.data?.detail || error.message));
   }
 };
 export const findCourseByDetails = async (name, description, userId = null) => {
@@ -357,121 +528,7 @@ export const findCourseByDetails = async (name, description, userId = null) => {
     return null;
   }
 };
-export const updateCourse = async (courseData) => {
-  try {
-    const formData = new FormData();
 
-    // Required for update
-    if (courseData.id) {
-      formData.append("Id", courseData.id.toString());
-    }
-
-    if (courseData.name) formData.append("Name", courseData.name);
-    if (courseData.description) formData.append("Description", courseData.description);
-    if (courseData.duration) formData.append("Duration", courseData.duration.toString());
-    if (courseData.categoryId) formData.append("CategoryId", courseData.categoryId.toString());
-    
-    if (courseData.verifiedCertificate !== undefined) {
-      formData.append("VerifiedCertificate", courseData.verifiedCertificate.toString());
-    }
-    
-    if (courseData.imageFile && courseData.imageFile instanceof File) {
-      formData.append("ImageFile", courseData.imageFile);
-    }
-
-    if (courseData.certificateId) {
-      formData.append("CertificateId", courseData.certificateId.toString());
-    }
-
-    if (courseData.tagIds && Array.isArray(courseData.tagIds)) {
-      courseData.tagIds.forEach((id) => {
-        formData.append("TagIds", id.toString());
-      });
-    }
-
-    if (courseData.targetGroupIds && Array.isArray(courseData.targetGroupIds)) {
-      courseData.targetGroupIds.forEach((id) => {
-        formData.append("TargetGroupIds", id.toString());
-      });
-    }
-
-    if (courseData.startDuration) {
-      formData.append("StartDuration", courseData.startDuration.toString());
-    }
-
-    if (courseData.deadline) {
-      formData.append("DeadLine", courseData.deadline.toString());
-    }
-
-    // NEW: Added ExpirationDate field
-    if (courseData.expirationDate) {
-      formData.append("ExpirationDate", courseData.expirationDate.toString());
-    }
-
-    if (courseData.autoReassign !== undefined) {
-      formData.append("AutoReassign", courseData.autoReassign.toString());
-    }
-
-    // NEW: Added HasNotification field
-    if (courseData.hasNotification !== undefined) {
-      formData.append("HasNotification", courseData.hasNotification.toString());
-    }
-
-    if (courseData.publishCourse !== undefined) {
-      formData.append("PublishCourse", courseData.publishCourse.toString());
-    }
-
-    if (courseData.userId) {
-      formData.append("UserId", courseData.userId.toString());
-    }
-
-    // Cluster settings
-    if (courseData.clusterId) {
-      formData.append("ClusterId", courseData.clusterId.toString());
-      
-      // ClusterCoefficient - 0 dəyərini də daxil et
-      if (courseData.clusterCoefficient !== null && courseData.clusterCoefficient !== undefined) {
-        formData.append("ClusterCoefficient", courseData.clusterCoefficient.toString());
-      }
-    }
-
-    if (courseData.clusterOrderNumber) {
-      formData.append("ClusterOrderNumber", courseData.clusterOrderNumber.toString());
-    }
-
-    if (courseData.clusterIsMandatory !== undefined) {
-      formData.append("ClusterIsMandatory", courseData.clusterIsMandatory.toString());
-    }
-
-    // FIXED: Succession rates - now uses SuccessionRatesJson
-    if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
-      const validRates = courseData.successionRates.filter(rate => 
-        rate.minRange !== null && rate.minRange !== undefined && 
-        rate.maxRange !== null && rate.maxRange !== undefined
-      ).map(rate => ({
-        minRange: parseInt(rate.minRange),
-        maxRange: parseInt(rate.maxRange),
-        badgeId: rate.badgeId && !isNaN(parseInt(rate.badgeId)) ? parseInt(rate.badgeId) : null
-      }));
-
-      if (validRates.length > 0) {
-        formData.append("SuccessionRatesJson", JSON.stringify(validRates));
-      }
-    }
-
-    const response = await axios.put(`${API_URL}Course/UpdateCourse`, formData, {
-      headers: {
-        ...getHeaders(),
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error("Error updating course:", error);
-    throw new Error("Failed to update course: " + (error.response?.data?.detail || error.message));
-  }
-};
 // Delete course
 export const deleteCourse = async (courseId) => {
   try {
@@ -767,9 +824,7 @@ export const validateCourseData = (courseData) => {
     errors.push("Duration must be between 1 and 10080 minutes");
   }
 
-  if (courseData.startDuration && courseData.deadline && courseData.startDuration >= courseData.deadline) {
-    errors.push("Start duration must be less than deadline");
-  }
+
 
   // FIXED: Validate succession rates structure
   if (courseData.successionRates && Array.isArray(courseData.successionRates)) {
@@ -889,8 +944,8 @@ export const calculateCourseCompletion = (course) => {
 // Course order by options - FIXED based on API documentation
 export const COURSE_ORDER_OPTIONS = {
   NAME_ASC: 'nameasc',
-  NAME_DESC: 'namedesc',
-  DATE_ASC: 'dateasc', 
+  NAME_DESC: 'namedesc', 
+  DATE_ASC: 'dateasc',
   DATE_DESC: 'datedesc',
   DURATION_ASC: 'durationasc',
   DURATION_DESC: 'durationdesc'

@@ -100,7 +100,8 @@ const NewsCategoryAdmin = () => {
   const confirmDelete = async () => {
     try {
       dispatch(setLoading(true));
-      await dispatch(deleteNewsCategoryAsync(deleteModal.id)).unwrap();
+      // FIX: Pass an object with id property instead of just the id
+      await dispatch(deleteNewsCategoryAsync({ id: deleteModal.id })).unwrap();
       toast.success("Category deleted successfully!");
       closeDeleteModal();
     } catch (err) {

@@ -51,7 +51,7 @@ const TrainingListPage = () => {
       setLoading(true);
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Training",
+        "https://demoadmin.databyte.app/api/Training",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -82,7 +82,7 @@ const TrainingListPage = () => {
     try {
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Training",
+        "https://demoadmin.databyte.app/api/Training",
         {
           method: "DELETE",
           headers: {
@@ -163,8 +163,8 @@ const TrainingListPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pt-14 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50/50 pt-14 ">
+      <div className=" mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -292,24 +292,16 @@ const TrainingListPage = () => {
         {/* Empty State */}
         {filteredTrainings.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <Calendar size={40} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <Calendar size={32} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
               No Trainings Found
             </h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-xs text-gray-500 mb-6">
               {searchTerm || filterType !== "all"
                 ? "Try adjusting your search or filters to find trainings."
                 : "Get started by creating your first training session."}
             </p>
-            {!searchTerm && filterType === "all" && (
-              <Link
-                href="/admin/dashboard/trainings/create"
-                className="inline-flex items-center gap-2 bg-[#0AAC9E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#089385] transition-colors"
-              >
-                <Plus size={16} />
-                Create Training
-              </Link>
-            )}
+          
           </div>
         ) : (
           <>

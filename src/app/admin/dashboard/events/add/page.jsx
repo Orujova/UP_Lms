@@ -109,7 +109,7 @@ const EventForm = () => {
   useEffect(() => {
     const fetchBrandingData = async () => {
       try {
-        const response = await fetch('https://bravoadmin.uplms.org/api/BrendingSetting?IsEvent=true');
+        const response = await fetch('https://demoadmin.databyte.app/api/BrendingSetting?IsEvent=true');
         const data = await response.json();
         if (data && data.length > 0) {
           setBrandingData(data[0]);
@@ -165,27 +165,27 @@ const EventForm = () => {
   const formatImageUrl = (urlStr) => {
     if (!urlStr) return null;
 
-    if (urlStr.includes("100.42.179.27:7198")) {
+    if (urlStr.includes("100.42.179.27:7298")) {
       const baseDir = urlStr.includes("brending/") ? "" : "brending/";
       const fileName = urlStr.split("/").pop();
-      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${fileName}`;
+      return `https://demoadmin.databyte.app/uploads/brending/${baseDir}${fileName}`;
     }
 
     // Already correctly formatted URLs
-    if (urlStr.startsWith("https://bravoadmin.uplms.org/uploads/brending/")) {
+    if (urlStr.startsWith("https://demoadmin.databyte.app/uploads/brending/")) {
       return urlStr;
     }
 
     // Relative paths with brending prefix
     if (urlStr.startsWith("brending/")) {
-      return `https://bravoadmin.uplms.org/uploads/${urlStr}`;
+      return `https://demoadmin.databyte.app/uploads/${urlStr}`;
     }
 
     // Other relative paths without protocol
     if (!urlStr.startsWith("http") && !urlStr.startsWith("https")) {
       const baseDir = urlStr.includes("brending/") ? "" : "brending/";
       const cleanPath = urlStr.replace(/^\/+/, "");
-      return `https://bravoadmin.uplms.org/uploads/brending/${baseDir}${cleanPath}`;
+      return `https://demoadmin.databyte.app/uploads/brending/${baseDir}${cleanPath}`;
     }
 
     return urlStr;

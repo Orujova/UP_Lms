@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getToken, getUserId } from '@/authtoken/auth.js';
 
-const API_URL = 'https://bravoadmin.uplms.org/api/';
+const API_URL = 'https://demoadmin.databyte.app/api/';
 
 const getHeaders = () => {
   const token = getToken();

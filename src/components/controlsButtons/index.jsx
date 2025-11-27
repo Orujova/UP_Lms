@@ -48,7 +48,7 @@ export default function ControlsButtons({
       const token = getToken();
 
       // Create the API URL with query parameters
-      const apiUrl = `https://bravoadmin.uplms.org/api/AdminApplicationUser/export-app-users?${queryParams.toString()}`;
+      const apiUrl = `https://demoadmin.databyte.app/api/AdminApplicationUser/export-app-users?${queryParams.toString()}`;
 
       // Fetch the file
       const response = await fetch(apiUrl, {

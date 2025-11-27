@@ -53,7 +53,7 @@ const TrainingDetailsPage = () => {
     try {
       const token = getToken();
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Training/GetById?Id=${id}`,
+        `https://demoadmin.databyte.app/api/Training/GetById?Id=${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -82,7 +82,7 @@ const TrainingDetailsPage = () => {
     try {
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Training",
+        "https://demoadmin.databyte.app/api/Training",
         {
           method: "DELETE",
           headers: {

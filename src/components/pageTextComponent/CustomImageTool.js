@@ -615,8 +615,8 @@ export class CustomImageTool {
           let imageUrl = "";
           if (image && image.newsImageUrls && image.newsImageUrls.length > 0) {
             imageUrl = image.newsImageUrls[0].replace(
-              "https://100.42.179.27:7198/imagecontainer/",
-              "https://bravoadmin.uplms.org/uploads/imagecontainer/"
+              "https://100.42.179.27:7298/imagecontainer/",
+              "https://demoadmin.databyte.app/uploads/imagecontainer/"
             );
           } else if (typeof image === "string") {
             imageUrl = image;

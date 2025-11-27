@@ -97,52 +97,52 @@ const EditTargetGroup = ({ params }) => {
   const loadDropdownData = async () => {
     const endpoints = [
       {
-        url: "https://bravoadmin.uplms.org/api/FunctionalArea",
+        url: "https://demoadmin.databyte.app/api/FunctionalArea",
         key: "functionalAreas",
         extract: (data) => data[0]?.functionalAreas || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/Department",
+        url: "https://demoadmin.databyte.app/api/Department",
         key: "departments",
         extract: (data) => data[0]?.departments || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/Project",
+        url: "https://demoadmin.databyte.app/api/Project",
         key: "projects",
         extract: (data) => data[0]?.projects || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/Division",
+        url: "https://demoadmin.databyte.app/api/Division",
         key: "divisions",
         extract: (data) => data[0]?.divisions || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/SubDivision",
+        url: "https://demoadmin.databyte.app/api/SubDivision",
         key: "subDivisions",
         extract: (data) => data[0]?.subDivisions || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/Position",
+        url: "https://demoadmin.databyte.app/api/Position",
         key: "positions",
         extract: (data) => data[0]?.positions || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/PositionGroup",
+        url: "https://demoadmin.databyte.app/api/PositionGroup",
         key: "positionGroups",
         extract: (data) => data[0]?.positionGroups || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/Gender",
+        url: "https://demoadmin.databyte.app/api/Gender",
         key: "genders",
         extract: (data) => data || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/Role",
+        url: "https://demoadmin.databyte.app/api/Role",
         key: "roles",
         extract: (data) => data[0]?.roles || [],
       },
       {
-        url: "https://bravoadmin.uplms.org/api/ResidentalArea",
+        url: "https://demoadmin.databyte.app/api/ResidentalArea",
         key: "residentalAreas",
         extract: (data) => data[0]?.residentalAreas || [],
       },
@@ -184,7 +184,7 @@ const EditTargetGroup = ({ params }) => {
     if (!token) throw new Error("Authentication token not found");
 
     const response = await fetch(
-      `https://bravoadmin.uplms.org/api/TargetGroup/${id}`,
+      `https://demoadmin.databyte.app/api/TargetGroup/${id}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -453,7 +453,7 @@ const EditTargetGroup = ({ params }) => {
       }
 
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/UpdateTargetGroup",
+        "https://demoadmin.databyte.app/api/TargetGroup/UpdateTargetGroup",
         {
           method: "PUT",
           headers: {

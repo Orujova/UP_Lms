@@ -52,7 +52,7 @@ const ImageUpload = ({ imagePreview, defaultImageUrl, onImageChange, onImageRemo
             <div className="relative w-full max-w-xs mx-auto">
               <div className="h-64 flex items-center justify-center">
                 <img
-                  src={imagePreview || defaultImageUrl || "/placeholder-image.jpg"}
+                  src={imagePreview || defaultImageUrl }
                   alt="Preview"
                   className="h-full object-contain rounded-lg"
                   onError={(e) => {

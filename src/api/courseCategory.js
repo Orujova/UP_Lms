@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getToken } from '@/authtoken/auth.js';
 
-const API_URL = 'https://bravoadmin.uplms.org/api/';
+const API_URL = 'https://demoadmin.databyte.app/api/';
 
 const getHeaders = () => {
   const token = getToken();
@@ -95,16 +95,12 @@ export const updateCourseCategory = async (categoryData) => {
 // Delete course category
 export const deleteCourseCategory = async (categoryId) => {
   try {
-    const payload = {
-      id: parseInt(categoryId),
-    };
-
     const response = await axios.delete(`${API_URL}CourseCategory`, {
-      data: payload,
-      headers: {
-        ...getHeaders(),
-        'Content-Type': 'application/json',
+      params: {
+        Id: parseInt(categoryId),
+        Language: 'az' // və ya dinamik dil
       },
+      headers: getHeaders()
     });
 
     return response.data;

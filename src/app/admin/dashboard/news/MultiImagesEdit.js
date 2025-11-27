@@ -103,9 +103,9 @@ const MultiImagesEdit = ({ images = [], onChange, onMarkForDeletion }) => {
       // Check if it already has the full URL
       if (image.preview.startsWith("http")) {
         // If it's the old server URL, replace it with the new one
-        if (image.preview.includes("100.42.179.27:7198")) {
-          return `https://bravoadmin.uplms.org/uploads/${image.preview.replace(
-            "https://100.42.179.27:7198/",
+        if (image.preview.includes("100.42.179.27:7298")) {
+          return `https://demoadmin.databyte.app/uploads/${image.preview.replace(
+            "https://100.42.179.27:7298/",
             ""
           )}`;
         }
@@ -115,10 +115,10 @@ const MultiImagesEdit = ({ images = [], onChange, onMarkForDeletion }) => {
 
       // If it's a relative path, prepend the base URL
       if (!image.preview.startsWith("/")) {
-        return `https://bravoadmin.uplms.org/uploads/${image.preview}`;
+        return `https://demoadmin.databyte.app/uploads/${image.preview}`;
       } else {
         // If it has a leading slash, remove it
-        return `https://bravoadmin.uplms.org/uploads${image.preview}`;
+        return `https://demoadmin.databyte.app/uploads${image.preview}`;
       }
     }
 

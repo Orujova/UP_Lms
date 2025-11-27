@@ -202,7 +202,7 @@ export default function UserFeedbackPage() {
       }
 
       const response = await axios.get(
-        `https://bravoadmin.uplms.org/api/AdminApplicationUser/feedbacks?${queryParams}`,
+        `https://demoadmin.databyte.app/api/AdminApplicationUser/feedbacks?${queryParams}`,
         {
           headers: {
             Accept: "*/*",

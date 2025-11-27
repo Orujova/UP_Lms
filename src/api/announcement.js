@@ -18,7 +18,7 @@ export const createAnnouncement = async (announcementData) => {
   }
 
   const response = await fetch(
-    "https://bravoadmin.uplms.org/api/Announcement",
+    "https://demoadmin.databyte.app/api/Announcement",
     {
       method: "POST",
       headers: {
@@ -53,7 +53,7 @@ export const fetchAnnouncements = async (params = {}) => {
   if (params.EndDate) queryParams.append("EndDate", params.EndDate);
   if (params.OrderBy) queryParams.append("OrderBy", params.OrderBy);
 
-  const url = `https://bravoadmin.uplms.org/api/Announcement?${queryParams.toString()}`;
+  const url = `https://demoadmin.databyte.app/api/Announcement?${queryParams.toString()}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -76,7 +76,7 @@ export const getAnnouncementById = async (id) => {
   const userId = getUserId() || 0; // Default to 0 if userId is not available
 
   // Add the userId query parameter as required by the API
-  const url = `https://bravoadmin.uplms.org/api/Announcement/${id}?userid=${userId}`;
+  const url = `https://demoadmin.databyte.app/api/Announcement/${id}?userid=${userId}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -106,7 +106,7 @@ export const updateAnnouncement = async (announcementData) => {
   }
 
   const response = await fetch(
-    "https://bravoadmin.uplms.org/api/Announcement",
+    "https://demoadmin.databyte.app/api/Announcement",
     {
       method: "PUT",
       headers: {
@@ -137,7 +137,7 @@ export const deleteAnnouncement = async (id) => {
   }
 
   const response = await fetch(
-    "https://bravoadmin.uplms.org/api/Announcement",
+    "https://demoadmin.databyte.app/api/Announcement",
     {
       method: "DELETE",
       headers: {

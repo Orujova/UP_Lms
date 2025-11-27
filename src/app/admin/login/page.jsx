@@ -47,7 +47,7 @@ export default function Page() {
   const fetchBrandingSettings = async () => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/BrendingSetting?IsOTPAndLogin=true"
+        "https://demoadmin.databyte.app/api/BrendingSetting?IsOTPAndLogin=true"
       );
       const data = await response.json();
 
@@ -60,8 +60,8 @@ export default function Page() {
         // Process all images
         const fixedUrls = data[0].otpAndLoginImages.map(
           (imageUrl) =>
-            `https://bravoadmin.uplms.org/uploads/${imageUrl.replace(
-              "https://100.42.179.27:7198/",
+            `https://demoadmin.databyte.app/uploads/${imageUrl.replace(
+              "https://100.42.179.27:7298/",
               ""
             )}`
         );

@@ -15,7 +15,7 @@ export default {
       {
         protocol: "http",
         hostname: "100.42.179.27",
-        port: "7198",
+        port: "7298",
         pathname: "/appuser/**", // Match the path for specific images
       },
     ],

@@ -129,7 +129,7 @@ const CourseCreateLayout = ({ children, isEditing = false }) => {
       </div>
 
       {/* Step Navigation */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 mt-6 rounded-lg">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between relative">
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-gray-200 -z-10">
@@ -202,59 +202,7 @@ const CourseCreateLayout = ({ children, isEditing = false }) => {
           {children}
         </div>
 
-        {/* Navigation Footer */}
-        <div className="mt-4 bg-white rounded border border-gray-200">
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-                className={`
-                  flex items-center px-3 py-1.5 text-xs font-medium rounded transition-all
-                  ${currentStep === 1
-                    ? 'text-gray-400 cursor-not-allowed bg-gray-50'
-                    : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
-                  }
-                `}
-              >
-                <ArrowLeft className="w-3 h-3 mr-1" />
-                Previous
-              </button>
-
-              {currentStep < 3 ? (
-                <button
-                  onClick={handleNext}
-                  disabled={!isStepComplete(currentStep)}
-                  className={`
-                    flex items-center px-4 py-1.5 text-xs font-medium rounded transition-all
-                    ${isStepComplete(currentStep)
-                      ? 'text-white bg-[#0AAC9E] hover:bg-[#0AAC9E]/90'
-                      : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  Continue
-                  <ArrowRight className="w-3 h-3 ml-1" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => console.log('Publish')}
-                  disabled={!currentCourse?.id}
-                  className={`
-                    flex items-center px-4 py-1.5 text-xs font-medium rounded transition-all
-                    ${currentCourse?.id
-                      ? 'text-white bg-green-600 hover:bg-green-700'
-                      : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  <Globe className="w-3 h-3 mr-1" />
-                  Publish
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+    
       </div>
     </div>
   );

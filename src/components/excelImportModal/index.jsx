@@ -74,7 +74,7 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }) => {
     try {
       // API config
       const token = getToken();
-      const API_URL = "https://bravoadmin.uplms.org/api/";
+      const API_URL = "https://demoadmin.databyte.app/api/";
 
       const formData = new FormData();
       formData.append("file", file);

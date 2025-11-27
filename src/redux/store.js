@@ -26,6 +26,7 @@ import quiz from "./quiz/quizSlice";
 import courseTag from "./courseTag/courseTagSlice";
 import courseCategory from "./courseCategory/courseCategorySlice.js";
 import badge from "./badge/badgeSlice";
+import positionCourseRequirement from "./positionCourseRequirement/positionCourseRequirementSlice";
 const combinedReducers = combineReducers({
   news,
   quiz,
@@ -35,6 +36,7 @@ const combinedReducers = combineReducers({
   courseCategory,
   courseTag,
   course,
+  positionCourseRequirement,
   functionalArea,
   residentalArea,
   role,

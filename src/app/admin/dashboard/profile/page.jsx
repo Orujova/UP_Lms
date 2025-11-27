@@ -201,7 +201,7 @@ const AdminProfilePage = () => {
 
   const token = getToken();
   const userId = getUserId();
-  const API_URL = "https://bravoadmin.uplms.org/api/";
+  const API_URL = "https://demoadmin.databyte.app/api/";
 
   // Enhanced default cover photo
   const defaultCoverPhoto =
@@ -1029,8 +1029,8 @@ const AdminProfilePage = () => {
               style={{
                 backgroundImage: userData.coverPhotoUrl
                   ? `url(${userData.coverPhotoUrl.replace(
-                      "https://100.42.179.27:7198/",
-                      "https://bravoadmin.uplms.org/uploads/"
+                      "https://100.42.179.27:7298/",
+                      "https://demoadmin.databyte.app/uploads/"
                     )})`
                   : `url(${defaultCoverPhoto})`,
               }}
@@ -1056,8 +1056,8 @@ const AdminProfilePage = () => {
                   imageUrl={
                     userData?.imageUrl
                       ? userData.imageUrl.replace(
-                          "https://100.42.179.27:7198/",
-                          "https://bravoadmin.uplms.org/uploads/"
+                          "https://100.42.179.27:7298/",
+                          "https://demoadmin.databyte.app/uploads/"
                         )
                       : noPP
                   }

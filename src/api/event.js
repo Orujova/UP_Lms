@@ -1,6 +1,6 @@
-import { getToken } from "@/authtoken/auth";
+import { getToken, getUserId } from "@/authtoken/auth";
 
-const API_BASE_URL = "https://bravoadmin.uplms.org/api";
+const API_BASE_URL = "https://demoadmin.databyte.app/api";
 
 export const eventApi = {
   async getTargetGroups() {
@@ -45,7 +45,6 @@ export const eventApi = {
       return [];
     } catch (error) {
       console.error("Error fetching target groups:", error);
-      // Return empty array instead of throwing to prevent UI breakage
       return [];
     }
   },
@@ -57,7 +56,6 @@ export const eventApi = {
         throw new Error("Authorization token is missing");
       }
 
-      // Use the specific endpoint format that works
       const response = await fetch(
         `${API_BASE_URL}/PollUnit?Page=1&ShowMore.Take=100`,
         {
@@ -75,7 +73,6 @@ export const eventApi = {
 
       const data = await response.json();
 
-      // Process data based on the expected format
       if (Array.isArray(data) && data.length > 0 && data[0].pollUnits) {
         return data[0].pollUnits;
       } else {
@@ -95,11 +92,9 @@ export const eventApi = {
         throw new Error("Authorization token is missing");
       }
 
-      // Create FormData for file upload
       const formData = new FormData();
       for (const key in eventData) {
         if (eventData[key] !== null && eventData[key] !== undefined) {
-          // Handle arrays specially
           if (Array.isArray(eventData[key])) {
             eventData[key].forEach((item, index) => {
               formData.append(`${key}[${index}]`, item);
@@ -138,11 +133,9 @@ export const eventApi = {
         throw new Error("Authorization token is missing");
       }
 
-      // Create FormData for file upload
       const formData = new FormData();
       for (const key in eventData) {
         if (eventData[key] !== null && eventData[key] !== undefined) {
-          // Handle arrays specially
           if (Array.isArray(eventData[key])) {
             eventData[key].forEach((item, index) => {
               formData.append(`${key}[${index}]`, item);
@@ -153,7 +146,6 @@ export const eventApi = {
         }
       }
 
-      // Make sure EventId is included in the form data
       if (eventData.eventId && !formData.has("EventId")) {
         formData.append("EventId", eventData.eventId);
       }
@@ -179,23 +171,34 @@ export const eventApi = {
     }
   },
 
-  async deleteEvent(eventId) {
+  // UPDATED DELETE METHOD
+  async deleteEvent(eventId, language = 'az') {
     try {
       const token = getToken();
       if (!token) {
         throw new Error("Authorization token is missing");
       }
 
-      const response = await fetch(`${API_BASE_URL}/Event/${eventId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      // NEW API endpoint: DELETE /api/Event?EventId={id}&Language={language}
+      const queryParams = new URLSearchParams({
+        EventId: eventId.toString(),
+        Language: language,
       });
 
+      const response = await fetch(
+        `${API_BASE_URL}/Event?${queryParams.toString()}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "*/*",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       if (!response.ok) {
-        throw new Error(`Failed to delete event: ${response.status}`);
+        const errorText = await response.text().catch(() => '');
+        throw new Error(errorText || `Failed to delete event: ${response.status}`);
       }
 
       return true;
@@ -205,22 +208,31 @@ export const eventApi = {
     }
   },
 
-  async getEvent(eventId) {
+  // UPDATED GET EVENT METHOD
+  async getEvent(eventId, userId = null, device = 1, language = 'az') {
     try {
       const token = getToken();
-      const userId = getUserId();
+      const userIdToUse = userId || getUserId();
 
       if (!token) {
         throw new Error("Authorization token is missing");
       }
 
+      // NEW API endpoint: GET /api/Event/GetById
+      const queryParams = new URLSearchParams({
+        Id: eventId.toString(),
+        UserId: userIdToUse.toString(),
+        Device: device.toString(), // 1 for web, 2 for mobile
+        Language: language,
+      });
+
       const response = await fetch(
-        `${API_BASE_URL}/Event/${eventId}?userid=${userId}`,
+        `${API_BASE_URL}/Event/GetById?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
+            accept: "*/*",
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
           },
         }
       );

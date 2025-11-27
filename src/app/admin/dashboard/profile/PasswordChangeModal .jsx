@@ -90,7 +90,7 @@ const PasswordChangeModal = ({ isOpen, onClose, userId }) => {
       // Fetch configuration
       const token = getToken();
       const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "https://bravoadmin.uplms.org/api/";
+        process.env.NEXT_PUBLIC_API_URL || "https://demoadmin.databyte.app/api/";
 
       const response = await fetch(
         `${API_URL}AdminApplicationUser/ChangePassword`,

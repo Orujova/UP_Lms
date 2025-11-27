@@ -29,7 +29,7 @@ export default function TargetPage() {
       }
 
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?IsDeleted=${isDeleted}`,
+        `https://demoadmin.databyte.app/api/TargetGroup/GetAllTargetGroups?IsDeleted=${isDeleted}`,
         {
           method: "GET",
           headers: {
@@ -85,7 +85,7 @@ export default function TargetPage() {
 
       // Use the same API endpoint for both deactivation and restoration
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/DeactivateTargetGroup",
+        "https://demoadmin.databyte.app/api/TargetGroup/DeactivateTargetGroup",
         {
           method: "PUT",
           headers: {

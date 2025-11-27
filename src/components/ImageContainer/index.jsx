@@ -20,7 +20,7 @@ const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
       setLoading(true);
       const token = getToken();
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/ImageContainer/GetAll?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}&OrderBy=${orderBy}`,
+        `https://demoadmin.databyte.app/api/ImageContainer/GetAll?UserId=${userId}&Page=${page}&ShowMore.Take=${itemsPerPage}&OrderBy=${orderBy}`,
         {
           headers: {
             accept: "*/*",
@@ -56,7 +56,7 @@ const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
       formData.append("Images", file);
 
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/ImageContainer/add-image-from-text-editor",
+        "https://demoadmin.databyte.app/api/ImageContainer/add-image-from-text-editor",
         {
           method: "POST",
           headers: {
@@ -94,7 +94,7 @@ const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
       formData.append("Id", imageId);
 
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/ImageContainer",
+        "https://demoadmin.databyte.app/api/ImageContainer",
         {
           method: "DELETE",
           headers: {
@@ -211,8 +211,8 @@ const ImageContainer = ({ onImageSelect, selectedImage = null, onCancel }) => {
               >
                 <img
                   src={image.newsImageUrls[0].replace(
-                    "https://100.42.179.27:7198/imagecontainer/",
-                    "https://bravoadmin.uplms.org/uploads/imagecontainer/"
+                    "https://100.42.179.27:7298/imagecontainer/",
+                    "https://demoadmin.databyte.app/uploads/imagecontainer/"
                   )}
                   alt={image.fileName}
                   className="w-full aspect-video object-cover cursor-pointer"

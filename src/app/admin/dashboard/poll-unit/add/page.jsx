@@ -216,7 +216,7 @@ export default function CreatePollUnit() {
     try {
       setSaving(true);
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit",
+        "https://demoadmin.databyte.app/api/PollUnit",
         {
           method: "POST",
           headers: {

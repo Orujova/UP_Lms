@@ -2,7 +2,7 @@
 import { getToken } from "@/authtoken/auth.js";
 import { toast } from "sonner";
 
-const API_BASE_URL = "https://bravoadmin.uplms.org/api";
+const API_BASE_URL = "https://demoadmin.databyte.app/api";
 
 export const faqService = {
   // Categories with pagination
@@ -96,17 +96,21 @@ export const faqService = {
     }
   },
 
-  deleteCategory: async (id) => {
+  deleteCategory: async (id, language = "") => {
     try {
       const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/FAQCategory`, {
+      const url = new URL(`${API_BASE_URL}/FAQCategory`);
+      url.searchParams.append("Id", id);
+      if (language) {
+        url.searchParams.append("Language", language);
+      }
+
+      const response = await fetch(url.toString(), {
         method: "DELETE",
         headers: {
           accept: "*/*",
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id }),
       });
 
       if (!response.ok) {
@@ -217,17 +221,21 @@ export const faqService = {
     }
   },
 
-  deleteQuestion: async (id) => {
+  deleteQuestion: async (id, language = "") => {
     try {
       const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/FAQQuestion`, {
+      const url = new URL(`${API_BASE_URL}/FAQQuestion`);
+      url.searchParams.append("Id", id);
+      if (language) {
+        url.searchParams.append("Language", language);
+      }
+
+      const response = await fetch(url.toString(), {
         method: "DELETE",
         headers: {
           accept: "*/*",
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id }),
       });
 
       if (!response.ok) {

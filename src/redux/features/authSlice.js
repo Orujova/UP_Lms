@@ -18,7 +18,7 @@ export const loginUser = createAsyncThunk(
   async ({ username, password }, { rejectWithValue }) => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/AdminApplicationUser/Login",
+        "https://demoadmin.databyte.app/api/AdminApplicationUser/Login",
         {
           method: "POST",
           headers: {
@@ -47,7 +47,7 @@ export const verifyOTP = createAsyncThunk(
   async (otpToken, userId, { rejectWithValue }) => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/AdminApplicationUser/OtpConfirmationForLogin",
+        "https://demoadmin.databyte.app/api/AdminApplicationUser/OtpConfirmationForLogin",
         {
           method: "POST",
           headers: {
@@ -76,7 +76,7 @@ export const resendOTP = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/AdminApplicationUser/ResendOTP",
+        "https://demoadmin.databyte.app/api/AdminApplicationUser/ResendOTP",
         {
           method: "POST",
           headers: {

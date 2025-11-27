@@ -1,4 +1,4 @@
-// Updated NewsManagement.jsx with Category Management integration
+// Updated NewsManagement.jsx with new DELETE API endpoint
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
@@ -22,9 +22,8 @@ import FilterPanel from "@/components/newsPageFilter";
 
 export default function NewsManagement() {
   const [filterVisible, setFilterVisible] = useState(false);
-  // Initialize filters with default sort order
   const [filters, setFilters] = useState({ OrderBy: "datedesc" });
-  const [sortOrder, setSortOrder] = useState("datedesc"); // Default to newest first
+  const [sortOrder, setSortOrder] = useState("datedesc");
   const [pagination, setPagination] = useState({
     Page: 1,
     ShowMore: { Take: 10 },
@@ -43,12 +42,10 @@ export default function NewsManagement() {
     [newsData]
   );
 
-  // Fetch news categories from Redux
   useEffect(() => {
     dispatch(fetchNewsCategoriesAsync());
   }, [dispatch]);
 
-  // Handle toast notifications for delete operations
   useEffect(() => {
     if (deleteSuccess) {
       toast.success("News item deleted successfully!");
@@ -62,28 +59,20 @@ export default function NewsManagement() {
   const handleSort = (newOrder) => {
     setSortOrder(newOrder);
     setFilters((prev) => ({ ...prev, OrderBy: newOrder }));
-    setPagination((prev) => ({ ...prev, Page: 1 })); // Reset to first page when sorting
+    setPagination((prev) => ({ ...prev, Page: 1 }));
   };
 
-  // Update the useEffect hook for API calls
   useEffect(() => {
-    // Format filter parameters before dispatch
     const queryParams = {
       ...pagination,
       ...(filters.SearchInput && { SearchInput: filters.SearchInput }),
-
-      // Keep using NewsCategoryIds in the component state, but the API function will format it correctly
       ...(filters.NewsCategoryIds &&
         filters.NewsCategoryIds.length > 0 && {
           NewsCategoryIds: filters.NewsCategoryIds.map((id) => parseInt(id)),
         }),
-
       ...(filters.StartDate && { StartDate: filters.StartDate }),
       ...(filters.EndDate && { EndDate: filters.EndDate }),
-
-      // Always include OrderBy to ensure consistent sorting
       OrderBy: filters.OrderBy || "datedesc",
-
       ...((filters.ViewRange?.Start || filters.ViewRange?.End) && {
         ViewRange: {
           Start: filters.ViewRange?.Start
@@ -110,12 +99,13 @@ export default function NewsManagement() {
   };
 
   const confirmDelete = () => {
+    // Updated to match new API: DELETE /api/News?Id={id}
+    // Redux thunk indi həm obyekt, həm də sadəcə id qəbul edir
     dispatch(deleteNewsAsync(deleteModal.id));
     closeDeleteModal();
   };
 
   const handleExport = () => {
-    // Use current filter settings for export
     dispatch(exportNewsAsync(filters))
       .unwrap()
       .then(() => {
@@ -168,7 +158,6 @@ export default function NewsManagement() {
               Filter
             </button>
 
-            {/* News Category Management Link */}
             <Link href="/admin/dashboard/newsCategory">
               <button className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
                 <List className="w-4 h-4" />
@@ -244,7 +233,6 @@ export default function NewsManagement() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}

@@ -83,17 +83,43 @@ export default function EditAnnouncement({ params }) {
       const token = getToken();
       const userId = getUserId() || 0;
 
+      const queryParams = new URLSearchParams({
+        Id: id,
+        UserId: userId
+      });
+
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/Announcement/${id}?userid=${userId}`,
+        `https://demoadmin.databyte.app/api/Announcement/GetById?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            Accept: "application/json",
+            Accept: "*/*",
           },
         }
       );
 
       if (!response.ok) {
+        // Handle 409 conflict
+        if (response.status === 409) {
+          console.warn('Conflict error during fetch - retrying...');
+          // Retry once
+          const retryResponse = await fetch(
+            `https://demoadmin.databyte.app/api/Announcement/GetById?${queryParams.toString()}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "*/*",
+              },
+            }
+          );
+          
+          if (retryResponse.ok) {
+            const data = await retryResponse.json();
+            processAnnouncementData(data);
+            return;
+          }
+        }
+        
         const errorText = await response.text();
         console.error(`API Error (${response.status}):`, errorText);
         throw new Error(`Failed to fetch announcement: ${response.statusText}`);
@@ -101,41 +127,8 @@ export default function EditAnnouncement({ params }) {
 
       const data = await response.json();
       console.log("Announcement data received:", data);
-
-      // Update form data from the API response
-      setFormData({
-        id: data.id || 0,
-        Title: data.title || "",
-        SubTitle: data.subTitle || "",
-        Description: data.description || "",
-        ShortDescription: data.shortDescription || "",
-        Priority: data.priority || "NORMAL",
-        ScheduledDate: data.scheduledDate?.split("T")[0] || "",
-        ExpiryDate: data.expiryDate?.split("T")[0] || "",
-        PollUnitId:
-          data.pollUnitId === 0 ? "" : data.pollUnitId?.toString() || "",
-        TargetGroupId: data.targetGroupId?.toString() || "",
-        HasNotification: data.hasNotification || false,
-      });
-
-      // Process target groups
-      if (data.targetGroupIds && data.targetGroups) {
-        const selectedGroups = data.targetGroupIds.map((id, index) => ({
-          id: id,
-          name: data.targetGroups[index],
-        }));
-        setSelectedTargetGroups(selectedGroups);
-      }
-
-      // Set image preview
-      if (data.imageUrl) {
-        setImagePreview(
-          `https://bravoadmin.uplms.org/uploads/${data.imageUrl.replace(
-            "https://100.42.179.27:7198/",
-            ""
-          )}`
-        );
-      }
+      processAnnouncementData(data);
+      
     } catch (error) {
       console.error("Error fetching announcement:", error);
       setError(error.message || "Failed to load announcement data");
@@ -144,12 +137,46 @@ export default function EditAnnouncement({ params }) {
       setLoading(false);
     }
   };
+ const processAnnouncementData = (data) => {
+    setFormData({
+      id: data.id || 0,
+      Title: data.title || "",
+      SubTitle: data.subTitle || "",
+      Description: data.description || "",
+      ShortDescription: data.shortDescription || "",
+      Priority: data.priority || "NORMAL",
+      ScheduledDate: data.scheduledDate?.split("T")[0] || "",
+      ExpiryDate: data.expiryDate?.split("T")[0] || "",
+      PollUnitId:
+        data.pollUnitId === 0 ? "" : data.pollUnitId?.toString() || "",
+      TargetGroupId: data.targetGroupId?.toString() || "",
+      HasNotification: data.hasNotification || false,
+    });
 
+    // Process target groups
+    if (data.targetGroupIds && data.targetGroups) {
+      const selectedGroups = data.targetGroupIds.map((id, index) => ({
+        id: id,
+        name: data.targetGroups[index],
+      }));
+      setSelectedTargetGroups(selectedGroups);
+    }
+
+    // Set image preview
+    if (data.imageUrl) {
+      setImagePreview(
+        `https://demoadmin.databyte.app/uploads/${data.imageUrl.replace(
+          "https://100.42.179.27:7298/",
+          ""
+        )}`
+      );
+    }
+  };
   const fetchPollUnits = async () => {
     try {
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit?Page=1&ShowMore.Take=100",
+        "https://demoadmin.databyte.app/api/PollUnit?Page=1&ShowMore.Take=100",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -174,7 +201,7 @@ export default function EditAnnouncement({ params }) {
     try {
       const token = getToken();
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100",
+        "https://demoadmin.databyte.app/api/TargetGroup/GetAllTargetGroups?Page=1&ShowMore.Take=100",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -313,7 +340,7 @@ const handleSubmit = async (e) => {
       console.log(`${pair[0]}: ${pair[1]}`);
     }
 
-    const response = await fetch("https://bravoadmin.uplms.org/api/Announcement", {
+    const response = await fetch("https://demoadmin.databyte.app/api/Announcement", {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,

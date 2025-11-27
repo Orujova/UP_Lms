@@ -50,7 +50,7 @@ const PollUnitsList = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `https://bravoadmin.uplms.org/api/PollUnit?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${searchTerm}&Type=${
+        `https://demoadmin.databyte.app/api/PollUnit?Page=${currentPage}&ShowMore.Take=${PAGE_SIZE}&Search=${searchTerm}&Type=${
           filter === "all" ? "" : filter
         }`
       );
@@ -68,7 +68,7 @@ const PollUnitsList = () => {
     try {
       setExporting(true);
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/PollUnit/export-poll-units",
+        "https://demoadmin.databyte.app/api/PollUnit/export-poll-units",
         {
           method: "GET",
           headers: {

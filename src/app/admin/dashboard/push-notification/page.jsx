@@ -89,7 +89,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        "https://bravoadmin.uplms.org/api/Notification/SendMobile",
+        "https://demoadmin.databyte.app/api/Notification/SendMobile",
         {
           method: "POST",
           headers: {

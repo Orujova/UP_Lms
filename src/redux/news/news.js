@@ -1,4 +1,4 @@
-// src/redux/news/news.js - Enhanced with additional thunks and reducers
+// src/redux/news/news.js - Updated with new API endpoints
 
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
@@ -17,7 +17,7 @@ export const newsAsync = createAsyncThunk("news/fetchNews", async (params) => {
   return data;
 });
 
-// New thunks for additional API operations
+// Add news thunk
 export const addNewsAsync = createAsyncThunk(
   "news/addNews",
   async (newsData, { rejectWithValue }) => {
@@ -30,11 +30,12 @@ export const addNewsAsync = createAsyncThunk(
   }
 );
 
+// Get news by ID thunk - UPDATED with new parameters
 export const getNewsByIdAsync = createAsyncThunk(
   "news/getNewsById",
-  async (id, { rejectWithValue }) => {
+  async ({ id, userId = null, device = 1, language = 'az' }, { rejectWithValue }) => {
     try {
-      const data = await getNewsById(id);
+      const data = await getNewsById(id, userId, device, language);
       return data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -42,11 +43,12 @@ export const getNewsByIdAsync = createAsyncThunk(
   }
 );
 
+// Update news thunk - UPDATED with language parameter
 export const updateNewsAsync = createAsyncThunk(
   "news/updateNews",
-  async (newsData, { rejectWithValue }) => {
+  async ({ newsData, language = 'az' }, { rejectWithValue }) => {
     try {
-      const data = await updateNews(newsData);
+      const data = await updateNews(newsData, language);
       return data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -54,18 +56,22 @@ export const updateNewsAsync = createAsyncThunk(
   }
 );
 
+// Delete news thunk - UPDATED (Language parametri olmadan)
 export const deleteNewsAsync = createAsyncThunk(
   "news/deleteNews",
   async (id, { rejectWithValue }) => {
     try {
-      await apiDeleteNews(id);
-      return id; // Return the ID for the reducer
+      // Əgər obyekt göndərilibsə, id-ni çıxar
+      const newsId = typeof id === 'object' ? id.id : id;
+      await apiDeleteNews(newsId);
+      return newsId; // Return the ID for the reducer
     } catch (error) {
       return rejectWithValue(error.message);
     }
   }
 );
 
+// Export news thunk
 export const exportNewsAsync = createAsyncThunk(
   "news/exportNews",
   async (params, { rejectWithValue }) => {
@@ -92,6 +98,7 @@ export const exportNewsAsync = createAsyncThunk(
   }
 );
 
+// Fetch categories thunk
 export const fetchNewsCategoriesAsync = createAsyncThunk(
   "news/fetchCategories",
   async (_, { rejectWithValue }) => {

@@ -194,7 +194,7 @@ export default function UserComponent({
       setShowModal(false); // Close confirm modal
 
       const token = getToken();
-      const API_URL = "https://bravoadmin.uplms.org/api/";
+      const API_URL = "https://demoadmin.databyte.app/api/";
       const endpoint = `${API_URL}AdminApplicationUser/DeactivateUser`;
 
       // For active users, we set isDeleted to true to deactivate them
@@ -357,6 +357,7 @@ export default function UserComponent({
             width={40}
             height={40}
             className={`rounded-lg ${!isActive ? "opacity-70 grayscale" : ""}`}
+            unoptimized
           />
         </div>
         <div>
